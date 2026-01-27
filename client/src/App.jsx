@@ -1,13 +1,22 @@
-import { useState } from 'react'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/layout/Layout';
+import Dashboard from './pages/dashboard/Dashboard';
 
 function App() {
-
-
   return (
-    <h1 class=" bg-amber-800 text-3xl font-bold underline mix-blend-color-red">
-    Hello world!
-  </h1>
-  )
+    <Router>
+      <Routes>
+        <Route path="/dashboard" element={
+          <Layout>
+            <Dashboard />
+          </Layout>
+        } />
+        
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;
