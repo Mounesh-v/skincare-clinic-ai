@@ -16,15 +16,15 @@ const TrayaStyleHome = () => {
   const [playingVideo, setPlayingVideo] = useState(false);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen ">
       
       {/* Hero Section - Strong CTA for Quiz */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50 py-16 md:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-200 via-white to-teal-50 py-10 md:py-2">
         <div className="container-custom">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             
             {/* Left Content */}
-            <div className="space-y-8 animate-fadeIn">
+            <div className="space-y-12 animate-fadeIn p-3">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-sm font-medium">
                 <Sparkles className="h-4 w-4" />
                 <span>India's #1 AI-Powered Skin Care Platform</span>
@@ -63,20 +63,21 @@ const TrayaStyleHome = () => {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  variant="primary"
+                <Button 
+                  variant=""
                   size="lg"
                   onClick={() => navigate('/assessment')}
                   rightIcon={<ArrowRight className="h-5 w-5" />}
-                  className="shadow-xl shadow-primary-500/30"
+                  className="shadow-xl shadow-primary-500/30 bg-green-200 "
                 >
                   Take FREE Skin Test
                 </Button>
                 <Button
-                  variant="outline"
+                  variant=""
                   size="lg"
                   onClick={() => setPlayingVideo(true)}
                   leftIcon={<Play className="h-5 w-5" />}
+                  className="shadow-xl shadow-primary-500/30 bg-green-200 "
                 >
                   Watch How It Works
                 </Button>
@@ -100,7 +101,7 @@ const TrayaStyleHome = () => {
             </div>
 
             {/* Right Visual */}
-            <div className="relative animate-float">
+            <div className="relative animate-float p-5">
               {/* Main Image Container */}
               <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/20">
                 <div className="aspect-[4/5] bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center">
@@ -113,8 +114,8 @@ const TrayaStyleHome = () => {
               </div>
 
               {/* Floating Success Card */}
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 max-w-xs animate-slideRight">
-                <div className="flex items-center gap-3 mb-2">
+              <div className="absolute -bottom-6 -left-1 bg-white rounded-2xl shadow-xl p-6  max-w-xs animate-slideRight">
+                <div className="flex items-center gap-3 mb-2 ">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center">
                     <CheckCircle className="h-6 w-6 text-white" />
                   </div>
@@ -126,7 +127,7 @@ const TrayaStyleHome = () => {
               </div>
 
               {/* Floating Rating Card */}
-              <div className="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl p-4 animate-slideRight" style={{animationDelay: '0.2s'}}>
+              <div className="absolute -top-3 -right-1 bg-white rounded-2xl shadow-2xl p-4 animate-slideRight" style={{animationDelay: '0.7s'}}>
                 <div className="flex items-center gap-2 mb-1">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -145,7 +146,7 @@ const TrayaStyleHome = () => {
       </section>
 
       {/* Social Proof Bar */}
-      <section className="bg-white border-y border-slate-200 py-6">
+      <section className="bg-white border-y border-slate-200 py-18">
         <div className="container-custom">
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-center md:text-left">
             <div className="flex items-center gap-3">
@@ -241,7 +242,7 @@ const TrayaStyleHome = () => {
             >
               Start Your FREE Skin Test Now
             </Button>
-            <p className="text-sm text-slate-600 mt-3">Takes only 3 minutes • 50,000+ people tested</p>
+            <p className="text-md text-slate-600 mt-3 bg-green-100">Takes only 3 minutes • 50,000+ people tested</p>
           </div>
         </div>
       </section>
@@ -361,7 +362,7 @@ const TrayaStyleHome = () => {
               size="lg"
               onClick={() => navigate('/assessment')}
               rightIcon={<ArrowRight className="h-5 w-5" />}
-              className="bg-white text-primary-600 hover:bg-slate-50"
+              className="bg-green-100 text-primary-600 hover:bg-slate-50"
             >
               Start Now - It's FREE
             </Button>
@@ -406,11 +407,11 @@ const TrayaStyleHome = () => {
             Join 50,000+ people who trusted us with their skin health. Take the first step today.
           </p>
           <Button
-            variant="primary"
+            variant=""
             size="lg"
             onClick={() => navigate('/assessment')}
             rightIcon={<ArrowRight className="h-5 w-5" />}
-            className="shadow-2xl shadow-primary-500/30"
+            className="shadow-2xl shadow-primary-500/30 bg-green-100"
           >
             Take Your FREE Skin Test
           </Button>

@@ -89,7 +89,7 @@ const Header = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-50 bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 py-1 border-b border-slate-50 ">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
