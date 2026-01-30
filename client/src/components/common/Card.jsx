@@ -1,5 +1,6 @@
 import React from 'react';
 
+// Main Card Component (Default Export)
 const Card = ({ 
   children, 
   title, 
@@ -40,4 +41,30 @@ const Card = ({
   );
 };
 
+// Named Exports for Sub-components
+export const CardHeader = ({ children, className = '' }) => {
+  return (
+    <div className={`px-6 py-4 border-b border-gray-100 ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+export const CardTitle = ({ children, className = '' }) => {
+  return (
+    <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
+      {children}
+    </h3>
+  );
+};
+
+export const CardBody = ({ children, className = '' }) => {
+  return (
+    <div className={`p-6 ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+// Default Export
 export default Card;

@@ -1,57 +1,36 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Layouts
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 
-// Pages - Traya Style
+// Pages
 import TrayaStyleHome from './pages/home';
-// import SkinAssessmentQuiz from './components/assessment/SkinAssessmentQuiz';
-// import AnalysisResults from './pages/AnalysisResults';
+import Assessment from "./pages/Assessment/SkinAssessmentQuiz.jsx";
+import AnalysisResults from './pages/Assessment/AnalysisResults.jsx'; 
 
-// Auth Pages (to be created)
-// import Login from './pages/auth/Login';
-// import Signup from './pages/auth/Signup';
 
-// Other Pages (to be created)
-// import DoctorSelection from './pages/DoctorSelection';
-// import Consultation from './pages/Consultation';
-// import Checkout from './pages/Checkout';
-// import Dashboard from './pages/Dashboard';
-// import Profile from './pages/Profile';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetail from './pages/ProductDetail';
+import CheckoutPage from './pages/CheckoutPage';
 
-// Styles
-// import './styles/globals.css';
-
-/**
- * Main App Component - Traya-Style Skincare Clinic
- * 
- * Complete routing with assessment flow
- */
 function App() {
-  // Assessment state management
   const [assessmentData, setAssessmentData] = useState(null);
-  
-  // Mock authentication state (replace with actual auth context)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
-  // Handle assessment completion
   const handleAssessmentComplete = (data) => {
     console.log('Assessment completed:', data);
     setAssessmentData(data);
-    // In production, save to backend/context
   };
 
-  // Mock login (replace with actual auth)
   const handleLogin = (userData) => {
     setUser(userData);
     setIsAuthenticated(true);
   };
 
-  // Mock logout (replace with actual auth)
   const handleLogout = () => {
     setUser(null);
     setIsAuthenticated(false);
@@ -60,7 +39,6 @@ function App() {
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
-        {/* Toast Notifications */}
         <Toaster
           position="top-right"
           toastOptions={{
@@ -94,14 +72,8 @@ function App() {
           }}
         />
 
-        {/* Header - Shows on all pages except assessment */}
-        <Routes>
-          <Route path="/assessment" element={null} />
-          <Route path="*" element={<Header isAuthenticated={isAuthenticated} user={user} onLogout={handleLogout} />} />
-        </Routes>
-
-        {/* Main Content */}
-        <main className="flex-grow">
+        {/* Layout Wrapper with Conditional Header/Footer */}
+        <Layout isAuthenticated={isAuthenticated} user={user} onLogout={handleLogout}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<TrayaStyleHome />} />
@@ -114,6 +86,7 @@ function App() {
               } 
             />
             
+            {/* Results Page */}
             <Route 
               path="/results" 
               element={
@@ -125,58 +98,40 @@ function App() {
               } 
             />
 
-            {/* Auth Routes - Uncomment when created */}
-            {/* <Route path="/login" element={<Login onLogin={handleLogin} />} /> */}
-            {/* <Route path="/signup" element={<Signup />} /> */}
-
-            {/* Other Public Routes - Uncomment when created */}
-            {/* <Route path="/doctors" element={<DoctorSelection />} /> */}
-            {/* <Route path="/how-it-works" element={<HowItWorks />} /> */}
-            {/* <Route path="/pricing" element={<Pricing />} /> */}
-            {/* <Route path="/about" element={<About />} /> */}
-            {/* <Route path="/contact" element={<Contact />} /> */}
-
-            {/* Checkout - Uncomment when created */}
-            {/* <Route path="/checkout" element={<Checkout />} /> */}
-
-            {/* Protected Routes - Uncomment when created */}
-            {/* <Route 
-              path="/dashboard" 
-              element={
-                isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />
-              } 
-            /> */}
-            {/* <Route 
-              path="/consultation" 
-              element={
-                isAuthenticated ? <Consultation /> : <Navigate to="/login" replace />
-              } 
-            /> */}
-            {/* <Route 
-              path="/profile" 
-              element={
-                isAuthenticated ? <Profile /> : <Navigate to="/login" replace />
-              } 
-            /> */}
+            {/* Uncomment when these pages are created */}
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products/:productId" element={<ProductDetail />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
 
             {/* 404 Page */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </main>
-
-        {/* Footer - Shows on all pages except assessment */}
-        <Routes>
-          <Route path="/assessment" element={null} />
-          <Route path="*" element={<Footer />} />
-        </Routes>
+        </Layout>
       </div>
     </Router>
   );
 }
 
 /**
+ * Layout Component - Conditionally renders Header/Footer
+ */
+const Layout = ({ isAuthenticated, user, onLogout, children }) => {
+  const location = useLocation();
+  const hideHeaderFooter = location.pathname === '/assessment';
+
+  return (
+    <>
+      {!hideHeaderFooter && <Header isAuthenticated={isAuthenticated} user={user} onLogout={onLogout} />}
+      <main className="flex-grow">
+        {children}
+      </main>
+      {!hideHeaderFooter && <Footer />}
+    </>
+  );
+};
+
+/**
  * Assessment Wrapper Component
- * Wraps the quiz with navigation capability
  */
 const AssessmentWrapper = ({ onComplete }) => {
   const navigate = useNavigate();
@@ -186,7 +141,7 @@ const AssessmentWrapper = ({ onComplete }) => {
     navigate('/results');
   };
 
-  return <SkinAssessmentQuiz onComplete={handleComplete} />;
+  return <Assessment onComplete={handleComplete} />;
 };
 
 /**
