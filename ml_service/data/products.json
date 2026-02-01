@@ -1,0 +1,62 @@
+[
+  {
+    "id": "cleanser-gentle-gel",
+    "name": "Calm Restore Gel Cleanser",
+    "category": "Cleanser",
+    "skin_types": ["oily", "combination"],
+    "concerns": ["acne", "dullness"],
+    "benefits": ["Balances sebum", "Maintains barrier", "Leaves skin fresh"],
+    "price": 1299,
+    "image_url": "/images/products/cleanser-gel.png"
+  },
+  {
+    "id": "serum-niacinamide",
+    "name": "Clarify 10% Niacinamide Serum",
+    "category": "Serum",
+    "skin_types": ["oily", "combination", "normal"],
+    "concerns": ["acne", "pigmentation", "dullness"],
+    "benefits": ["Controls breakouts", "Evens tone", "Tightens pores"],
+    "price": 1599,
+    "image_url": "/images/products/niacinamide.png"
+  },
+  {
+    "id": "moisture-ceramide",
+    "name": "Barrier Shield Ceramide Cream",
+    "category": "Moisturiser",
+    "skin_types": ["dry", "sensitive", "combination"],
+    "concerns": ["dryness", "wrinkles", "rashes"],
+    "benefits": ["Deep hydration", "Strengthens barrier", "Soothes flares"],
+    "price": 1899,
+    "image_url": "/images/products/ceramide-cream.png"
+  },
+  {
+    "id": "spf-50",
+    "name": "Daily Defense SPF 50",
+    "category": "Sunscreen",
+    "skin_types": ["oily", "dry", "sensitive", "combination", "normal"],
+    "concerns": ["pigmentation", "wrinkles", "dark_circles"],
+    "benefits": ["Broad spectrum", "Matte finish", "No white cast"],
+    "price": 999,
+    "image_url": "/images/products/spf-50.png"
+  },
+  {
+    "id": "supplement-sleep",
+    "name": "Sleep Reset Magnesium Complex",
+    "category": "Supplement",
+    "skin_types": ["all"],
+    "concerns": ["dullness", "wrinkles", "dark_circles"],
+    "benefits": ["Improves rest", "Reduces stress", "Supports repair"],
+    "price": 1290,
+    "image_url": "/images/products/sleep-complex.png"
+  },
+  {
+    "id": "mask-aha",
+    "name": "Glow Cycle AHA Treatment",
+    "category": "Treatment",
+    "skin_types": ["combination", "normal", "oily"],
+    "concerns": ["dullness", "pigmentation"],
+    "benefits": ["Resurfaces texture", "Boosts radiance"],
+    "price": 1499,
+    "image_url": "/images/products/aha-mask.png"
+  }
+]

@@ -8,8 +8,8 @@ import Footer from './components/layout/Footer';
 
 // Pages
 import TrayaStyleHome from './pages/home';
-import Assessment from "./pages/Assessment/SkinAssessmentQuiz.jsx";
-import AnalysisResults from './pages/Assessment/AnalysisResults.jsx'; 
+import StartAssessment from './pages/assessment/StartAssessment.jsx';
+import AnalysisResults from './pages/assessment/Analysisresults.jsx';
 
 
 import ProductsPage from './pages/ProductsPage';
@@ -79,11 +79,9 @@ function App() {
             <Route path="/" element={<TrayaStyleHome />} />
             
             {/* Assessment Flow */}
-            <Route 
-              path="/assessment" 
-              element={
-                <AssessmentWrapper onComplete={handleAssessmentComplete} />
-              } 
+            <Route
+              path="/assessment"
+              element={<AssessmentWrapper onComplete={handleAssessmentComplete} />}
             />
             
             {/* Results Page */}
@@ -141,7 +139,7 @@ const AssessmentWrapper = ({ onComplete }) => {
     navigate('/results');
   };
 
-  return <Assessment onComplete={handleComplete} />;
+  return <StartAssessment onComplete={handleComplete} />;
 };
 
 /**
