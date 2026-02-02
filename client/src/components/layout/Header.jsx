@@ -18,6 +18,8 @@ import {
   MapPin
 } from 'lucide-react';
 
+import ctaBg from '../../assets/hero2.jpg';
+
 const Header = ({ 
   isAuthenticated = false, 
   user = null,
@@ -99,7 +101,7 @@ const Header = ({
               className="flex items-center gap-2 group"
               onClick={() => setFullscreenMenuOpen(false)}
             >
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center  shadow-md group-hover:shadow-lg transition-shadow">
                 <span className="text-2xl">🌿</span>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
@@ -254,252 +256,266 @@ const Header = ({
       </header>
 
       {/* Fullscreen Dropdown Menu Overlay */}
-      {fullscreenMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-white overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            
-            {/* Close Button */}
+{fullscreenMenuOpen && (
+  <div className="fixed inset-0 z-40 overflow-y-auto">
+    {/* Background Image */}
+    <div 
+      className="absolute inset-0 bg-cover bg-center sm:bg-top md:bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${ctaBg})` }}
+    >
+      {/* Overlay for readability */}
+      <div className="absolute inset-0 bg-white/35 backdrop-sm"></div>
+    </div>
+
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10">
+      
+      {/* Close Button */}
+      <button
+        onClick={() => setFullscreenMenuOpen(false)}
+        className="absolute top-6 right-6 p-2 hover:bg-slate-100/80 rounded-lg transition-colors backdrop-blur-sm"
+      >
+        <X className="h-6 w-6 text-slate-700" />
+      </button>
+
+      {/* Menu Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mt-8">
+        
+        {/* WHAT WE DO Section */}
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-emerald-500 pb-2">
+            WHAT WE DO
+          </h2>
+          <p className="text-slate-600 mb-6 text-sm leading-relaxed">
+            We help you take control of your skin health in a personalised, and scientific way.
+          </p>
+          <div className="space-y-3">
+            {menuSections.whatWeDo.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setFullscreenMenuOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-emerald-50 transition-all duration-200 group shadow-sm"
+                >
+                  <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                    <Icon className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <span className="text-slate-700 font-medium group-hover:text-emerald-600 transition-colors">
+                    {item.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-emerald-600 transition-colors" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="mt-8 space-y-3">
             <button
-              onClick={() => setFullscreenMenuOpen(false)}
-              className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              onClick={() => {
+                navigate('/assessment');
+                setFullscreenMenuOpen(false);
+              }}
+              className="w-full px-4 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-lg"
             >
-              <X className="h-6 w-6 text-slate-700" />
+              Start Assessment
             </button>
+            <button
+              onClick={() => {
+                navigate('/login');
+                setFullscreenMenuOpen(false);
+              }}
+              className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors"
+            >
+              Log In
+            </button>
+          </div>
+        </div>
 
-            {/* Menu Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mt-8">
+        {/* HOW WE DO IT Section */}
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-teal-500 pb-2">
+            HOW WE DO IT
+          </h2>
+          <div className="space-y-3">
+            {menuSections.howWeDoIt.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setFullscreenMenuOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-teal-50 transition-all duration-200 group shadow-sm"
+                >
+                  <div className="p-2 bg-teal-100 rounded-lg group-hover:bg-teal-200 transition-colors">
+                    <Icon className="h-5 w-5 text-teal-600" />
+                  </div>
+                  <span className="text-slate-700 font-medium group-hover:text-teal-600 transition-colors">
+                    {item.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-teal-600 transition-colors" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Featured Products Section */}
+          <div className="mt-8 p-6 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
+            <h3 className="font-bold text-slate-900 mb-3">
+              🎯 Featured Products
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              Discover our doctor-approved skincare solutions
+            </p>
+            <button
+              onClick={() => {
+                navigate('/products');
+                setFullscreenMenuOpen(false);
+              }}
+              className="w-full px-4 py-2 bg-white text-teal-600 font-medium rounded-lg hover:shadow-md transition-shadow"
+            >
+              View Products
+            </button>
+          </div>
+        </div>
+
+        {/* WHO WE ARE Section */}
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-purple-500 pb-2">
+            WHO WE ARE
+          </h2>
+          <div className="space-y-3">
+            {menuSections.whoWeAre.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setFullscreenMenuOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-purple-50 transition-all duration-200 group shadow-sm"
+                >
+                  <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                    <Icon className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <span className="text-slate-700 font-medium group-hover:text-purple-600 transition-colors">
+                    {item.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-purple-600 transition-colors" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* GET IN TOUCH Section */}
+          <div className="mt-8 p-6 bg-white/60 backdrop-blur-sm rounded-lg shadow-lg border border-white/50">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              GET IN TOUCH
+            </h3>
+            <div className="space-y-3">
+              <a
+                href="tel:+911234567890"
+                className="flex items-center gap-3 text-slate-600 hover:text-emerald-600 transition-colors"
+              >
+                <Phone className="h-5 w-5" />
+                <span className="text-sm">+91 123 456 7890</span>
+              </a>
               
-              {/* WHAT WE DO Section */}
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-emerald-500 pb-2">
-                  WHAT WE DO
-                </h2>
-                <p className="text-slate-600 mb-6 text-sm leading-relaxed">
-                  We help you take control of your skin health in a personalised, and scientific way.
-                </p>
-                <div className="space-y-3">
-                  {menuSections.whatWeDo.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setFullscreenMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-emerald-50 transition-all duration-200 group"
-                      >
-                        <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                          <Icon className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-emerald-600 transition-colors">
-                          {item.name}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-emerald-600 transition-colors" />
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* Quick Action Buttons */}
-                <div className="mt-8 space-y-3">
-                  <button
-                    onClick={() => {
-                      navigate('/assessment');
-                      setFullscreenMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-                  >
-                    Start Assessment
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigate('/login');
-                      setFullscreenMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors"
-                  >
-                    Log In
-                  </button>
-                </div>
-              </div>
-
-              {/* HOW WE DO IT Section */}
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-teal-500 pb-2">
-                  HOW WE DO IT
-                </h2>
-                <div className="space-y-3">
-                  {menuSections.howWeDoIt.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setFullscreenMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-teal-50 transition-all duration-200 group"
-                      >
-                        <div className="p-2 bg-teal-100 rounded-lg group-hover:bg-teal-200 transition-colors">
-                          <Icon className="h-5 w-5 text-teal-600" />
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-teal-600 transition-colors">
-                          {item.name}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-teal-600 transition-colors" />
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* Featured Products Section */}
-                <div className="mt-8 p-6 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-lg">
-                  <h3 className="font-bold text-slate-900 mb-3">
-                    🎯 Featured Products
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-4">
-                    Discover our doctor-approved skincare solutions
-                  </p>
-                  <button
-                    onClick={() => {
-                      navigate('/products');
-                      setFullscreenMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-2 bg-white text-teal-600 font-medium rounded-lg hover:shadow-md transition-shadow"
-                  >
-                    View Products
-                  </button>
-                </div>
-              </div>
-
-              {/* WHO WE ARE Section */}
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-purple-500 pb-2">
-                  WHO WE ARE
-                </h2>
-                <div className="space-y-3">
-                  {menuSections.whoWeAre.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setFullscreenMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 transition-all duration-200 group"
-                      >
-                        <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                          <Icon className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <span className="text-slate-700 font-medium group-hover:text-purple-600 transition-colors">
-                          {item.name}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-purple-600 transition-colors" />
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* GET IN TOUCH Section */}
-                <div className="mt-8">
-                  <h3 className="text-lg font-bold text-slate-900 mb-4">
-                    GET IN TOUCH
-                  </h3>
-                  <div className="space-y-3">
-                    <a
-                      href="tel:+911234567890"
-                      className="flex items-center gap-3 text-slate-600 hover:text-emerald-600 transition-colors"
-                    >
-                      <Phone className="h-5 w-5" />
-                      <span className="text-sm">+91 123 456 7890</span>
-                    </a>
-                    <a
-                      href="mailto:hello@skincare.ai"
-                      className="flex items-center gap-3 text-slate-600 hover:text-emerald-600 transition-colors"
-                    >
-                      <Mail className="h-5 w-5" />
-                      <span className="text-sm">hello@skincare.ai</span>
-                    </a>
-                    <div className="flex items-center gap-3 text-slate-600">
-                      <MapPin className="h-5 w-5" />
-                      <span className="text-sm">Mumbai, India</span>
-                    </div>
-                  </div>
-
-                  {/* Social Media */}
-                  <div className="flex items-center gap-4 mt-6">
-                    <a
-                      href="https://instagram.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-slate-100 rounded-full hover:bg-emerald-100 transition-colors"
-                    >
-                      <span className="text-xl">📷</span>
-                    </a>
-                    <a
-                      href="https://facebook.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-slate-100 rounded-full hover:bg-emerald-100 transition-colors"
-                    >
-                      <span className="text-xl">📘</span>
-                    </a>
-                    <a
-                      href="https://whatsapp.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 bg-slate-100 rounded-full hover:bg-emerald-100 transition-colors"
-                    >
-                      <span className="text-xl">💬</span>
-                    </a>
-                  </div>
-                </div>
+              <a
+                href="mailto:hello@skincare.ai"
+                className="flex items-center gap-3 text-slate-600 hover:text-emerald-600 transition-colors"
+              >
+                <Mail className="h-5 w-5" />
+                <span className="text-sm">hello@skincare.ai</span>
+              </a>
+              
+              <div className="flex items-center gap-3 text-slate-600">
+                <MapPin className="h-5 w-5" />
+                <span className="text-sm">Mumbai, India</span>
               </div>
             </div>
 
-            {/* Mobile User Section (if authenticated) */}
-            {isAuthenticated && user && (
-              <div className="mt-12 pt-8 border-t border-slate-200 md:hidden">
-                <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg">
-                  {user.avatar ? (
-                    <img 
-                      src={user.avatar} 
-                      alt={user.name}
-                      className="h-12 w-12 rounded-full object-cover border-2 border-emerald-500"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center border-2 border-emerald-500">
-                      <User className="h-6 w-6 text-white" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{user.name}</p>
-                    <p className="text-xs text-slate-600">{user.email}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      navigate('/dashboard');
-                      setFullscreenMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    <LayoutDashboard className="h-5 w-5 text-slate-500" />
-                    <span className="font-medium">Dashboard</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleLogoutClick();
-                      setFullscreenMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span>Logout</span>
-                  </button>
-                </div>
+            {/* Social Media */}
+            <div className="flex items-center gap-4 mt-6">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white/80 rounded-full hover:bg-emerald-100 transition-colors shadow-sm"
+              >
+                <span className="text-xl">📷</span>
+              </a>
+              
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white/80 rounded-full hover:bg-emerald-100 transition-colors shadow-sm"
+              >
+                <span className="text-xl">📘</span>
+              </a>
+              
+              <a
+                href="https://whatsapp.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white/80 rounded-full hover:bg-emerald-100 transition-colors shadow-sm"
+              >
+                <span className="text-xl">💬</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile User Section (if authenticated) */}
+      {isAuthenticated && user && (
+        <div className="mt-12 pt-8 border-t border-slate-200 md:hidden">
+          <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-br from-emerald-50/90 to-teal-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
+            {user.avatar ? (
+              <img 
+                src={user.avatar} 
+                alt={user.name}
+                className="h-12 w-12 rounded-full object-cover border-2 border-emerald-500"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center border-2 border-emerald-500">
+                <User className="h-6 w-6 text-white" />
               </div>
             )}
+            <div>
+              <p className="text-sm font-semibold text-slate-900">{user.name}</p>
+              <p className="text-xs text-slate-600">{user.email}</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                navigate('/dashboard');
+                setFullscreenMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors shadow-sm"
+            >
+              <LayoutDashboard className="h-5 w-5 text-slate-500" />
+              <span className="font-medium">Dashboard</span>
+            </button>
+            <button
+              onClick={() => {
+                handleLogoutClick();
+                setFullscreenMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium shadow-sm"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       )}
+    </div>
+  </div>
+)}
+
     </>
   );
 };
