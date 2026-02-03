@@ -5,10 +5,7 @@ import Button from "../../components/common/Button";
 // import { ASSESSMENT_STEPS } from '../../utils/constants';
 
 
-/**
- * Traya-Inspired Skin Assessment Quiz
- * Multi-step questionnaire with progress tracking
- */
+
 const SkinAssessmentQuiz = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState({});
