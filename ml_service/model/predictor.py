@@ -134,6 +134,7 @@ class SkinTypePredictor:
         try:
             loaded_model = torch_module.jit.load(str(self.weights_path), map_location=self.device)
             loaded_model.eval()
+            loaded_model.to(self.device)
             self._model = loaded_model
             if self.transform is None:
                 print("[SkinTypePredictor] TorchVision transforms unavailable; running in heuristic mode")
@@ -206,15 +207,31 @@ class SkinTypePredictor:
 
     def _build_transform(self) -> Optional[Any]:
         transform_module = transforms
-        if transform_module is None:
+        if transform_module is not None:
+            return transform_module.Compose(
+                [
+                    transform_module.Resize((224, 224)),
+                    transform_module.ToTensor(),
+                    transform_module.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ]
+            )
+        if torch is None:
             return None
-        return transform_module.Compose(
-            [
-                transform_module.Resize((224, 224)),
-                transform_module.ToTensor(),
-                transform_module.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
+        return self._fallback_transform
+
+    def _fallback_transform(self, image: "PILImage") -> "Tensor":
+        torch_module = torch
+        if torch_module is None:
+            raise RuntimeError("PyTorch is required for preprocessing but is not installed")
+
+        resized = image.convert("RGB").resize((224, 224))
+        width, height = resized.size
+        data = torch_module.ByteTensor(list(resized.getdata()))
+        tensor = data.view(height, width, 3).permute(2, 0, 1).to(dtype=torch_module.float32) / 255.0
+
+        mean = torch_module.tensor([0.485, 0.456, 0.406], dtype=torch_module.float32).view(3, 1, 1)
+        std = torch_module.tensor([0.229, 0.224, 0.225], dtype=torch_module.float32).view(3, 1, 1)
+        return (tensor - mean) / std
 
 
 def load_predictor(weights_dir: Path) -> SkinTypePredictor:
