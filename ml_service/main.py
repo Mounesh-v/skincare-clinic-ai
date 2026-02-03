@@ -9,12 +9,24 @@ import base64
 import binascii
 import hashlib
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, validator
+
+try:  # pragma: no cover - optional dependency
+    from PIL import Image, UnidentifiedImageError
+except Exception:  # pragma: no cover - pillow optional
+    Image = None  # type: ignore[assignment]
+    UnidentifiedImageError = None  # type: ignore[assignment]
+
+try:  # pragma: no cover - optional dependency
+    import numpy as np
+except Exception:  # pragma: no cover - numpy optional
+    np = None  # type: ignore[assignment]
 
 try:
     from .model import load_predictor
@@ -414,58 +426,203 @@ def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optio
     except (binascii.Error, ValueError) as exc:
         raise HTTPException(status_code=400, detail="image_data must be valid base64") from exc
 
-    if PREDICTOR is not None:
-        result: Optional[Dict[str, Any]] = None
-        try:
-            raw_result = PREDICTOR.predict(raw)
-            if isinstance(raw_result, dict):
-                result = raw_result
-        except ValueError as prediction_error:
-            if "No_face_detected" in str(prediction_error):
-                raise HTTPException(status_code=422, detail="No face detected in uploaded image") from prediction_error
-        except Exception as prediction_error:  # pragma: no cover - resilience when torch fails
-            print(f"[Predictor] Inference error, falling back to digest heuristics: {prediction_error}")
+    predictor = PREDICTOR
+    if predictor is None or not getattr(predictor, "available", False):
+        raise HTTPException(status_code=503, detail="Skin analysis model is unavailable on the server.")
 
-        if result:
-            raw_feature_insights = result.get("feature_insights", [])
-            feature_insights: List[FeatureInsight] = []
-            for raw_item in raw_feature_insights:
-                if not isinstance(raw_item, dict):
-                    continue
-                label_obj = raw_item.get("label", "Feature")
-                value_obj = raw_item.get("value", 0.0)
-                unit_obj = raw_item.get("unit", "")
-                label = str(label_obj)
-                value = float(value_obj) if isinstance(value_obj, (int, float)) else 0.0
-                unit = str(unit_obj) if isinstance(unit_obj, str) else ""
-                feature_insights.append(FeatureInsight(label=label, value=value, unit=unit))
+    try:
+        result = predictor.predict(raw)
+    except ValueError as prediction_error:
+        if "No_face_detected" in str(prediction_error):
+            raise HTTPException(status_code=422, detail="No face detected in uploaded image") from prediction_error
+        raise HTTPException(status_code=400, detail="Unable to analyse the uploaded image") from prediction_error
+    except Exception as prediction_error:  # pragma: no cover - resilience when torch fails
+        raise HTTPException(status_code=500, detail="Skin analysis model failed to run") from prediction_error
 
-            if not feature_insights:
-                feature_insights = _digest_feature_insights(raw)
+    if not isinstance(result, dict):
+        raise HTTPException(status_code=500, detail="Skin analysis model returned an unexpected response")
 
-            confidence_obj = result.get("confidence", 0.6)
-            confidence = float(confidence_obj) if isinstance(confidence_obj, (int, float)) else 0.6
+    raw_feature_insights = result.get("feature_insights", [])
+    if isinstance(raw_feature_insights, dict):
+        iterable_feature_insights = raw_feature_insights.values()
+    elif isinstance(raw_feature_insights, (list, tuple, set)):
+        iterable_feature_insights = raw_feature_insights
+    elif raw_feature_insights:
+        iterable_feature_insights = [raw_feature_insights]
+    else:
+        iterable_feature_insights = []
 
-            predicted_type_obj = result.get("predicted_skin_type")
-            predicted_type = str(predicted_type_obj) if isinstance(predicted_type_obj, str) else str(
-                answers.get("skin_type", "combination")
-            )
+    feature_insights: List[FeatureInsight] = []
+    for raw_item in iterable_feature_insights:
+        if not isinstance(raw_item, dict):
+            continue
+        label_obj = raw_item.get("label", "Feature")
+        value_obj = raw_item.get("value", 0.0)
+        unit_obj = raw_item.get("unit", "")
+        label = str(label_obj)
+        value = float(value_obj) if isinstance(value_obj, (int, float)) else 0.0
+        unit = str(unit_obj) if isinstance(unit_obj, str) else ""
+        feature_insights.append(FeatureInsight(label=label, value=value, unit=unit))
 
-            notes_obj = result.get("notes")
-            notes = str(notes_obj) if isinstance(notes_obj, str) else None
+    confidence_obj = result.get("confidence", 0.6)
+    confidence = float(confidence_obj) if isinstance(confidence_obj, (int, float)) else 0.6
+    if not feature_insights:
+        feature_insights = [
+            FeatureInsight(label="Model Confidence", value=round(confidence * 100, 1), unit="%"),
+        ]
 
-            face_score_obj = result.get("face_score")
-            if face_score_obj is not None and isinstance(face_score_obj, (int, float)) and float(face_score_obj) < 0.12:
-                raise HTTPException(status_code=422, detail="No face detected in uploaded image")
+    predicted_type_obj = result.get("predicted_skin_type")
+    predicted_type = str(predicted_type_obj) if isinstance(predicted_type_obj, str) else str(
+        answers.get("skin_type", "combination")
+    )
 
-            return ImageAnalysis(
-                predicted_skin_type=predicted_type,
-                confidence=round(confidence, 2),
-                feature_insights=feature_insights,
-                notes=notes,
-            )
+    notes_obj = result.get("notes")
+    notes = str(notes_obj) if isinstance(notes_obj, str) else None
 
-    return _digest_based_analysis(raw, answers)
+    face_score_obj = result.get("face_score")
+    if face_score_obj is not None and isinstance(face_score_obj, (int, float)) and float(face_score_obj) < 0.12:
+        raise HTTPException(status_code=422, detail="No face detected in uploaded image")
+
+    return ImageAnalysis(
+        predicted_skin_type=predicted_type,
+        confidence=round(confidence, 2),
+        feature_insights=feature_insights,
+        notes=notes,
+    )
+
+
+def _enhanced_heuristic_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis:
+    if Image is None or np is None:
+        return _digest_based_analysis(raw, answers)
+
+    np_module = cast(Any, np)
+
+    try:
+        with Image.open(BytesIO(raw)) as opened:
+            image = opened.convert("RGB")
+    except Exception as exc:
+        if UnidentifiedImageError is not None:
+            if isinstance(exc, UnidentifiedImageError):
+                raise HTTPException(status_code=422, detail="Unsupported image format") from exc
+        return _digest_based_analysis(raw, answers)
+
+    width, height = image.size
+    max_side = max(width, height)
+    if max_side > 720:
+        scale = 720 / float(max_side)
+        image = image.resize((max(64, int(width * scale)), max(64, int(height * scale))))
+
+    rgb = np_module.asarray(image, dtype=np_module.float32) / 255.0
+    hsv = np_module.asarray(image.convert("HSV"), dtype=np_module.float32) / 255.0
+    ycbcr = np_module.asarray(image.convert("YCbCr"), dtype=np_module.float32)
+
+    total_rows, total_cols, _ = rgb.shape
+    y0 = int(total_rows * 0.15)
+    y1 = int(total_rows * 0.85)
+    x0 = int(total_cols * 0.15)
+    x1 = int(total_cols * 0.85)
+    if y1 <= y0 or x1 <= x0:
+        y0, y1, x0, x1 = 0, total_rows, 0, total_cols
+
+    central_slice = (slice(y0, y1), slice(x0, x1))
+    skin_mask = (
+        (ycbcr[..., 1] >= 77)
+        & (ycbcr[..., 1] <= 127)
+        & (ycbcr[..., 2] >= 133)
+        & (ycbcr[..., 2] <= 173)
+    )
+
+    central_mask = skin_mask[central_slice]
+    valid_mask = central_mask if np_module.any(central_mask) else skin_mask
+    skin_ratio = float(np_module.mean(valid_mask)) if valid_mask.size else 0.0
+    if skin_ratio < 0.12:
+        raise HTTPException(status_code=422, detail="No face detected in uploaded image")
+
+    def _masked_stat(data: Any, mask: Any, attr: str) -> float:
+        if mask.size == 0 or not np_module.any(mask):
+            return float(getattr(np_module, attr)(data))
+        return float(getattr(np_module, attr)(data[mask]))
+
+    value = hsv[..., 2]
+    saturation = hsv[..., 1]
+
+    brightness_mean = _masked_stat(value, valid_mask, "mean")
+    brightness_std = _masked_stat(value, valid_mask, "std")
+    saturation_mean = _masked_stat(saturation, valid_mask, "mean")
+    saturation_std = _masked_stat(saturation, valid_mask, "std")
+
+    highlight_ratio = float(np_module.mean((value > 0.78) & valid_mask)) if valid_mask.size else float(np_module.mean(value > 0.78))
+    shadow_ratio = float(np_module.mean((value < 0.22) & valid_mask)) if valid_mask.size else float(np_module.mean(value < 0.22))
+
+    grad_y, grad_x = np_module.gradient(value)
+    gradient_magnitude = np_module.sqrt(np_module.square(grad_x) + np_module.square(grad_y))
+    texture_micro = _masked_stat(gradient_magnitude, valid_mask, "mean")
+
+    redness_map = rgb[..., 0] - np_module.maximum(rgb[..., 1], rgb[..., 2])
+    redness_mean = _masked_stat(np_module.clip(redness_map, 0.0, 1.0), valid_mask, "mean")
+
+    oil_score = 0.52 * highlight_ratio + 0.35 * saturation_mean + 0.13 * texture_micro
+    dry_score = 0.48 * (1.0 - saturation_mean) + 0.32 * brightness_std + 0.2 * shadow_ratio
+    sensitive_score = 0.6 * redness_mean + 0.4 * (saturation_std + brightness_std) / 2.0
+
+    diff = oil_score - dry_score
+    baseline_type = answers.get("skin_type", "combination").lower()
+    if baseline_type not in SKIN_TYPE_SUMMARY:
+        baseline_type = "combination"
+    predicted_type = baseline_type
+
+    if sensitive_score > 0.18 and redness_mean > 0.08 and saturation_mean < 0.45:
+        predicted_type = "sensitive"
+    elif diff > 0.08:
+        predicted_type = "oily"
+    elif diff < -0.08:
+        predicted_type = "dry"
+    else:
+        mid_range = abs(diff)
+        predicted_type = "combination" if mid_range > 0.025 else "normal"
+
+    if baseline_type in {"oily", "dry", "sensitive"} and abs(diff) < 0.04:
+        predicted_type = baseline_type
+
+    separation = max(
+        abs(diff),
+        abs(oil_score - sensitive_score),
+        abs(dry_score - sensitive_score),
+    )
+    confidence = max(
+        0.62,
+        min(
+            0.95,
+            0.55 + separation * 0.7 + skin_ratio * 0.25 - max(0.0, saturation_std - 0.18) * 0.18,
+        ),
+    )
+
+    dryness_index = float(max(0.0, min(100.0, dry_score * 160)))
+    oil_index = float(max(0.0, min(100.0, oil_score * 160)))
+    redness_index = float(max(0.0, min(100.0, redness_mean * 320)))
+    hydration_balance = float(max(0.0, min(100.0, (1.0 - dry_score) * 100)))
+
+    feature_insights = [
+        FeatureInsight(label="Skin Coverage", value=round(skin_ratio * 100, 1), unit="%"),
+        FeatureInsight(label="Hydration Balance", value=round(hydration_balance, 1), unit=""),
+        FeatureInsight(label="Oil Activity", value=round(oil_index, 1), unit=""),
+        FeatureInsight(label="Redness Indicator", value=round(redness_index, 1), unit=""),
+    ]
+
+    notes: List[str] = []
+    if highlight_ratio > 0.28:
+        notes.append("Visible T-zone shine detected. Blot before moisturizer or add a mattifying serum.")
+    if brightness_std > 0.17 and saturation_mean < 0.35:
+        notes.append("Texture looks parched. Layer humectants plus ceramides for deeper hydration.")
+    if redness_mean > 0.09:
+        notes.append("Slight redness observed. Keep actives gentle and add barrier-calming ingredients.")
+
+    return ImageAnalysis(
+        predicted_skin_type=predicted_type,
+        confidence=round(confidence, 2),
+        feature_insights=feature_insights,
+        notes=" ".join(notes) if notes else None,
+    )
 
 
 def _digest_based_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis:
@@ -513,7 +670,7 @@ def _digest_based_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis
 
 
 def _digest_feature_insights(raw: bytes) -> List[FeatureInsight]:
-    analysis = _digest_based_analysis(raw, {})
+    analysis = _enhanced_heuristic_analysis(raw, {})
     return analysis.feature_insights
 
 
