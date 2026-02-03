@@ -16,6 +16,9 @@ import ProductsPage from './pages/ProductsPage';
 import ProductDetail from './pages/ProductDetail';
 import CheckoutPage from './pages/CheckoutPage';
 
+import Signup from './pages/auth/Signup';
+import Login from './pages/auth/Login.jsx';
+
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -100,6 +103,9 @@ function App() {
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/products/:productId" element={<ProductDetail />} />
             <Route path="/checkout" element={<CheckoutPage />} />
+
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Login />} />
 
             {/* 404 Page */}
             <Route path="*" element={<NotFound />} />
