@@ -1,177 +1,275 @@
-"""CLI to train a skin-type classifier using transfer learning.
+"""TensorFlow training pipeline for the skin-type classifier.
 
-Example usage:
-
-    uvicorn ml_service.main:app --reload  # run API in another terminal
-
-    # train the model (expects an ImageFolder with class sub-directories)
-    python -m ml_service.train_skin_model \
-        --dataset ./data/skin_dataset \
-        --output ./model_weights/skin_classifier.ts \
-        --epochs 12
-
-Dataset layout:
-
-skin_dataset/
-    dry/
-        img001.jpg
-    oily/
-        ...
-
-The script fine-tunes MobileNetV2 and exports a TorchScript module compatible
-with the runtime predictor used by the FastAPI service.
+Upgrades over the legacy trainer:
+- Face detection & cropping via MediaPipe before every sample.
+- Lighting normalisation with CLAHE in HSV space.
+- Transfer learning with MobileNetV2 and rich mobile-style augmentations.
+- SavedModel export to stay compatible with TensorFlow Lite conversion.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import random
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Tuple, cast
+from typing import Dict, Iterable, Tuple
 
-try:  # pragma: no cover - optional dependency import
-    import torch  # type: ignore[import]
-    from torch import nn  # type: ignore[import]
-    from torch.utils.data import DataLoader  # type: ignore[import]
-    from torchvision import datasets, transforms  # type: ignore[import]
-    from torchvision.models import mobilenet_v2, MobileNet_V2_Weights  # type: ignore[import]
-except ImportError as torch_import_error:  # pragma: no cover - runtime guard
-    torch = None  # type: ignore[assignment]
-    nn = None  # type: ignore[assignment]
-    DataLoader = object  # type: ignore[assignment]
-    datasets = None  # type: ignore[assignment]
-    transforms = None  # type: ignore[assignment]
-    mobilenet_v2 = None  # type: ignore[assignment]
-    MobileNet_V2_Weights = None  # type: ignore[assignment]
-    _TORCH_IMPORT_ERROR = torch_import_error
-else:
-    _TORCH_IMPORT_ERROR = None
+import numpy as np
 
-LABELS = ["dry", "oily", "combination", "sensitive", "normal"]
+try:
+    import tensorflow as tf  # type: ignore[import]
+    from tensorflow.keras import callbacks, layers, models, optimizers  # type: ignore[import]
+    from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input  # type: ignore[import]
+except ImportError as exc:  # pragma: no cover - defensive guard for missing dependency
+    raise ImportError(
+        "TensorFlow is required to train the skin-type classifier. Install it via 'pip install tensorflow-cpu'."
+    ) from exc
 
+from .model.preprocessing import (
+    CANONICAL_LABELS,
+    DISPLAY_LABELS,
+    TARGET_IMAGE_SIZE,
+    filter_labelled_files,
+    preprocess_image_file,
+)
 
-def build_dataloaders(dataset_dir: Path, batch_size: int = 32) -> Tuple[Any, Any]:
-    if _TORCH_IMPORT_ERROR is not None or transforms is None or datasets is None or DataLoader is object:
-        raise RuntimeError(
-            "PyTorch and TorchVision must be installed to build dataloaders"
-        ) from _TORCH_IMPORT_ERROR
-
-    data_transforms = {
-        "train": transforms.Compose(
-            [
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
-                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.02),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        ),
-        "val": transforms.Compose(
-            [
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        ),
-    }
-
-    image_datasets = {
-        phase: datasets.ImageFolder(dataset_dir / phase, data_transforms[phase])
-        for phase in ("train", "val")
-    }
-
-    data_loader_cls = cast(Any, DataLoader)
-
-    loaders = {
-        phase: data_loader_cls(image_datasets[phase], batch_size=batch_size, shuffle=(phase == "train"), num_workers=4)
-        for phase in ("train", "val")
-    }
-
-    return loaders["train"], loaders["val"]
+AUTOTUNE = tf.data.AUTOTUNE
+RNG_SEED = 2024
+IMAGE_HEIGHT, IMAGE_WIDTH = TARGET_IMAGE_SIZE
+NUM_CLASSES = len(CANONICAL_LABELS)
 
 
-def train_model(train_loader: Any, val_loader: Any, epochs: int, device: Any) -> Any:
-    if _TORCH_IMPORT_ERROR is not None or torch is None or nn is None or mobilenet_v2 is None or MobileNet_V2_Weights is None:
-        raise RuntimeError("PyTorch must be installed to train the skin model") from _TORCH_IMPORT_ERROR
+@dataclass
+class TrainingConfig:
+    dataset: str
+    output_dir: str
+    epochs: int
+    batch_size: int
+    warmup_epochs: int
+    fine_tune_at_layer: int
+    learning_rate: float
+    fine_tune_learning_rate: float
 
-    weights = MobileNet_V2_Weights.IMAGENET1K_V1
-    model = mobilenet_v2(weights=weights)
-    model.classifier[1] = nn.Linear(model.last_channel, len(LABELS))
-    model.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=2)
+def seed_everything(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
-    for epoch in range(epochs):
-        model.train()
-        running_loss = 0.0
-        for inputs, labels in train_loader:
-            inputs = inputs.to(device)
-            labels = labels.to(device)
 
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+def iter_labelled_files(split_dir: Path) -> Iterable[Tuple[Path, str]]:
+    image_suffixes = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+    for label_dir in split_dir.iterdir():
+        if not label_dir.is_dir():
+            continue
+        label = label_dir.name.lower()
+        for filepath in label_dir.rglob("*"):
+            if filepath.suffix.lower() in image_suffixes:
+                yield filepath, label
 
-            running_loss += loss.item() * inputs.size(0)
 
-        epoch_loss = running_loss / len(train_loader.dataset)
+def load_split(dataset_dir: Path, split: str) -> Tuple[np.ndarray, np.ndarray]:
+    split_dir = dataset_dir / split
+    if not split_dir.exists():
+        raise FileNotFoundError(f"Split '{split}' not found at {split_dir}")
+    paths, labels = filter_labelled_files(iter_labelled_files(split_dir))
+    if len(paths) == 0:
+        raise ValueError(f"No supported images found in {split_dir}")
+    return paths, labels
 
-        model.eval()
-        val_loss = 0.0
-        correct = 0
-        with torch.no_grad():
-            for inputs, labels in val_loader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                val_loss += loss.item() * inputs.size(0)
-                preds = outputs.argmax(dim=1)
-                correct += (preds == labels).sum().item()
 
-        val_loss = val_loss / len(val_loader.dataset)
-        val_acc = correct / len(val_loader.dataset)
-        scheduler.step(val_loss)
+def _py_load_image(path_tensor: tf.Tensor) -> tf.Tensor:
+    path_value = path_tensor.numpy()
+    if isinstance(path_value, (bytes, np.bytes_)):
+        path_bytes = bytes(path_value)
+    elif isinstance(path_value, np.ndarray):
+        path_bytes = path_value.tobytes()
+    else:
+        path_bytes = str(path_value).encode("utf-8")
+    path = path_bytes.decode("utf-8")
+    image, _ = preprocess_image_file(path, target_size=TARGET_IMAGE_SIZE, enforce_face=True)
+    return tf.convert_to_tensor(image, dtype=tf.float32)
 
-        print(f"Epoch {epoch + 1}/{epochs} - train loss {epoch_loss:.4f} — val loss {val_loss:.4f} — val acc {val_acc:.3%}")
+
+def build_dataset(paths: np.ndarray, labels: np.ndarray, batch_size: int, shuffle: bool) -> tf.data.Dataset:
+    path_ds = tf.data.Dataset.from_tensor_slices(paths)
+    label_ds = tf.data.Dataset.from_tensor_slices(labels)
+    ds = tf.data.Dataset.zip((path_ds, label_ds))
+
+    def _load(path: tf.Tensor, label: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+        image = tf.py_function(func=_py_load_image, inp=[path], Tout=tf.float32)
+        image.set_shape((IMAGE_HEIGHT, IMAGE_WIDTH, 3))
+        image = preprocess_input(image)
+        return image, label
+
+    ds = ds.map(_load, num_parallel_calls=AUTOTUNE)
+    if shuffle:
+        ds = ds.shuffle(buffer_size=len(paths), seed=RNG_SEED, reshuffle_each_iteration=True)
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(AUTOTUNE)
+    return ds
+
+
+def make_augmentation_block() -> tf.keras.Sequential:
+    return tf.keras.Sequential(
+        [
+            layers.RandomFlip("horizontal"),
+            layers.RandomRotation(0.08),
+            layers.RandomTranslation(0.05, 0.05),
+            layers.RandomZoom(0.1),
+            layers.RandomContrast(0.2),
+        ],
+        name="augmentation",
+    )
+
+
+def build_model() -> Tuple[tf.keras.Model, tf.keras.Model]:
+    data_augmentation = make_augmentation_block()
+    inputs = layers.Input(shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3))
+    x = data_augmentation(inputs)
+    base_model = MobileNetV2(include_top=False, weights="imagenet", input_shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3))
+    base_model.trainable = False
+    x = base_model(x, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dropout(0.25)(x)
+    outputs = layers.Dense(NUM_CLASSES, activation="softmax", name="skin_type_logits")(x)
+    model = models.Model(inputs=inputs, outputs=outputs, name="skin_type_classifier")
+    return model, base_model
+
+
+def compute_class_weights(labels: np.ndarray) -> Dict[int, float]:
+    counts = np.bincount(labels, minlength=NUM_CLASSES)
+    total = float(labels.shape[0])
+    weights: Dict[int, float] = {}
+    for idx, count in enumerate(counts):
+        weights[idx] = total / (NUM_CLASSES * float(max(count, 1)))
+    return weights
+
+
+def train_model(
+    model: tf.keras.Model,
+    base_model: tf.keras.Model,
+    train_ds: tf.data.Dataset,
+    val_ds: tf.data.Dataset,
+    config: TrainingConfig,
+    class_weights: Dict[int, float],
+) -> models.Model:
+    optimiser = optimizers.Adam(learning_rate=config.learning_rate)
+    model.compile(
+        optimizer=optimiser,
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy", tf.keras.metrics.TopKCategoricalAccuracy(k=2, name="top2")],
+    )
+
+    early_stop = callbacks.EarlyStopping(monitor="val_accuracy", patience=5, restore_best_weights=True)
+    reduce_lr = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6)
+
+    model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=config.warmup_epochs,
+        class_weight=class_weights,
+        callbacks=[early_stop, reduce_lr],
+    )
+
+    if config.epochs <= config.warmup_epochs:
+        return model
+
+    base_model.trainable = True
+    freeze_until = max(len(base_model.layers) - config.fine_tune_at_layer, 0)
+    for layer in base_model.layers[:freeze_until]:
+        layer.trainable = False
+
+    fine_tune_opt = optimizers.Adam(learning_rate=config.fine_tune_learning_rate)
+    model.compile(
+        optimizer=fine_tune_opt,
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy", tf.keras.metrics.TopKCategoricalAccuracy(k=2, name="top2")],
+    )
+
+    total_epochs = config.epochs
+    model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=total_epochs,
+        initial_epoch=config.warmup_epochs,
+        class_weight=class_weights,
+        callbacks=[early_stop, reduce_lr],
+    )
 
     return model
 
 
-def export_model(model: Any, output_path: Path, device: Any) -> None:
-    if torch is None:
-        raise RuntimeError("PyTorch must be installed to export the skin model")
-    model.eval()
-    example_input = torch.randn(1, 3, 224, 224, device=device)
-    traced = cast(Any, torch.jit.trace(model, example_input))
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    traced.save(str(output_path))
-    print(f"Saved TorchScript module to {output_path}")
+def export_model(model: tf.keras.Model, output_dir: Path, config: TrainingConfig) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    saved_model_dir = output_dir / "saved_model"
+    tf.saved_model.save(model, saved_model_dir)
+
+    label_map = {int(idx): DISPLAY_LABELS[label] for idx, label in enumerate(CANONICAL_LABELS)}
+    metadata = {
+        "labels": label_map,
+        "canonical_labels": list(CANONICAL_LABELS),
+        "image_size": TARGET_IMAGE_SIZE,
+        "config": asdict(config),
+    }
+    with (output_dir / "model_metadata.json").open("w", encoding="utf-8") as handle:
+        json.dump(metadata, handle, indent=2)
+
+    print(f"Saved TensorFlow model to {saved_model_dir}")
+    print("To generate a TensorFlow Lite file run:")
+    print(f"  tflite_convert --saved_model_dir={saved_model_dir} --output_file={output_dir / 'skin_classifier.tflite'}")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train the skin-type classifier")
-    parser.add_argument("--dataset", type=Path, required=True, help="Path to dataset folder containing train/ and val/")
-    parser.add_argument("--output", type=Path, default=Path("model_weights/skin_classifier.ts"), help="Where to store the TorchScript model")
-    parser.add_argument("--epochs", type=int, default=12)
+    parser = argparse.ArgumentParser(description="Train the MobileNetV2 skin-type classifier")
+    parser.add_argument("--dataset", type=Path, required=True, help="Dataset root containing train/ and val/ subdirectories")
+    parser.add_argument("--output", type=Path, default=Path("ml_service/model/artifacts"), help="Directory to store the SavedModel and metadata")
+    parser.add_argument("--epochs", type=int, default=20, help="Total number of epochs including fine-tuning")
     parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--warmup-epochs", type=int, default=8, help="Epochs with frozen base before fine-tuning")
+    parser.add_argument("--fine-tune-at-layer", type=int, default=40, help="Number of base layers (from the end) to include in fine-tuning")
+    parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--fine-tune-learning-rate", type=float, default=1e-5)
     return parser.parse_args()
 
 
 def main() -> None:
-    if _TORCH_IMPORT_ERROR is not None or torch is None:
-        raise SystemExit(
-            "PyTorch and TorchVision are required to run the training CLI."
-        )
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_loader, val_loader = build_dataloaders(args.dataset, batch_size=args.batch_size)
-    model = train_model(train_loader, val_loader, epochs=args.epochs, device=device)
-    export_model(model, args.output, device)
+    seed_everything(RNG_SEED)
+
+    train_paths, train_labels = load_split(args.dataset, "train")
+    val_paths, val_labels = load_split(args.dataset, "val")
+
+    train_ds = build_dataset(train_paths, train_labels, batch_size=args.batch_size, shuffle=True)
+    val_ds = build_dataset(val_paths, val_labels, batch_size=args.batch_size, shuffle=False)
+
+    class_weights = compute_class_weights(train_labels)
+
+    model, base_model = build_model()
+
+    config = TrainingConfig(
+        dataset=str(args.dataset.resolve()),
+        output_dir=str(args.output.resolve()),
+        epochs=int(args.epochs),
+        batch_size=int(args.batch_size),
+        warmup_epochs=int(args.warmup_epochs),
+        fine_tune_at_layer=int(args.fine_tune_at_layer),
+        learning_rate=float(args.learning_rate),
+        fine_tune_learning_rate=float(args.fine_tune_learning_rate),
+    )
+
+    trained_model = train_model(
+        model,
+        base_model,
+        train_ds,
+        val_ds,
+        config=config,
+        class_weights=class_weights,
+    )
+
+    export_model(trained_model, args.output, config)
 
 
 if __name__ == "__main__":
