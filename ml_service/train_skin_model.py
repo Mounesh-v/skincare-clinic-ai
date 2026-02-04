@@ -176,4 +176,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-C:/skincare-clinic-ai/.venv/Scripts/python.exe -m uvicorn ml_service.main:app --reload --host 127.0.0.1 --port 8000
