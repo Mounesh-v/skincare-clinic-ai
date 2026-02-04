@@ -263,7 +263,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       popular: false,
       price: 1999,
       originalPrice: 2999,
-      discount: 33,
+      discount: 33,   
       includes: [
         'Customized skin analysis',
         'Medicated creams & serums',
@@ -312,66 +312,181 @@ const SkinAnalysisResults = ({ assessmentData }) => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Hero Section - Analysis Complete */}
-      <section className="bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] py-16 text-white">
-        <div className="container-custom">
-          <div className="mx-auto flex max-w-5xl flex-col gap-10">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.4em] text-white/60">Personalised assessment report</p>
-                <h1 className="text-3xl font-semibold md:text-4xl lg:text-[40px]">
-                  {assessmentData?.lead?.name ? `${assessmentData.lead.name},` : 'Hey,'} your skin reboot starts now.
-                </h1>
-                <p className="max-w-xl text-sm text-white/80 md:text-base">
-                  Our AI blended your responses, lifestyle cues, and skin photo to chart a phased plan. Stick to the rhythm and we expect visible shifts in {analysisResults.monthsToResults} months.
-                </p>
-              </div>
-              <div className="w-full max-w-xs rounded-3xl bg-white/10 p-6 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{analysisResults.stageLabel}</p>
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="text-5xl font-bold leading-none">{successPercent}%</span>
-                  <span className="pb-1 text-xs font-medium text-white/70">success likelihood</span>
-                </div>
-                <p className="mt-4 text-xs text-white/70">Based on adherence to the recommended routine, nutrition, and monthly check-ins.</p>
-              </div>
-            </div>
+     {/* Hero Section - Analysis Complete */}
+<section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 lg:py-24 text-white overflow-hidden">
+  {/* Background Pattern */}
+  <div className="absolute inset-0 opacity-10">
+    <div 
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `radial-gradient(circle, #10b981 1px, transparent 1px)`,
+        backgroundSize: '30px 30px'
+      }}
+    ></div>
+  </div>
 
-            <div>
-              <div className="h-3 w-full rounded-full bg-white/15">
-                <div
-                  className="h-full rounded-full bg-emerald-400"
-                  style={{ width: `${successPercent}%` }}
-                />
-              </div>
-              <div className="mt-3 flex flex-wrap gap-4 text-xs font-medium text-white/75 md:text-sm">
-                <span className="inline-flex items-center gap-2"><CheckCircle className="h-4 w-4" /> {analysisResults.stageLabel}</span>
-                <span className="inline-flex items-center gap-2"><Clock className="h-4 w-4" /> Results in ~{analysisResults.monthsToResults} months</span>
-                {confidencePercent && (
-                  <span className="inline-flex items-center gap-2"><Shield className="h-4 w-4" /> Photo confidence {confidencePercent}%</span>
-                )}
-              </div>
-            </div>
+  {/* Decorative Blur Elements */}
+  <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
+  <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl"></div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-wide text-white/70">Predicted Skin Type</p>
-                <p className="mt-2 text-2xl font-semibold">{analysisResults.predictedSkinType}</p>
-                <p className="mt-2 text-sm text-white/70">Photo cues confirmed your questionnaire responses.</p>
-              </div>
-              <div className="rounded-2xl bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-wide text-white/70">Top Focus</p>
-                <p className="mt-2 text-2xl font-semibold">{primaryFocus}</p>
-                <p className="mt-2 text-sm text-white/70">We begin by tackling the highest-impact habit shift.</p>
-              </div>
-              <div className="rounded-2xl bg-white/10 p-5">
-                <p className="text-xs uppercase tracking-wide text-white/70">Lifestyle Levers</p>
-                <p className="mt-2 text-2xl font-semibold">{lifestyleTips.length}</p>
-                <p className="mt-2 text-sm text-white/70">Key rituals to reinforce topical care each week.</p>
-              </div>
+  <div className="container-custom relative z-10">
+    <div className="mx-auto max-w-6xl">
+      {/* Header Section */}
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between mb-12">
+        <div className="space-y-6 flex-1">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/90">
+              Personalized Assessment Report
+            </p>
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight">
+            {assessmentData?.lead?.name ? (
+              <>
+                <span className="text-emerald-400">{assessmentData.lead.name},</span>
+                <br />
+                your skin reboot starts now.
+              </>
+            ) : (
+              <>
+                <span className="text-emerald-400">Hey,</span>
+                <br />
+                your skin reboot starts now.
+              </>
+            )}
+          </h1>
+          
+          <p className="max-w-2xl text-base md:text-lg text-white/80 leading-relaxed">
+            Our AI analyzed your responses, lifestyle patterns, and skin photo to create a personalized treatment plan. 
+            Follow the routine consistently and expect visible improvements in{' '}
+            <span className="font-semibold text-emerald-400">{analysisResults.monthsToResults} months</span>.
+          </p>
+        </div>
+
+        {/* Success Card */}
+        <div className="w-full lg:w-80 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 shadow-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-white/70">
+              {analysisResults.stageLabel}
+            </p>
+            <Shield className="h-5 w-5 text-emerald-400" />
+          </div>
+          
+          <div className="flex items-end gap-3 mb-6">
+            <span className="text-6xl font-bold leading-none bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              {successPercent}%
+            </span>
+            <span className="pb-2 text-sm font-medium text-white/70">
+              success rate
+            </span>
+          </div>
+
+          {/* Mini Progress Bar */}
+          <div className="mb-4">
+            <div className="h-2 w-full rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-1000"
+                style={{ width: `${successPercent}%` }}
+              />
             </div>
           </div>
+          
+          <p className="text-xs text-white/60 leading-relaxed">
+            Based on adherence to recommended routine, nutrition guidelines, and monthly progress check-ins.
+          </p>
         </div>
-      </section>
+      </div>
+
+      {/* Progress Bar Section */}
+      <div className="mb-10">
+        <div className="relative">
+          <div className="h-4 w-full rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 transition-all duration-1000 shadow-lg shadow-emerald-500/50"
+              style={{ width: `${successPercent}%` }}
+            />
+          </div>
+        </div>
+        
+        <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium text-white/75">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+            <CheckCircle className="h-4 w-4 text-emerald-400" />
+            <span>{analysisResults.stageLabel}</span>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+            <Clock className="h-4 w-4 text-teal-400" />
+            <span>Results in ~{analysisResults.monthsToResults} months</span>
+          </div>
+          {confidencePercent && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+              <Shield className="h-4 w-4 text-blue-400" />
+              <span>Photo confidence {confidencePercent}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Card 1 */}
+        <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/20">
+          <div className="absolute top-4 right-4 w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center">
+            <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </div>
+          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
+            Predicted Skin Type
+          </p>
+          <p className="text-3xl font-bold mb-3 text-white group-hover:text-emerald-400 transition-colors">
+            {analysisResults.predictedSkinType}
+          </p>
+          <p className="text-sm text-white/70 leading-relaxed">
+            Photo analysis confirmed your questionnaire responses for accuracy.
+          </p>
+        </div>
+
+        {/* Card 2 */}
+        <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-teal-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20">
+          <div className="absolute top-4 right-4 w-12 h-12 bg-teal-400/10 rounded-xl flex items-center justify-center">
+            <svg className="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
+            Primary Focus
+          </p>
+          <p className="text-3xl font-bold mb-3 text-white group-hover:text-teal-400 transition-colors">
+            {primaryFocus}
+          </p>
+          <p className="text-sm text-white/70 leading-relaxed">
+            We prioritize the most impactful treatment for faster visible results.
+          </p>
+        </div>
+
+        {/* Card 3 */}
+        <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-blue-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 sm:col-span-2 lg:col-span-1">
+          <div className="absolute top-4 right-4 w-12 h-12 bg-blue-400/10 rounded-xl flex items-center justify-center">
+            <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
+            Lifestyle Levers
+          </p>
+          <p className="text-3xl font-bold mb-3 text-white group-hover:text-blue-400 transition-colors">
+            {lifestyleTips.length} key habits
+          </p>
+          <p className="text-sm text-white/70 leading-relaxed">
+            Essential daily rituals to amplify your topical skincare routine.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* Main Analysis Section */}
       <section className="py-16">
