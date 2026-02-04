@@ -16,11 +16,17 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
 import cv2
-import mediapipe as mp
 import numpy as np
+
+try:  # pragma: no cover - optional dependency
+    from mediapipe.python.solutions import face_detection as mp_face_detection  # type: ignore[import]
+    from mediapipe.python.solutions.face_detection import FaceDetection as FaceDetectionType  # type: ignore[import]
+except Exception:  # pragma: no cover - fallback when mediapipe missing
+    mp_face_detection = None  # type: ignore[assignment]
+    FaceDetectionType = Any  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # Label metadata
@@ -40,10 +46,11 @@ TARGET_IMAGE_SIZE: Tuple[int, int] = (224, 224)
 # ---------------------------------------------------------------------------
 # MediaPipe face detection helpers
 # ---------------------------------------------------------------------------
-_mp_face_detection = mp.solutions.face_detection
+_mp_face_detection = mp_face_detection
+
 
 _FACE_DETECTOR_LOCK = threading.Lock()
-_FACE_DETECTOR: Optional[_mp_face_detection.FaceDetection] = None
+_FACE_DETECTORS: Dict[int, Any] = {}
 
 
 @dataclass
@@ -54,44 +61,60 @@ class DetectionResult:
     score: float
 
 
-def _get_face_detector() -> _mp_face_detection.FaceDetection:
-    global _FACE_DETECTOR
-    if _FACE_DETECTOR is None:
-        with _FACE_DETECTOR_LOCK:
-            if _FACE_DETECTOR is None:
-                # model_selection=1 targets faces at roughly 5m distance, good for selfies.
-                _FACE_DETECTOR = _mp_face_detection.FaceDetection(
-                    model_selection=1, min_detection_confidence=0.5
-                )
-    return _FACE_DETECTOR
+def _get_face_detector(model_selection: int = 1):
+    with _FACE_DETECTOR_LOCK:
+        detector = _FACE_DETECTORS.get(model_selection)
+        if detector is None:
+            if _mp_face_detection is None:
+                raise ImportError("mediapipe is not available; install mediapipe to enable face detection")
+            detector = _mp_face_detection.FaceDetection(
+                model_selection=model_selection,
+                min_detection_confidence=0.4,
+            )
+            _FACE_DETECTORS[model_selection] = detector
+        return detector
 
 
 def detect_face_bbox(image_rgb: np.ndarray, min_score: float = 0.5) -> Optional[DetectionResult]:
     """Return the strongest face bounding box in absolute pixel coordinates."""
 
-    detector = _get_face_detector()
-    results = detector.process(image_rgb)
-    if not results.detections:
-        return None
+    # Try multiple detector configs so angled or distant faces still register.
+    attempts = [
+        (1, min_score),
+        (0, min(0.45, min_score)),
+        (1, 0.3),
+    ]
 
-    best_detection = max(results.detections, key=lambda det: det.score)
-    score = float(best_detection.score)
-    if score < min_score:
-        return None
+    best_rect: Optional[DetectionResult] = None
 
-    bbox = best_detection.location_data.relative_bounding_box
-    h, w, _ = image_rgb.shape
-    x_min = max(0.0, bbox.xmin)
-    y_min = max(0.0, bbox.ymin)
-    width = min(1.0, bbox.width)
-    height = min(1.0, bbox.height)
+    for model_selection, score_threshold in attempts:
+        detector = _get_face_detector(model_selection)
+        results = detector.process(image_rgb)
+        if not results.detections:
+            continue
 
-    x0 = int(np.floor(x_min * w))
-    y0 = int(np.floor(y_min * h))
-    x1 = int(np.ceil((x_min + width) * w))
-    y1 = int(np.ceil((y_min + height) * h))
+        candidate = max(results.detections, key=lambda det: det.score)
+        score = float(candidate.score)
+        if score < score_threshold:
+            continue
 
-    return DetectionResult(rect=(x0, y0, x1, y1), score=score)
+        bbox = candidate.location_data.relative_bounding_box
+        h, w, _ = image_rgb.shape
+        x_min = max(0.0, bbox.xmin)
+        y_min = max(0.0, bbox.ymin)
+        width = min(1.0, bbox.width)
+        height = min(1.0, bbox.height)
+
+        x0 = int(np.floor(x_min * w))
+        y0 = int(np.floor(y_min * h))
+        x1 = int(np.ceil((x_min + width) * w))
+        y1 = int(np.ceil((y_min + height) * h))
+
+        result = DetectionResult(rect=(x0, y0, x1, y1), score=score)
+        if best_rect is None or result.score > best_rect.score:
+            best_rect = result
+
+    return best_rect
 
 
 def crop_to_face(image_rgb: np.ndarray, detection: Optional[DetectionResult], padding: float = 0.25) -> np.ndarray:
