@@ -132,6 +132,7 @@ class ImageAnalysis(BaseModel):
     confidence: float
     feature_insights: List[FeatureInsight]
     notes: Optional[str] = None
+    low_confidence: bool = Field(default=False)
 
 
 class TimelineMilestone(BaseModel):
@@ -428,7 +429,7 @@ def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optio
 
     predictor = PREDICTOR
     if predictor is None or not getattr(predictor, "available", False):
-        raise HTTPException(status_code=503, detail="Skin analysis model is unavailable on the server.")
+        return _enhanced_heuristic_analysis(raw, answers)
 
     try:
         result = predictor.predict(raw)
@@ -436,7 +437,7 @@ def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optio
         if "No_face_detected" in str(prediction_error):
             raise HTTPException(status_code=422, detail="No face detected in uploaded image") from prediction_error
         raise HTTPException(status_code=400, detail="Unable to analyse the uploaded image") from prediction_error
-    except Exception as prediction_error:  # pragma: no cover - resilience when torch fails
+    except Exception as prediction_error:  # pragma: no cover - resilience when runtime fails
         raise HTTPException(status_code=500, detail="Skin analysis model failed to run") from prediction_error
 
     if not isinstance(result, dict):
@@ -479,6 +480,11 @@ def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optio
     notes_obj = result.get("notes")
     notes = str(notes_obj) if isinstance(notes_obj, str) else None
 
+    low_confidence_obj = result.get("low_confidence")
+    low_confidence = bool(low_confidence_obj) if isinstance(low_confidence_obj, bool) else confidence < 0.6
+    if low_confidence and not notes:
+        notes = "Low confidence, retake image"
+
     face_score_obj = result.get("face_score")
     if face_score_obj is not None and isinstance(face_score_obj, (int, float)) and float(face_score_obj) < 0.12:
         raise HTTPException(status_code=422, detail="No face detected in uploaded image")
@@ -488,6 +494,7 @@ def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optio
         confidence=round(confidence, 2),
         feature_insights=feature_insights,
         notes=notes,
+        low_confidence=low_confidence,
     )
 
 
@@ -533,7 +540,11 @@ def _enhanced_heuristic_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAn
     )
 
     central_mask = skin_mask[central_slice]
-    valid_mask = central_mask if np_module.any(central_mask) else skin_mask
+    if np_module.any(central_mask):
+        valid_mask = np_module.zeros_like(skin_mask, dtype=bool)
+        valid_mask[central_slice] = central_mask
+    else:
+        valid_mask = skin_mask
     skin_ratio = float(np_module.mean(valid_mask)) if valid_mask.size else 0.0
     if skin_ratio < 0.12:
         raise HTTPException(status_code=422, detail="No face detected in uploaded image")
@@ -622,6 +633,7 @@ def _enhanced_heuristic_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAn
         confidence=round(confidence, 2),
         feature_insights=feature_insights,
         notes=" ".join(notes) if notes else None,
+        low_confidence=confidence < 0.6,
     )
 
 
@@ -666,6 +678,7 @@ def _digest_based_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis
             FeatureInsight(label="Dryness Index", value=dryness_index),
         ],
         notes=notes,
+        low_confidence=confidence < 0.6,
     )
 
 
