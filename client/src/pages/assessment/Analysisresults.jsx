@@ -135,14 +135,12 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       return null;
     }
 
-    const answers = assessmentData.answers ?? {};
     const analysis = assessmentData.analysis;
 
-    const skinTypeKey = answers.skin_type ?? 'custom';
     const imageAnalysis = analysis.image_analysis ?? null;
-    const predictedKey = imageAnalysis?.predicted_skin_type ?? skinTypeKey;
-    const skinTypeLabel = formatSkinLabel(skinTypeKey);
-    const predictedSkinType = formatSkinLabel(predictedKey);
+    const predictedKey = imageAnalysis?.predicted_skin_type ?? 'combination';
+    const skinTypeLabel = formatSkinLabel(predictedKey);
+    const predictedSkinType = skinTypeLabel;
 
     const rootCauses = (analysis.root_causes ?? []).map((cause, index) => ({
       id: index + 1,

@@ -22,22 +22,13 @@ const INITIAL_LEAD = {
 };
 
 const INITIAL_ANSWERS = {
-	skin_type: '',
-	main_concern: '',
-	sensitivity: '',
-	sleep: '',
-	stress: '',
-	water: '',
-	diet: '',
+    main_concern: '',
+    sensitivity: '',
+    sleep: '',
+    stress: '',
+    water: '',
+    diet: '',
 };
-
-const SKIN_TYPE_OPTIONS = [
-	{ value: 'oily', label: 'Oily', description: 'Shiny T-zone, clogged pores' },
-	{ value: 'dry', label: 'Dry', description: 'Feels tight or flaky' },
-	{ value: 'combination', label: 'Combination', description: 'Oily T-zone, dry cheeks' },
-	{ value: 'sensitive', label: 'Sensitive', description: 'Redness or irritation' },
-	{ value: 'normal', label: 'Normal', description: 'Balanced overall' },
-];
 
 const CONCERN_OPTIONS = [
 	{ value: 'acne', label: 'Acne & Breakouts' },
@@ -98,9 +89,9 @@ const StartAssessment = ({ onComplete }) => {
 		if (stepIndex === 0) {
 			return lead.name.trim() && lead.age.trim() && lead.gender;
 		}
-		if (stepIndex === 1) {
-			return answers.skin_type && answers.main_concern;
-		}
+        if (stepIndex === 1) {
+            return answers.main_concern;
+        }
 		if (stepIndex === 2) {
 			return answers.sleep && answers.stress && answers.water && answers.diet;
 		}
@@ -235,6 +226,7 @@ const StartAssessment = ({ onComplete }) => {
 					phone: lead.phone.trim() || undefined,
 					consent: true,
 				},
+                // Skin type determined by AI during analysis
 				answers: {
 					...answers,
 					age: lead.age.trim(),
@@ -409,75 +401,11 @@ const StartAssessment = ({ onComplete }) => {
             </p>
         </div>
 
-        {/* Skin Type Section */}
-        <div className="space-y-5">
-            <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#97b94f] text-sm font-bold text-white">
-                    1
-                </div>
-                <div>
-                    <span className="text-base font-bold text-slate-900">Skin Type</span>
-                    <p className="text-sm text-slate-500">How does your skin typically feel?</p>
-                </div>
-            </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {SKIN_TYPE_OPTIONS.map((option) => (
-                    <button
-                        type="button"
-                        key={option.value}
-                        onClick={() => handleAnswerChange('skin_type', option.value)}
-                        className={`group relative overflow-hidden rounded-2xl border-2 p-6 text-left shadow-sm transition-all duration-300 ${
-                            answers.skin_type === option.value
-                                ? 'border-[#97b94f] bg-gradient-to-br from-[#f0f5e3] to-[#e8f0d5] shadow-lg ring-2 ring-[#97b94f]/20'
-                                : 'border-slate-200 bg-white hover:border-[#b7cc79] hover:shadow-md'
-                        }`}
-                    >
-                        {/* Checkmark indicator */}
-                        {answers.skin_type === option.value && (
-                            <div className="absolute right-3 top-3">
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#97b94f]">
-                                    <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {/* Icon placeholder - you can add custom icons */}
-                        <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${
-                            answers.skin_type === option.value 
-                                ? 'bg-[#97b94f]/20' 
-                                : 'bg-slate-100 group-hover:bg-slate-200'
-                        }`}>
-                            <span className="text-2xl">
-                                {option.value === 'oily' && '💧'}
-                                {option.value === 'dry' && '🏜️'}
-                                {option.value === 'combination' && '⚖️'}
-                                {option.value === 'normal' && '✨'}
-                            </span>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            <div className={`text-lg font-bold transition-colors ${
-                                answers.skin_type === option.value ? 'text-slate-900' : 'text-slate-800'
-                            }`}>
-                                {option.label}
-                            </div>
-                            <p className="text-sm leading-relaxed text-slate-600">
-                                {option.description}
-                            </p>
-                        </div>
-                    </button>
-                ))}
-            </div>
-        </div>
-
         {/* Primary Concern Section */}
         <div className="space-y-5">
             <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#97b94f] text-sm font-bold text-white">
-                    2
+                    1
                 </div>
                 <div>
                     <span className="text-base font-bold text-slate-900">Primary Concern</span>
@@ -514,7 +442,7 @@ const StartAssessment = ({ onComplete }) => {
         <div className="space-y-5">
             <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#97b94f] text-sm font-bold text-white">
-                    3
+                    2
                 </div>
                 <div>
                     <span className="text-base font-bold text-slate-900">Sensitivity Level</span>
@@ -935,7 +863,6 @@ const StartAssessment = ({ onComplete }) => {
 				<Card className="border border-slate-200 bg-white p-6 shadow-sm">
 					<h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Skin Focus</h3>
 					<ul className="mt-4 space-y-2 text-sm text-slate-700">
-						<li><span className="font-medium">Skin Type:</span> {answers.skin_type || '—'}</li>
 						<li><span className="font-medium">Primary Concern:</span> {answers.main_concern || '—'}</li>
 						<li><span className="font-medium">Sensitivity:</span> {answers.sensitivity || '—'}</li>
 					</ul>

@@ -372,11 +372,7 @@ def create_recommendations(
         )
 
     if PRODUCT_RECOMMENDER is not None:
-        predicted_type = (
-            image_analysis.predicted_skin_type
-            if image_analysis
-            else answers.get("skin_type", "normal")
-        )
+        predicted_type = image_analysis.predicted_skin_type if image_analysis else "normal"
         try:
             product_matches = PRODUCT_RECOMMENDER.recommend(predicted_type, concern, severity)
         except Exception as recommender_error:  # pragma: no cover - defensive
@@ -473,9 +469,7 @@ def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optio
         ]
 
     predicted_type_obj = result.get("predicted_skin_type")
-    predicted_type = str(predicted_type_obj) if isinstance(predicted_type_obj, str) else str(
-        answers.get("skin_type", "combination")
-    )
+    predicted_type = str(predicted_type_obj) if isinstance(predicted_type_obj, str) else "combination"
 
     notes_obj = result.get("notes")
     notes = str(notes_obj) if isinstance(notes_obj, str) else None
@@ -577,7 +571,8 @@ def _enhanced_heuristic_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAn
     sensitive_score = 0.6 * redness_mean + 0.4 * (saturation_std + brightness_std) / 2.0
 
     diff = oil_score - dry_score
-    baseline_type = answers.get("skin_type", "combination").lower()
+    baseline_raw = answers.get("skin_type") if isinstance(answers, dict) else None
+    baseline_type = baseline_raw.lower() if isinstance(baseline_raw, str) else "combination"
     if baseline_type not in SKIN_TYPE_SUMMARY:
         baseline_type = "combination"
     predicted_type = baseline_type
@@ -652,7 +647,8 @@ def _digest_based_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis
     if structure_score < 0.12:
         raise HTTPException(status_code=422, detail="No face detected in uploaded image")
 
-    inferred_type = answers.get("skin_type") or "combination"
+    baseline_raw = answers.get("skin_type") if isinstance(answers, dict) else None
+    inferred_type = baseline_raw if isinstance(baseline_raw, str) and baseline_raw else "combination"
     if oil_index - dryness_index > 35:
         inferred_type = "oily"
     elif dryness_index - oil_index > 20:
@@ -835,11 +831,8 @@ def analyze_assessment(payload: AssessmentRequest) -> AssessmentResponse:
     except Exception as exc:  # pragma: no cover - defensive for malformed JSON
         raise HTTPException(status_code=400, detail="Invalid assessment payload") from exc
 
-    raw_skin_type = answers.get("skin_type")
-    skin_type = raw_skin_type if isinstance(raw_skin_type, str) and raw_skin_type else "balanced"
-
     image_analysis = summarise_image(payload.image_data, answers)
-    profile_key = image_analysis.predicted_skin_type if image_analysis else skin_type
+    profile_key = image_analysis.predicted_skin_type if image_analysis else "balanced"
     skin_profile = SKIN_TYPE_SUMMARY.get(
         profile_key,
         "We craft a balanced routine that adapts to your unique skin behaviour.",

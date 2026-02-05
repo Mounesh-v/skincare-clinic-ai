@@ -14,44 +14,6 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
   // Sample questions - expand this based on your needs
   const questions = [
     {
-      id: 'skin_type',
-      question: 'What is your skin type?',
-      subtitle: 'Select the option that best describes your skin',
-      type: 'single-choice',
-      options: [
-        { 
-          id: 'oily', 
-          label: 'Oily', 
-          description: 'Shiny skin, enlarged pores, prone to acne',
-          icon: '💧'
-        },
-        { 
-          id: 'dry', 
-          label: 'Dry', 
-          description: 'Tight, flaky, rough texture',
-          icon: '🏜️'
-        },
-        { 
-          id: 'combination', 
-          label: 'Combination', 
-          description: 'Oily T-zone, dry cheeks',
-          icon: '🔄'
-        },
-        { 
-          id: 'sensitive', 
-          label: 'Sensitive', 
-          description: 'Easily irritated, redness, reactions',
-          icon: '⚠️'
-        },
-        { 
-          id: 'normal', 
-          label: 'Normal', 
-          description: 'Balanced, healthy appearance',
-          icon: '✨'
-        },
-      ]
-    },
-    {
       id: 'main_concern',
       question: 'What is your main skin concern?',
       subtitle: 'Choose your primary concern (you can add more later)',
