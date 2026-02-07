@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
@@ -15,6 +15,7 @@ import AnalysisResults from './pages/assessment/Analysisresults.jsx';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetail from './pages/ProductDetail';
 import CheckoutPage from './pages/CheckoutPage';
+import Contact from './pages/Contact';
 
 import Signup from './pages/auth/Signup';
 import Login from './pages/auth/Login.jsx';
@@ -24,6 +25,40 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncAuthState = () => {
+      const storedToken = window.localStorage.getItem('authToken');
+      const storedUser = window.localStorage.getItem('authUser');
+      if (storedToken && storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        } catch (error) {
+          window.localStorage.removeItem('authUser');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    };
+
+    syncAuthState();
+    window.addEventListener('auth:updated', syncAuthState);
+    window.addEventListener('storage', syncAuthState);
+
+    return () => {
+      window.removeEventListener('auth:updated', syncAuthState);
+      window.removeEventListener('storage', syncAuthState);
+    };
+  }, []);
+
   const handleAssessmentComplete = (data) => {
     console.log('Assessment completed:', data);
     setAssessmentData(data);
@@ -32,11 +67,27 @@ function App() {
   const handleLogin = (userData) => {
     setUser(userData);
     setIsAuthenticated(true);
+    if (typeof window !== 'undefined') {
+      try {
+        if (userData?.token) {
+          window.localStorage.setItem('authToken', userData.token);
+        }
+        window.localStorage.setItem('authUser', JSON.stringify(userData));
+        window.dispatchEvent(new Event('auth:updated'));
+      } catch (error) {
+        console.error('Failed to persist auth user', error);
+      }
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
     setIsAuthenticated(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('authToken');
+      window.localStorage.removeItem('authUser');
+      window.dispatchEvent(new Event('auth:updated'));
+    }
   };
 
   return (
@@ -80,6 +131,7 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<TrayaStyleHome />} />
+            <Route path="/contact" element={<Contact />} />
             
             {/* Assessment Flow */}
             <Route
