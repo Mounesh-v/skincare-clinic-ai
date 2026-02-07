@@ -19,6 +19,8 @@ import CheckoutPage from './pages/CheckoutPage';
 import Signup from './pages/auth/Signup';
 import Login from './pages/auth/Login.jsx';
 
+import FindDoctors from './pages/FindDoctors';
+
 // Admin Pages
 import AdminLogin from './pages/auth/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
@@ -152,6 +154,8 @@ function App() {
                     )
                   } 
                 />
+
+                <Route path="/find-doctors" element={<FindDoctors />} />
 
                 {/* Products */}
                 <Route path="/products" element={<ProductsPage />} />
