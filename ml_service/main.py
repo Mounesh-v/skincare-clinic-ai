@@ -15,7 +15,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, EmailStr, Field, validator
+
+from .auth import get_or_create_user, issue_jwt, serialize_user, verify_google_token
 
 try:  # pragma: no cover - optional dependency
     from PIL import Image, UnidentifiedImageError
@@ -168,6 +170,26 @@ class AssessmentResponse(BaseModel):
     success_probability: float
     timeline: List[TimelineMilestone]
     matched_case: MatchedCase
+
+
+class AuthenticatedUser(BaseModel):
+    id: str
+    email: EmailStr
+    name: str
+    picture: Optional[str] = None
+
+
+class GoogleAuthPayload(BaseModel):
+    credential: str = Field(
+        ..., min_length=10, description="Google ID token retrieved from the client SDK"
+    )
+
+
+class AuthResponse(BaseModel):
+    token: str
+    token_type: str = Field(default="bearer")
+    expires_in: int = Field(..., ge=1, description="Seconds until the token expires")
+    user: AuthenticatedUser
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -815,6 +837,42 @@ def build_matched_case(severity: str, concern: str) -> MatchedCase:
         headline=headline,
         story=story,
         snapshots=snapshots,
+    )
+
+
+@app.post("/auth/google", response_model=AuthResponse)
+def authenticate_with_google(payload: GoogleAuthPayload) -> AuthResponse:
+    try:
+        id_info = verify_google_token(payload.credential)
+    except ValueError as validation_error:
+        raise HTTPException(status_code=401, detail=str(validation_error)) from validation_error
+    except RuntimeError as runtime_error:  # pragma: no cover - depends on env config
+        raise HTTPException(status_code=500, detail=str(runtime_error)) from runtime_error
+
+    try:
+        user_record = get_or_create_user(id_info)
+    except ValueError as persistence_error:
+        raise HTTPException(status_code=400, detail=str(persistence_error)) from persistence_error
+    except Exception as db_error:  # pragma: no cover - sqlite failure path
+        raise HTTPException(status_code=500, detail="Unable to persist user account") from db_error
+
+    try:
+        token, expires_at = issue_jwt(user_record)
+    except RuntimeError as jwt_error:  # pragma: no cover - depends on jwt config
+        raise HTTPException(status_code=500, detail=str(jwt_error)) from jwt_error
+
+    expires_in = max(1, int((expires_at - datetime.utcnow()).total_seconds()))
+
+    user_payload = serialize_user(user_record)
+    return AuthResponse(
+        token=token,
+        expires_in=expires_in,
+        user=AuthenticatedUser(
+            id=user_record.id,
+            email=user_record.email,
+            name=user_record.name,
+            picture=user_payload.get("picture"),
+        ),
     )
 
 

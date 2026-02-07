@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from 'lucide-react';
 import Button from '../../components/common/Button';
@@ -6,11 +6,148 @@ import toast from 'react-hot-toast';
 
 // Import your background image
 import loginBg from '../../assets/Signup-bg.jpg';
+import { loginWithGoogle } from '../../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const googleInitializedRef = useRef(false);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+
+  const handleGoogleCredential = useCallback(
+    async (response) => {
+      const credential = response?.credential;
+      if (!credential) {
+        setGoogleLoading(false);
+        toast.error('Google sign-in failed. Please try again.');
+        return;
+      }
+      try {
+        const authData = await loginWithGoogle(credential);
+        const firstName = authData?.user?.name?.split?.(' ')?.[0] || 'there';
+        try {
+          localStorage.setItem('authToken', authData.token);
+          localStorage.setItem('authUser', JSON.stringify(authData.user));
+        } catch (storageError) {
+          console.error('Failed to persist Google auth session', storageError);
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('auth:updated'));
+        }
+        toast.success(`Welcome back, ${firstName}!`);
+        navigate('/dashboard');
+      } catch (error) {
+        const message = error?.message || 'Google login failed. Please try again.';
+        toast.error(message);
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    [navigate]
+  );
+
+  const initialiseGoogleClient = useCallback(() => {
+    if (googleInitializedRef.current) {
+      return;
+    }
+    if (!googleClientId || typeof window === 'undefined') {
+      return;
+    }
+    const google = window.google;
+    if (!google?.accounts?.id) {
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleCredential,
+      ux_mode: 'popup',
+      auto_select: false,
+    });
+    googleInitializedRef.current = true;
+  }, [googleClientId, handleGoogleCredential]);
+
+  useEffect(() => {
+    if (!googleClientId || typeof window === 'undefined') {
+      return;
+    }
+
+    const scriptId = 'google-gsi-client';
+    const existingScript = document.getElementById(scriptId);
+
+    if (existingScript) {
+      if (window.google?.accounts?.id) {
+        initialiseGoogleClient();
+      } else {
+        existingScript.addEventListener('load', initialiseGoogleClient);
+      }
+      return () => existingScript.removeEventListener('load', initialiseGoogleClient);
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = initialiseGoogleClient;
+    script.onerror = () => {
+      toast.error('Unable to load Google Sign-In. Refresh and try again.');
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      script.onload = null;
+      script.onerror = null;
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.cancel();
+        window.google.accounts.id.disableAutoSelect();
+      }
+      googleInitializedRef.current = false;
+      setGoogleLoading(false);
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, [googleClientId, initialiseGoogleClient]);
+
+  const handleGoogleClick = useCallback(() => {
+    if (googleLoading) {
+      return;
+    }
+    if (!googleClientId) {
+      toast.error('Google login is not configured yet.');
+      return;
+    }
+    if (typeof window === 'undefined') {
+      toast.error('Google sign-in is unavailable right now.');
+      return;
+    }
+    const google = window.google;
+    if (!google?.accounts?.id || !googleInitializedRef.current) {
+      toast.error('Google Sign-In is still loading. Please try again in a moment.');
+      return;
+    }
+    setGoogleLoading(true);
+    google.accounts.id.prompt((notification) => {
+      const skipped = typeof notification?.isSkippedMoment === 'function' && notification.isSkippedMoment();
+      const notDisplayed = typeof notification?.isNotDisplayed === 'function' && notification.isNotDisplayed();
+      const dismissed = typeof notification?.isDismissedMoment === 'function' && notification.isDismissedMoment();
+      if (skipped || notDisplayed || dismissed) {
+        const reason =
+          notification?.getSkippedReason?.() ||
+          notification?.getNotDisplayedReason?.() ||
+          notification?.getDismissedReason?.();
+        if (reason === 'credential_returned') {
+          return;
+        }
+        setGoogleLoading(false);
+        if (reason && !['user_cancelled', 'suppressed_by_user'].includes(reason)) {
+          toast.error('Unable to complete Google sign-in. Please try again.');
+        }
+      }
+    });
+  }, [googleClientId, googleLoading]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -198,6 +335,9 @@ const Login = () => {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
+            onClick={handleGoogleClick}
+            disabled={googleLoading}
+            aria-busy={googleLoading}
             className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
           >
             <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">

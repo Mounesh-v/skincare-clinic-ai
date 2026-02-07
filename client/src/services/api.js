@@ -34,4 +34,9 @@ export const getHealthStatus = async () => {
 	return data;
 };
 
+export const loginWithGoogle = async (credential) => {
+	const { data } = await apiClient.post('/auth/google', { credential });
+	return data;
+};
+
 export default apiClient;
