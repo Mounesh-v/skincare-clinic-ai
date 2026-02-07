@@ -6,19 +6,44 @@ import { Toaster } from 'react-hot-toast';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 
-// Pages
+// Admin Components
+import AdminLayout from './components/admin/AdminLayout';
+
+// Public Pages
 import TrayaStyleHome from './pages/home';
 import StartAssessment from './pages/assessment/StartAssessment.jsx';
 import AnalysisResults from './pages/assessment/Analysisresults.jsx';
-
-
 import ProductsPage from './pages/ProductsPage';
 import ProductDetail from './pages/ProductDetail';
 import CheckoutPage from './pages/CheckoutPage';
+<<<<<<< HEAD
 import Contact from './pages/Contact';
 
+=======
+>>>>>>> 1748107362eefabcc9e0650aaad58fcb6f438016
 import Signup from './pages/auth/Signup';
 import Login from './pages/auth/Login.jsx';
+
+import FindDoctors from './pages/FindDoctors';
+
+// Admin Pages
+import AdminLogin from './pages/auth/AdminLogin';
+import Dashboard from './pages/admin/Dashboard';
+
+// Admin - Users
+import UserList from './pages/admin/Users/UserList';
+import UserDetail from './pages/admin/Users/UserDetail';
+
+// Admin - Products
+import ProductList from './pages/admin/Products/ProductList';
+import ProductCreate from './pages/admin/Products/ProductCreate';
+
+// Admin - Orders
+import OrderList from './pages/admin/Orders/OrderList';
+import OrderDetail from './pages/admin/Orders/OrderDetail';
+
+// Admin - Assessments
+import AssessmentList from './pages/admin/Assessments/AssessmentList';
 
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
@@ -126,43 +151,91 @@ function App() {
           }}
         />
 
+<<<<<<< HEAD
         {/* Layout Wrapper with Conditional Header/Footer */}
         <Layout isAuthenticated={isAuthenticated} user={user} onLogout={handleLogout}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<TrayaStyleHome />} />
             <Route path="/contact" element={<Contact />} />
+=======
+        <Routes>
+          {/* ============================================ */}
+          {/* ADMIN ROUTES (No Header/Footer) */}
+          {/* ============================================ */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+>>>>>>> 1748107362eefabcc9e0650aaad58fcb6f438016
             
-            {/* Assessment Flow */}
-            <Route
-              path="/assessment"
-              element={<AssessmentWrapper onComplete={handleAssessmentComplete} />}
-            />
+            {/* Users Management */}
+            <Route path="users" element={<UserList />} />
+            <Route path="users/:id" element={<UserDetail />} />
             
-            {/* Results Page */}
-            <Route 
-              path="/results" 
-              element={
-                assessmentData ? (
-                  <AnalysisResults assessmentData={assessmentData} />
-                ) : (
-                  <Navigate to="/assessment" replace />
-                )
-              } 
-            />
+            {/* Products Management */}
+            <Route path="products" element={<ProductList />} />
+            <Route path="products/create" element={<ProductCreate />} />
+            <Route path="products/:id/edit" element={<ProductCreate />} />
+            
+            {/* Orders Management */}
+            <Route path="orders" element={<OrderList />} />
+            <Route path="orders/:id" element={<OrderDetail />} />
+            
+            {/* Assessments Management */}
+            <Route path="assessments" element={<AssessmentList />} />
+            
+            {/* Placeholder Routes */}
+            <Route path="content" element={<ComingSoon title="Content Management" />} />
+            <Route path="analytics" element={<ComingSoon title="Analytics & Reports" />} />
+            <Route path="settings" element={<ComingSoon title="Settings" />} />
+          </Route>
 
-            {/* Uncomment when these pages are created */}
-            <Route path="/products" element={<ProductsPage />} />
-            <Route path="/products/:productId" element={<ProductDetail />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
+          {/* ============================================ */}
+          {/* PUBLIC ROUTES (With Header/Footer) */}
+          {/* ============================================ */}
+          <Route path="/*" element={
+            <Layout isAuthenticated={isAuthenticated} user={user} onLogout={handleLogout}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<TrayaStyleHome />} />
+                
+                {/* Assessment Flow */}
+                <Route
+                  path="/assessment"
+                  element={<AssessmentWrapper onComplete={handleAssessmentComplete} />}
+                />
+                
+                {/* Results Page */}
+                <Route 
+                  path="/results" 
+                  element={
+                    assessmentData ? (
+                      <AnalysisResults assessmentData={assessmentData} />
+                    ) : (
+                      <Navigate to="/assessment" replace />
+                    )
+                  } 
+                />
 
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
+                <Route path="/find-doctors" element={<FindDoctors />} />
 
-            {/* 404 Page */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
+                {/* Products */}
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/products/:productId" element={<ProductDetail />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+
+                {/* Auth */}
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/login" element={<Login />} />
+
+                {/* 404 Page */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          } />
+        </Routes>
       </div>
     </Router>
   );
@@ -198,6 +271,21 @@ const AssessmentWrapper = ({ onComplete }) => {
   };
 
   return <StartAssessment onComplete={handleComplete} />;
+};
+
+/**
+ * Coming Soon Component (for admin placeholder pages)
+ */
+const ComingSoon = ({ title }) => {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="text-6xl mb-4">🚧</div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">{title}</h2>
+        <p className="text-slate-600">This page is under construction</p>
+      </div>
+    </div>
+  );
 };
 
 /**

@@ -124,10 +124,10 @@ const Header = ({
                 Products
               </Link>
               <Link
-                to="/about"
+                to="/find-doctors"
                 className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
               >
-                About
+                Doctors
               </Link>
               <Link
                 to="/contact"
@@ -321,6 +321,8 @@ const Header = ({
             >
               Start Assessment
             </button>
+            
+            
             <button
               onClick={() => {
                 navigate('/login');
