@@ -117,7 +117,8 @@ def _initialise_collection() -> None:
     if MongoClient is None:
         _raise_mongo_error()
     try:
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        mongo_client_class = cast(Any, MongoClient)
+        client = mongo_client_class(MONGODB_URI, serverSelectionTimeoutMS=5000)
         client.admin.command("ping")
         db = client[MONGODB_DB_NAME]
         collection = db[MONGODB_USERS_COLLECTION]
