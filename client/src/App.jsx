@@ -5,8 +5,6 @@ import { Toaster } from 'react-hot-toast';
 // Layouts
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-
-// Admin Components
 import AdminLayout from './components/admin/AdminLayout';
 
 // Public Pages
@@ -16,33 +14,20 @@ import AnalysisResults from './pages/assessment/Analysisresults.jsx';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetail from './pages/ProductDetail';
 import CheckoutPage from './pages/CheckoutPage';
-<<<<<<< HEAD
 import Contact from './pages/Contact';
-
-=======
->>>>>>> 1748107362eefabcc9e0650aaad58fcb6f438016
 import Signup from './pages/auth/Signup';
 import Login from './pages/auth/Login.jsx';
-
 import FindDoctors from './pages/FindDoctors';
 
 // Admin Pages
 import AdminLogin from './pages/auth/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
-
-// Admin - Users
 import UserList from './pages/admin/Users/UserList';
 import UserDetail from './pages/admin/Users/UserDetail';
-
-// Admin - Products
 import ProductList from './pages/admin/Products/ProductList';
 import ProductCreate from './pages/admin/Products/ProductCreate';
-
-// Admin - Orders
 import OrderList from './pages/admin/Orders/OrderList';
 import OrderDetail from './pages/admin/Orders/OrderDetail';
-
-// Admin - Assessments
 import AssessmentList from './pages/admin/Assessments/AssessmentList';
 
 function App() {
@@ -85,24 +70,7 @@ function App() {
   }, []);
 
   const handleAssessmentComplete = (data) => {
-    console.log('Assessment completed:', data);
     setAssessmentData(data);
-  };
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-    if (typeof window !== 'undefined') {
-      try {
-        if (userData?.token) {
-          window.localStorage.setItem('authToken', userData.token);
-        }
-        window.localStorage.setItem('authUser', JSON.stringify(userData));
-        window.dispatchEvent(new Event('auth:updated'));
-      } catch (error) {
-        console.error('Failed to persist auth user', error);
-      }
-    }
   };
 
   const handleLogout = () => {
@@ -151,118 +119,96 @@ function App() {
           }}
         />
 
-<<<<<<< HEAD
-        {/* Layout Wrapper with Conditional Header/Footer */}
-        <Layout isAuthenticated={isAuthenticated} user={user} onLogout={handleLogout}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<TrayaStyleHome />} />
-            <Route path="/contact" element={<Contact />} />
-=======
         <Routes>
-          {/* ============================================ */}
-          {/* ADMIN ROUTES (No Header/Footer) */}
-          {/* ============================================ */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
->>>>>>> 1748107362eefabcc9e0650aaad58fcb6f438016
-            
-            {/* Users Management */}
             <Route path="users" element={<UserList />} />
             <Route path="users/:id" element={<UserDetail />} />
-            
-            {/* Products Management */}
             <Route path="products" element={<ProductList />} />
             <Route path="products/create" element={<ProductCreate />} />
             <Route path="products/:id/edit" element={<ProductCreate />} />
-            
-            {/* Orders Management */}
             <Route path="orders" element={<OrderList />} />
             <Route path="orders/:id" element={<OrderDetail />} />
-            
-            {/* Assessments Management */}
             <Route path="assessments" element={<AssessmentList />} />
-            
-            {/* Placeholder Routes */}
             <Route path="content" element={<ComingSoon title="Content Management" />} />
             <Route path="analytics" element={<ComingSoon title="Analytics & Reports" />} />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
           </Route>
 
-          {/* ============================================ */}
-          {/* PUBLIC ROUTES (With Header/Footer) */}
-          {/* ============================================ */}
-          <Route path="/*" element={
-            <Layout isAuthenticated={isAuthenticated} user={user} onLogout={handleLogout}>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<TrayaStyleHome />} />
-                
-                {/* Assessment Flow */}
-                <Route
-                  path="/assessment"
-                  element={<AssessmentWrapper onComplete={handleAssessmentComplete} />}
-                />
-                
-                {/* Results Page */}
-                <Route 
-                  path="/results" 
-                  element={
-                    assessmentData ? (
-                      <AnalysisResults assessmentData={assessmentData} />
-                    ) : (
-                      <Navigate to="/assessment" replace />
-                    )
-                  } 
-                />
-
-                <Route path="/find-doctors" element={<FindDoctors />} />
-
-                {/* Products */}
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/products/:productId" element={<ProductDetail />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
-
-                {/* Auth */}
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/login" element={<Login />} />
-
-                {/* 404 Page */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          } />
+          <Route
+            path="/*"
+            element={(
+              <PublicAppRoutes
+                isAuthenticated={isAuthenticated}
+                user={user}
+                onLogout={handleLogout}
+                assessmentData={assessmentData}
+                onAssessmentComplete={handleAssessmentComplete}
+              />
+            )}
+          />
         </Routes>
       </div>
     </Router>
   );
 }
 
-/**
- * Layout Component - Conditionally renders Header/Footer
- */
-const Layout = ({ isAuthenticated, user, onLogout, children }) => {
+function PublicAppRoutes({
+  isAuthenticated,
+  user,
+  onLogout,
+  assessmentData,
+  onAssessmentComplete,
+}) {
+  return (
+    <Layout isAuthenticated={isAuthenticated} user={user} onLogout={onLogout}>
+      <Routes>
+        <Route path="/" element={<TrayaStyleHome />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route
+          path="/assessment"
+          element={<AssessmentWrapper onComplete={onAssessmentComplete} />}
+        />
+        <Route
+          path="/results"
+          element={
+            assessmentData ? (
+              <AnalysisResults assessmentData={assessmentData} />
+            ) : (
+              <Navigate to="/assessment" replace />
+            )
+          }
+        />
+        <Route path="/find-doctors" element={<FindDoctors />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/:productId" element={<ProductDetail />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
+  );
+}
+
+function Layout({ isAuthenticated, user, onLogout, children }) {
   const location = useLocation();
   const hideHeaderFooter = location.pathname === '/assessment';
 
   return (
     <>
-      {!hideHeaderFooter && <Header isAuthenticated={isAuthenticated} user={user} onLogout={onLogout} />}
-      <main className="flex-grow">
-        {children}
-      </main>
+      {!hideHeaderFooter && (
+        <Header isAuthenticated={isAuthenticated} user={user} onLogout={onLogout} />
+      )}
+      <main className="flex-grow">{children}</main>
       {!hideHeaderFooter && <Footer />}
     </>
   );
-};
+}
 
-/**
- * Assessment Wrapper Component
- */
-const AssessmentWrapper = ({ onComplete }) => {
+function AssessmentWrapper({ onComplete }) {
   const navigate = useNavigate();
 
   const handleComplete = (data) => {
@@ -271,12 +217,9 @@ const AssessmentWrapper = ({ onComplete }) => {
   };
 
   return <StartAssessment onComplete={handleComplete} />;
-};
+}
 
-/**
- * Coming Soon Component (for admin placeholder pages)
- */
-const ComingSoon = ({ title }) => {
+function ComingSoon({ title }) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
@@ -286,12 +229,9 @@ const ComingSoon = ({ title }) => {
       </div>
     </div>
   );
-};
+}
 
-/**
- * 404 Not Found Component
- */
-const NotFound = () => {
+function NotFound() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center bg-slate-50">
       <div className="text-center px-4">
@@ -300,8 +240,8 @@ const NotFound = () => {
         <p className="text-xl text-slate-600 mb-8">
           Oops! The page you're looking for doesn't exist.
         </p>
-        <a 
-          href="/" 
+        <a
+          href="/"
           className="inline-flex items-center gap-2 px-8 py-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors duration-200 shadow-lg"
         >
           <span>Go Home</span>
@@ -312,6 +252,6 @@ const NotFound = () => {
       </div>
     </div>
   );
-};
+}
 
 export default App;
