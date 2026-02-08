@@ -1,6 +1,18 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:8000';
+const rawHost = import.meta.env.VITE_APP_HOST ?? import.meta.env.HOST ?? '127.0.0.1';
+const FALLBACK_HOST = `${rawHost}`.trim() || '127.0.0.1';
+const rawPort = import.meta.env.VITE_APP_PORT ?? import.meta.env.PORT ?? '5174';
+const FALLBACK_PORT = `${rawPort}`.trim() || '5174';
+
+const resolveDefaultBaseUrl = () => {
+	if (typeof window !== 'undefined' && window.location?.origin) {
+		return window.location.origin;
+	}
+	return `http://${FALLBACK_HOST}:${FALLBACK_PORT}`;
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || resolveDefaultBaseUrl();
 
 const apiClient = axios.create({
 	baseURL: API_BASE_URL,

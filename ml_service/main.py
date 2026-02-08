@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import os
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -15,6 +16,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field, validator
 
 from .auth import get_or_create_user, issue_jwt, serialize_user, verify_google_token
@@ -54,6 +57,8 @@ app = FastAPI(
 )
 
 # Allow local dev UIs (Vite + any staging origin) to hit the API without CORS noise.
+BASE_DIR = Path(__file__).resolve().parent
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,6 +66,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+FRONTEND_DIST_DIR = (BASE_DIR.parent / "client" / "dist").resolve()
+FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
+
+
+def spa_index_file() -> Optional[Path]:
+    index_path = FRONTEND_DIST_DIR / "index.html"
+    return index_path if index_path.exists() else None
+
+
+def spa_static_asset(path: str) -> Optional[Path]:
+    if not path:
+        return None
+    normalized = path.lstrip("/\\")
+    candidate = (FRONTEND_DIST_DIR / normalized).resolve()
+    try:
+        candidate.relative_to(FRONTEND_DIST_DIR)
+    except ValueError:
+        return None
+    return candidate if candidate.exists() and candidate.is_file() else None
+
+
+if FRONTEND_ASSETS_DIR.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=FRONTEND_ASSETS_DIR),
+        name="frontend-assets",
+    )
+else:
+    print(
+        "[Startup] Client build assets missing. Run `npm run build` inside client/ to "
+        "serve the UI from FastAPI."
+    )
 
 
 class LeadInfo(BaseModel):
@@ -192,7 +230,6 @@ class AuthResponse(BaseModel):
     user: AuthenticatedUser
 
 
-BASE_DIR = Path(__file__).resolve().parent
 MODEL_DIR = BASE_DIR / "model"
 DATA_DIR = BASE_DIR / "data"
 
@@ -922,4 +959,40 @@ def analyze_assessment(payload: AssessmentRequest) -> AssessmentResponse:
         success_probability=round(float(stage_info["success"]), 2),
         timeline=timeline,
         matched_case=matched_case,
+    )
+
+
+@app.get("/", include_in_schema=False)
+async def serve_frontend_root() -> FileResponse:
+    index_file = spa_index_file()
+    if not index_file:
+        raise HTTPException(
+            status_code=503,
+            detail="SkinCare AI UI build missing. Run `npm run build` inside client/.",
+        )
+    return FileResponse(index_file)
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend_paths(full_path: str) -> FileResponse:
+    asset_file = spa_static_asset(full_path)
+    if asset_file:
+        return FileResponse(asset_file)
+    index_file = spa_index_file()
+    if not index_file:
+        raise HTTPException(status_code=404, detail="Route not found.")
+    return FileResponse(index_file)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    host = os.getenv("APP_HOST", os.getenv("HOST", "127.0.0.1"))
+    port_raw = os.getenv("APP_PORT", os.getenv("PORT", "5174")) or "5174"
+    reload_flag = os.getenv("APP_RELOAD", "0").lower() in {"1", "true", "yes"}
+    uvicorn.run(
+        "ml_service.main:app",
+        host=host,
+        port=int(port_raw),
+        reload=reload_flag,
     )
