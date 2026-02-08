@@ -8,11 +8,122 @@ import toast from 'react-hot-toast';
 import loginBg from '../../assets/Signup-bg.jpg';
 import { loginWithGoogle } from '../../services/api';
 
+const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
+const ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+let googleScriptPromise = null;
+
+const ensureBase64Padding = (input = '') => {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  if (!normalized) {
+    return '';
+  }
+  const remainder = normalized.length % 4;
+  const padding = remainder === 0 ? '' : '='.repeat(4 - remainder);
+  return normalized + padding;
+};
+
+const decodeGoogleJwt = (credential) => {
+  if (typeof window === 'undefined' || !credential) {
+    return null;
+  }
+  try {
+    const [, payload] = credential.split('.');
+    const decoded = JSON.parse(window.atob(ensureBase64Padding(payload)));
+    return decoded;
+  } catch (error) {
+    console.warn('Failed to decode Google credential payload', error);
+    return null;
+  }
+};
+
+const describePromptIssue = (notification) => {
+  if (!notification) {
+    return 'Google sign-in did not complete. Please try again.';
+  }
+  const reason =
+    notification.getNotDisplayedReason?.() ||
+    notification.getSkippedReason?.() ||
+    notification.getDismissedReason?.();
+  if (!reason || reason === 'credential_returned') {
+    return '';
+  }
+  switch (reason) {
+    case 'popup_closed_by_user':
+    case 'user_cancelled':
+      return 'You closed the Google sign-in popup before finishing.';
+    case 'suppressed_by_user':
+      return 'Google sign-in is temporarily suppressed in this browser session.';
+    case 'ios_private_browsing':
+      return 'Google sign-in is blocked in private browsing mode. Please use a standard window.';
+    case 'not_loaded':
+      return 'Google sign-in could not load. Please disable blockers and try again.';
+    default:
+      return `Google sign-in could not continue (${reason}). Please try again.`;
+  }
+};
+
+const loadGoogleIdentityScript = () => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Google Sign-In is only available in the browser.'));
+  }
+  if (googleScriptPromise) {
+    return googleScriptPromise;
+  }
+  googleScriptPromise = new Promise((resolve, reject) => {
+    const resolveWithGoogle = () => {
+      if (window.google?.accounts?.id) {
+        resolve(window.google);
+        return true;
+      }
+      return false;
+    };
+
+    const existingScript = document.querySelector(`script[src="${GOOGLE_SCRIPT_SRC}"]`);
+    if (existingScript) {
+      if (resolveWithGoogle()) {
+        return;
+      }
+      const handleReady = () => {
+        if (!resolveWithGoogle()) {
+          reject(new Error('Google Identity Services is unavailable after loading.'));
+        }
+      };
+      const handleError = () => {
+        googleScriptPromise = null;
+        reject(new Error('Failed to load Google Identity Services.'));
+      };
+      existingScript.addEventListener('load', handleReady, { once: true });
+      existingScript.addEventListener('error', handleError, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = 'google-gsi-script';
+    script.src = GOOGLE_SCRIPT_SRC;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (!resolveWithGoogle()) {
+        googleScriptPromise = null;
+        reject(new Error('Google Identity Services failed to initialise.'));
+      }
+    };
+    script.onerror = () => {
+      googleScriptPromise = null;
+      reject(new Error('Failed to load Google Identity Services.'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return googleScriptPromise;
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState('');
   const googleInitializedRef = useRef(false);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
@@ -20,11 +131,18 @@ const Login = () => {
     async (response) => {
       const credential = response?.credential;
       if (!credential) {
+        const message = 'Google did not return any login credentials. Please try again.';
         setGoogleLoading(false);
-        toast.error('Google sign-in failed. Please try again.');
+        setGoogleError(message);
+        toast.error(message);
         return;
       }
       try {
+        const decodedProfile = decodeGoogleJwt(credential);
+        if (decodedProfile) {
+          const { name, email, picture } = decodedProfile;
+          console.info('Google profile decoded', { name, email, picture });
+        }
         const authData = await loginWithGoogle(credential);
         const firstName = authData?.user?.name?.split?.(' ')?.[0] || 'there';
         try {
@@ -36,118 +154,141 @@ const Login = () => {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new Event('auth:updated'));
         }
+        setGoogleError('');
         toast.success(`Welcome back, ${firstName}!`);
         navigate('/dashboard');
       } catch (error) {
         const message = error?.message || 'Google login failed. Please try again.';
+        setGoogleError(message);
         toast.error(message);
       } finally {
         setGoogleLoading(false);
       }
     },
-    [navigate]
+    [navigate, setGoogleError]
   );
 
-  const initialiseGoogleClient = useCallback(() => {
-    if (googleInitializedRef.current) {
-      return;
+  const validateOrigin = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return {
+        allowed: false,
+        message: 'Google login is only available in the browser.',
+      };
     }
-    if (!googleClientId || typeof window === 'undefined') {
-      return;
+    const origin = window.location.origin;
+    if (!ALLOWED_ORIGINS.includes(origin)) {
+      return {
+        allowed: false,
+        message: `Google login is limited to ${ALLOWED_ORIGINS.join(' or ')} (current: ${origin}).`,
+      };
     }
-    const google = window.google;
-    if (!google?.accounts?.id) {
-      return;
-    }
-    google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCredential,
-      ux_mode: 'popup',
-      auto_select: false,
-    });
-    googleInitializedRef.current = true;
-  }, [googleClientId, handleGoogleCredential]);
+    return { allowed: true, message: '' };
+  }, []);
+
+  const initialiseGoogleClient = useCallback(
+    (googleGlobal) => {
+      if (googleInitializedRef.current) {
+        return;
+      }
+      if (!googleClientId) {
+        return;
+      }
+      const originCheck = validateOrigin();
+      if (!originCheck.allowed) {
+        setGoogleError(originCheck.message);
+        toast.error(originCheck.message);
+        return;
+      }
+      const google = googleGlobal || window.google;
+      if (!google?.accounts?.id) {
+        return;
+      }
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredential,
+        ux_mode: 'popup',
+        auto_select: false,
+      });
+      googleInitializedRef.current = true;
+    },
+    [googleClientId, handleGoogleCredential, validateOrigin]
+  );
 
   useEffect(() => {
-    if (!googleClientId || typeof window === 'undefined') {
-      return;
+    if (!googleClientId) {
+      setGoogleError('Google login is not configured. Please set VITE_GOOGLE_CLIENT_ID.');
+      return undefined;
     }
 
-    const scriptId = 'google-gsi-client';
-    const existingScript = document.getElementById(scriptId);
-
-    if (existingScript) {
-      if (window.google?.accounts?.id) {
-        initialiseGoogleClient();
-      } else {
-        existingScript.addEventListener('load', initialiseGoogleClient);
-      }
-      return () => existingScript.removeEventListener('load', initialiseGoogleClient);
+    const originCheck = validateOrigin();
+    if (!originCheck.allowed) {
+      setGoogleError(originCheck.message);
+      toast.error(originCheck.message);
+      return undefined;
     }
 
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = initialiseGoogleClient;
-    script.onerror = () => {
-      toast.error('Unable to load Google Sign-In. Refresh and try again.');
-    };
-    document.head.appendChild(script);
+    let cancelled = false;
+    loadGoogleIdentityScript()
+      .then((googleGlobal) => {
+        if (cancelled) {
+          return;
+        }
+        initialiseGoogleClient(googleGlobal);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        console.error('Google Identity Services failed to load', error);
+        setGoogleError(error.message);
+        toast.error(error.message);
+      });
 
     return () => {
-      script.onload = null;
-      script.onerror = null;
-      if (window.google?.accounts?.id) {
+      cancelled = true;
+      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
         window.google.accounts.id.cancel();
         window.google.accounts.id.disableAutoSelect();
       }
       googleInitializedRef.current = false;
       setGoogleLoading(false);
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
     };
-  }, [googleClientId, initialiseGoogleClient]);
+  }, [googleClientId, initialiseGoogleClient, validateOrigin]);
 
   const handleGoogleClick = useCallback(() => {
     if (googleLoading) {
       return;
     }
     if (!googleClientId) {
-      toast.error('Google login is not configured yet.');
+      const message = 'Google login is not configured yet.';
+      setGoogleError(message);
+      toast.error(message);
       return;
     }
-    if (typeof window === 'undefined') {
-      toast.error('Google sign-in is unavailable right now.');
+    const originCheck = validateOrigin();
+    if (!originCheck.allowed) {
+      setGoogleError(originCheck.message);
+      toast.error(originCheck.message);
       return;
     }
     const google = window.google;
     if (!google?.accounts?.id || !googleInitializedRef.current) {
-      toast.error('Google Sign-In is still loading. Please try again in a moment.');
+      const message = 'Google Sign-In is still loading. Please try again in a moment.';
+      setGoogleError(message);
+      toast.error(message);
       return;
     }
+    setGoogleError('');
     setGoogleLoading(true);
     google.accounts.id.prompt((notification) => {
-      const skipped = typeof notification?.isSkippedMoment === 'function' && notification.isSkippedMoment();
-      const notDisplayed = typeof notification?.isNotDisplayed === 'function' && notification.isNotDisplayed();
-      const dismissed = typeof notification?.isDismissedMoment === 'function' && notification.isDismissedMoment();
-      if (skipped || notDisplayed || dismissed) {
-        const reason =
-          notification?.getSkippedReason?.() ||
-          notification?.getNotDisplayedReason?.() ||
-          notification?.getDismissedReason?.();
-        if (reason === 'credential_returned') {
-          return;
-        }
+      const issueMessage = describePromptIssue(notification);
+      if (issueMessage) {
         setGoogleLoading(false);
-        if (reason && !['user_cancelled', 'suppressed_by_user'].includes(reason)) {
-          toast.error('Unable to complete Google sign-in. Please try again.');
-        }
+        setGoogleError(issueMessage);
+        toast.error(issueMessage);
       }
     });
-  }, [googleClientId, googleLoading]);
+  }, [googleClientId, googleLoading, validateOrigin]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -371,6 +512,11 @@ const Login = () => {
             <span className="text-sm font-semibold text-slate-700">Facebook</span>
           </button>
         </div>
+        {googleError && (
+          <p className="col-span-2 pt-2 text-center text-sm font-semibold text-rose-600">
+            {googleError}
+          </p>
+        )}
       </form>
 
       {/* Signup Link */}
