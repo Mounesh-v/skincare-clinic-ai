@@ -9,7 +9,25 @@ import loginBg from '../../assets/Signup-bg.jpg';
 import { loginWithGoogle } from '../../services/api';
 
 const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
-const ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const RAW_DEV_PORT = import.meta.env.VITE_APP_PORT ?? import.meta.env.PORT ?? '5174';
+const DEFAULT_DEV_PORT = `${RAW_DEV_PORT}`.trim() || '5174';
+const LOCAL_DEV_ORIGINS = [`http://localhost:${DEFAULT_DEV_PORT}`, `http://127.0.0.1:${DEFAULT_DEV_PORT}`];
+
+const resolveAllowedOrigins = () => {
+  const envOrigins = import.meta.env.VITE_ALLOWED_ORIGINS;
+  if (envOrigins) {
+    return envOrigins
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+  }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return Array.from(new Set([window.location.origin, ...LOCAL_DEV_ORIGINS]));
+  }
+  return LOCAL_DEV_ORIGINS;
+};
+
+const ALLOWED_ORIGINS = resolveAllowedOrigins();
 let googleScriptPromise = null;
 
 const ensureBase64Padding = (input = '') => {
