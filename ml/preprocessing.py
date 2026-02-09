@@ -2,28 +2,26 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, Iterator, Optional, Sequence, Tuple
 
 import cv2
 import mediapipe as mp  # type: ignore[import]
 from mediapipe import Image as MpImage, ImageFormat as MpImageFormat  # type: ignore[import]
 from mediapipe.tasks import python as mp_python  # type: ignore[import]
 from mediapipe.tasks.python import vision as mp_vision  # type: ignore[import]
-
-try:  # pragma: no cover - optional dependency
-    from ultralytics import YOLO  # type: ignore[import]
-except Exception:  # pragma: no cover - YOLO optional
-    YOLO = None  # type: ignore[assignment]
 import numpy as np
 
 from .config import CONFIG
 
+LOGGER = logging.getLogger(__name__)
+
 _FACE_DETECTOR_LOCK = threading.Lock()
 _FACE_DETECTOR: Optional[Any] = None
-_YOLO_FALLBACK: Optional[Any] = None
+DebugHook = Callable[[Dict[str, Any]], None]
 
 
 @dataclass
@@ -51,26 +49,12 @@ def _get_face_detector() -> Any:
         return _FACE_DETECTOR
 
 
-def _get_yolo_fallback() -> Optional[Any]:
-    if YOLO is None:
-        return None
-    global _YOLO_FALLBACK
-    if _YOLO_FALLBACK is None:
-        model_path = CONFIG.yolo_face_weights
-        if not model_path.exists():
-            return None
-        _YOLO_FALLBACK = YOLO(str(model_path))  # type: ignore[arg-type]
-    return _YOLO_FALLBACK
-
-
 def detect_face_bbox(image_rgb: np.ndarray, min_score: float) -> Optional[DetectionResult]:
     detector = _get_face_detector()
     contiguous = np.ascontiguousarray(image_rgb)
     mp_image = MpImage(image_format=MpImageFormat.SRGB, data=contiguous)
     result = detector.detect(mp_image)
     detection = _select_best_detection(result.detections, min_score, image_rgb.shape)
-    if detection is None:
-        detection = _detect_with_yolo(image_rgb, min_score)
     return detection
 
 
@@ -104,30 +88,6 @@ def _select_best_detection(
     return DetectionResult(rect=(x0, y0, x1, y1), score=best_score)
 
 
-def _detect_with_yolo(image_rgb: np.ndarray, min_score: float) -> Optional[DetectionResult]:
-    model = _get_yolo_fallback()
-    if model is None:
-        return None
-    results = model.predict(image_rgb, conf=min_score, max_det=1, imgsz=640, verbose=False)
-    if not results:
-        return None
-    boxes = getattr(results[0], "boxes", None)
-    if boxes is None or boxes.xyxy is None or boxes.conf is None or boxes.xyxy.shape[0] == 0:
-        return None
-    coords = boxes.xyxy.cpu().numpy().astype(float)
-    scores = boxes.conf.cpu().numpy().astype(float)
-    idx = int(np.argmax(scores))
-    score = float(scores[idx])
-    if score < min_score:
-        return None
-    h, w, _ = image_rgb.shape
-    x0, y0, x1, y1 = coords[idx]
-    return DetectionResult(
-        rect=(int(max(0, np.floor(x0))), int(max(0, np.floor(y0))), int(min(w, np.ceil(x1))), int(min(h, np.ceil(y1)))),
-        score=score,
-    )
-
-
 def crop_to_face(image_rgb: np.ndarray, detection: Optional[DetectionResult], padding: float) -> np.ndarray:
     h, w, _ = image_rgb.shape
     if detection is None:
@@ -156,11 +116,47 @@ def normalise_lighting(image_rgb: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(hsv_eq, cv2.COLOR_HSV2RGB)
 
 
+def _emit_crop_debug(
+    tensor_ready: np.ndarray,
+    detection: Optional[DetectionResult],
+    face_score: float,
+    debug_hook: Optional[DebugHook],
+    debug_tag: Optional[str],
+) -> None:
+    if debug_hook is None and not LOGGER.isEnabledFor(logging.DEBUG):
+        return
+    payload: Dict[str, Any] = {
+        "tag": debug_tag,
+        "crop_shape": tensor_ready.shape,
+        "face_score": face_score,
+        "mean": float(tensor_ready.mean()),
+        "std": float(tensor_ready.std()),
+        "min": int(tensor_ready.min()),
+        "max": int(tensor_ready.max()),
+        "detection": detection.rect if detection else None,
+    }
+    if debug_hook:
+        debug_hook(payload)
+    else:
+        LOGGER.debug(
+            "Crop %s | shape=%s score=%.2f mean=%.2f min=%s max=%s rect=%s",
+            debug_tag or "(unnamed)",
+            payload["crop_shape"],
+            face_score,
+            payload["mean"],
+            payload["min"],
+            payload["max"],
+            payload["detection"],
+        )
+
+
 def preprocess_array(
     image_rgb: np.ndarray,
     *,
     detection: Optional[DetectionResult] = None,
     enforce_face: bool = True,
+    debug_hook: Optional[DebugHook] = None,
+    debug_tag: Optional[str] = None,
 ) -> Tuple[np.ndarray, float]:
     if image_rgb.ndim != 3 or image_rgb.shape[2] != 3:
         raise ValueError("Expected an RGB image with three channels")
@@ -168,31 +164,49 @@ def preprocess_array(
     if local_detection is None and enforce_face:
         retry_score = max(0.1, CONFIG.min_face_score * 0.5)
         local_detection = detect_face_bbox(image_rgb, retry_score)
+    if local_detection is None and enforce_face:
+        raise ValueError(
+            "Unable to detect a face with sufficient confidence."
+            " Ensure good lighting and keep your face centered in the frame."
+        )
     fallback_to_center = local_detection is None
     cropped = crop_to_face(image_rgb, local_detection, CONFIG.face_padding if not fallback_to_center else 0.0)
     resized = cv2.resize(cropped, CONFIG.image_size, interpolation=cv2.INTER_AREA)
     normalised = normalise_lighting(resized)
     tensor_ready = np.clip(normalised, 0, 255).astype(np.uint8)
     face_score = local_detection.score if local_detection else 0.0
+    _emit_crop_debug(tensor_ready, local_detection, face_score, debug_hook, debug_tag)
     return tensor_ready, face_score
 
 
-def preprocess_image_file(path: Path | str, enforce_face: bool = True) -> Tuple[np.ndarray, float]:
+def preprocess_image_file(
+    path: Path | str,
+    *,
+    enforce_face: bool = True,
+    debug_hook: Optional[DebugHook] = None,
+    debug_tag: Optional[str] = None,
+) -> Tuple[np.ndarray, float]:
     path_obj = Path(path)
     data = cv2.imread(str(path_obj), cv2.IMREAD_COLOR)
     if data is None:
         raise FileNotFoundError(f"Unable to read image: {path_obj}")
     rgb = cv2.cvtColor(data, cv2.COLOR_BGR2RGB)
-    return preprocess_array(rgb, enforce_face=enforce_face)
+    return preprocess_array(rgb, enforce_face=enforce_face, debug_hook=debug_hook, debug_tag=debug_tag)
 
 
-def preprocess_image_bytes(payload: bytes, enforce_face: bool = True) -> Tuple[np.ndarray, float]:
+def preprocess_image_bytes(
+    payload: bytes,
+    *,
+    enforce_face: bool = True,
+    debug_hook: Optional[DebugHook] = None,
+    debug_tag: Optional[str] = None,
+) -> Tuple[np.ndarray, float]:
     buffer = np.frombuffer(payload, dtype=np.uint8)
     decoded = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
     if decoded is None:
         raise ValueError("Unable to decode image bytes")
     rgb = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
-    return preprocess_array(rgb, enforce_face=enforce_face)
+    return preprocess_array(rgb, enforce_face=enforce_face, debug_hook=debug_hook, debug_tag=debug_tag)
 
 
 def iter_labelled_files(root: Path, split: str, extensions: Sequence[str] | None = None) -> Iterator[Tuple[Path, str]]:

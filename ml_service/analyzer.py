@@ -8,7 +8,7 @@ import logging
 import re
 import threading
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Tuple
 
 import cv2
 import numpy as np
@@ -29,6 +29,8 @@ class PredictionPayload:
     label_key: str
     label_name: str
     probability: float
+    probabilities: Dict[str, float]
+    top_predictions: List[Dict[str, Any]]
 
 
 class SkinAnalyzerService:
@@ -92,7 +94,45 @@ class SkinAnalyzerService:
         label_key = self._idx_to_label[best_idx]
         label_name = self._display_labels.get(label_key, label_key.title())
         probability = float(probs[best_idx])
-        return PredictionPayload(label_key=label_key, label_name=label_name, probability=probability)
+        probabilities = {
+            self._idx_to_label[idx]: float(prob)
+            for idx, prob in enumerate(probs)
+        }
+        sorted_idx = np.argsort(probs)[::-1][: min(3, probs.shape[0])]
+        top_predictions = [
+            {
+                "label": self._idx_to_label[int(idx)],
+                "display": self._display_labels.get(self._idx_to_label[int(idx)], self._idx_to_label[int(idx)].title()),
+                "probability": float(probs[int(idx)]),
+            }
+            for idx in sorted_idx
+        ]
+        LOGGER.info(
+            "Prediction: %s (%.2f) | top=%s",
+            label_name,
+            probability,
+            [(entry["label"], round(entry["probability"], 3)) for entry in top_predictions],
+        )
+        return PredictionPayload(
+            label_key=label_key,
+            label_name=label_name,
+            probability=probability,
+            probabilities=probabilities,
+            top_predictions=top_predictions,
+        )
+
+    @staticmethod
+    def _crop_debug(payload: Dict[str, Any]) -> None:
+        LOGGER.info(
+            "Crop debug [%s]: shape=%s face_score=%.2f mean=%.2f min=%s max=%s rect=%s",
+            payload.get("tag"),
+            payload.get("crop_shape"),
+            payload.get("face_score"),
+            payload.get("mean"),
+            payload.get("min"),
+            payload.get("max"),
+            payload.get("detection"),
+        )
 
     @staticmethod
     def _severity(prob: float) -> Tuple[str, int]:
@@ -111,7 +151,15 @@ class SkinAnalyzerService:
         answers = payload.get("answers") or {}
         lead = payload.get("lead") or {}
         raw_bytes = self._decode_image_bytes(image_data)
-        processed, face_score = preprocess_image_bytes(raw_bytes, enforce_face=True)
+        try:
+            processed, face_score = preprocess_image_bytes(
+                raw_bytes,
+                enforce_face=True,
+                debug_hook=self._crop_debug,
+                debug_tag=lead.get("name") or "anonymous",
+            )
+        except ValueError as exc:
+            raise ValueError(str(exc))
         prediction = self._run_prediction(processed)
         plan = build_personalized_plan(prediction.label_key, answers)
         severity_label, months_to_results = self._severity(prediction.probability)
@@ -129,6 +177,8 @@ class SkinAnalyzerService:
                 "label": prediction.label_name,
                 "confidence": prediction.probability,
                 "face_score": face_score,
+                "top_probabilities": prediction.top_predictions,
+                "probability_map": prediction.probabilities,
                 "feature_insights": feature_insights,
                 "notes": image_notes,
             },

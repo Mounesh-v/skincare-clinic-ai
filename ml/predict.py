@@ -15,11 +15,18 @@ from .preprocessing import preprocess_image_file
 from .model_utils import inference_model, load_class_map, to_tensor
 
 
+class TopPrediction(TypedDict):
+    index: int
+    probability: float
+
+
 class PredictionResult(TypedDict):
     image: str
     best_index: int
     probabilities: List[float]
     face_score: float
+    top_indices: List[int]
+    top_predictions: List[TopPrediction]
 
 
 def infer(model: torch.nn.Module, image_path: Path, device: torch.device) -> PredictionResult:
@@ -29,11 +36,17 @@ def infer(model: torch.nn.Module, image_path: Path, device: torch.device) -> Pre
         logits = model(tensor)
         probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
     best_idx = int(np.argmax(probs))
+    top_idx = np.argsort(probs)[::-1][: min(3, probs.shape[0])]
     return {
         "image": str(image_path),
         "best_index": best_idx,
         "probabilities": probs.tolist(),
         "face_score": face_score,
+        "top_indices": [int(idx) for idx in top_idx],
+        "top_predictions": [
+            {"index": int(idx), "probability": float(probs[int(idx)])}
+            for idx in top_idx
+        ],
     }
 
 
@@ -53,7 +66,16 @@ def format_output(result: PredictionResult, idx_to_label: Dict[int, str], displa
     prob_values = np.asarray(result["probabilities"], dtype=float)
     prob_percent = prob_values[idx] * 100
     face_score = float(result["face_score"])
-    return f"{result['image']}: {friendly} ({prob_percent:.1f}% confidence, face score {face_score:.2f})"
+    top_chunks: List[str] = []
+    for rank_idx in result.get("top_indices", []):
+        label = idx_to_label.get(rank_idx, str(rank_idx))
+        friendly_label = display_labels.get(label, label.title())
+        top_chunks.append(f"{friendly_label}={prob_values[rank_idx] * 100:.1f}%")
+    top_str = ", ".join(top_chunks)
+    return (
+        f"{result['image']}: {friendly} ({prob_percent:.1f}% confidence, face score {face_score:.2f})"
+        + (f" | Top-3 {top_str}" if top_str else "")
+    )
 
 
 def main() -> None:

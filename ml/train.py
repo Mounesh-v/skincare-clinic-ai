@@ -6,6 +6,7 @@ import argparse
 import json
 import random
 import time
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple, cast
@@ -17,6 +18,7 @@ from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 from torchvision import models
 
 from .config import CONFIG
+from .model_utils import normalize_tensor, to_tensor
 from .preprocessing import iter_labelled_files, preprocess_image_file
 
 
@@ -33,11 +35,15 @@ class DatasetItem:
 
 
 class SkinDataset(Dataset[Tuple[torch.Tensor, int]]):
-    def __init__(self, items: Sequence[DatasetItem], enforce_face: bool = True) -> None:
+    def __init__(
+        self,
+        items: Sequence[DatasetItem],
+        enforce_face: bool = True,
+        augment: bool = False,
+    ) -> None:
         self.items = list(items)
         self.enforce_face = enforce_face
-        self.mean = torch.tensor(CONFIG.normalization_mean, dtype=torch.float32).view(3, 1, 1)
-        self.std = torch.tensor(CONFIG.normalization_std, dtype=torch.float32).view(3, 1, 1)
+        self.augment = augment
 
     def __len__(self) -> int:
         return len(self.items)
@@ -48,9 +54,20 @@ class SkinDataset(Dataset[Tuple[torch.Tensor, int]]):
             image, _ = preprocess_image_file(item.path, enforce_face=self.enforce_face)
         except ValueError:
             image, _ = preprocess_image_file(item.path, enforce_face=False)
-        tensor = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0
-        tensor = (tensor - self.mean) / self.std
+        tensor = to_tensor(image, add_batch_dim=False, normalize=False)
+        if self.augment:
+            tensor = self._augment_tensor(tensor)
+        tensor = normalize_tensor(tensor)
         return tensor, item.label_idx
+
+    def _augment_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
+        if torch.rand(1).item() < 0.5:
+            tensor = torch.flip(tensor, dims=[2])
+        brightness = 1.0 + (torch.rand(1).item() - 0.5) * 0.2
+        tensor = torch.clamp(tensor * brightness, 0.0, 1.0)
+        if torch.rand(1).item() < 0.3:
+            tensor = torch.clamp(tensor + torch.randn_like(tensor) * 0.02, 0.0, 1.0)
+        return tensor
 
 
 def build_items(split: str) -> List[DatasetItem]:
@@ -78,6 +95,68 @@ def make_sampler(items: Sequence[DatasetItem], num_classes: int) -> Tuple[Weight
     sampler = WeightedRandomSampler(weights=sample_weights.tolist(), num_samples=len(items), replacement=True)
     criterion_weights = torch.tensor(class_weights, dtype=torch.float32)
     return sampler, criterion_weights
+
+
+def summarize_distribution(items: Sequence[DatasetItem], split_name: str) -> None:
+    counts = Counter(item.label_idx for item in items)
+    total = len(items)
+    pieces = []
+    for idx, label in enumerate(CONFIG.canonical_labels):
+        pieces.append(f"{label}:{counts.get(idx, 0)}")
+    summary = ", ".join(pieces)
+    print(f"{split_name} distribution -> total={total} ({summary})", flush=True)
+
+
+def rebalance_items(items: Sequence[DatasetItem], num_classes: int) -> List[DatasetItem]:
+    counts = Counter(item.label_idx for item in items)
+    if not counts:
+        return list(items)
+    max_count = max(counts.values())
+    rng = random.Random(CONFIG.rng_seed)
+    balanced: List[DatasetItem] = list(items)
+    for class_idx in range(num_classes):
+        pool = [item for item in items if item.label_idx == class_idx]
+        if not pool:
+            continue
+        needed = max_count - counts.get(class_idx, 0)
+        for _ in range(needed):
+            balanced.append(rng.choice(pool))
+    rng.shuffle(balanced)
+    print(
+        f"Applied oversampling balance: before={len(items)} after={len(balanced)} max_class={max_count}",
+        flush=True,
+    )
+    return balanced
+
+
+def diagnose_predictions(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    num_classes: int,
+) -> None:
+    totals = torch.zeros(num_classes, dtype=torch.long)
+    correct = torch.zeros(num_classes, dtype=torch.long)
+    predicted = torch.zeros(num_classes, dtype=torch.long)
+    with torch.no_grad():
+        for images, labels in loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+            preds = torch.argmax(outputs, dim=1)
+            for idx in range(num_classes):
+                mask = labels == idx
+                totals[idx] += int(mask.sum().item())
+                if mask.any().item():
+                    correct[idx] += int((preds[mask] == idx).sum().item())
+            for idx in range(num_classes):
+                predicted[idx] += int((preds == idx).sum().item())
+    diagnostics = []
+    for idx, label in enumerate(CONFIG.canonical_labels):
+        total = totals[idx].item()
+        acc = (correct[idx].item() / total) if total else 0.0
+        diagnostics.append(f"{label}:acc={acc:.2f} preds={predicted[idx].item()} samples={total}")
+    print("Validation diagnostics " + " | ".join(diagnostics), flush=True)
 
 
 def create_model(num_classes: int) -> nn.Module:
@@ -154,6 +233,8 @@ def main() -> None:
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--overfit", action="store_true", help="Overfit a tiny subset for debugging")
+    parser.add_argument("--no-balance", action="store_true", help="Disable oversampling class balance")
+    parser.add_argument("--no-augment", action="store_true", help="Disable training-time augmentations")
     parser.add_argument("--weights-out", type=Path, default=CONFIG.models_dir / "skin_classifier.pt")
     parser.add_argument("--metadata-out", type=Path, default=CONFIG.models_dir / "model_metadata.json")
     args = parser.parse_args()
@@ -168,7 +249,13 @@ def main() -> None:
         train_items = train_items[:10]
         val_items = train_items
 
-    train_dataset = SkinDataset(train_items, enforce_face=not args.overfit)
+    summarize_distribution(train_items, "train")
+    summarize_distribution(val_items, "val")
+
+    if not args.no_balance and not args.overfit:
+        train_items = rebalance_items(train_items, len(CONFIG.canonical_labels))
+
+    train_dataset = SkinDataset(train_items, enforce_face=not args.overfit, augment=not args.no_augment)
     val_dataset = SkinDataset(val_items, enforce_face=False)
 
     sampler, class_weights = make_sampler(train_items, len(CONFIG.canonical_labels))
@@ -212,6 +299,7 @@ def main() -> None:
     save_checkpoint(model, args.weights_out, args.metadata_out)
     print(f"Saved weights to {args.weights_out}")
     print(f"Saved metadata to {args.metadata_out}")
+    diagnose_predictions(model, val_loader, device, len(CONFIG.canonical_labels))
 
 
 if __name__ == "__main__":

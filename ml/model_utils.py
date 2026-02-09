@@ -12,6 +12,9 @@ from torchvision import models
 
 from .config import CONFIG
 
+_MEAN = torch.tensor(CONFIG.normalization_mean, dtype=torch.float32).view(3, 1, 1)
+_STD = torch.tensor(CONFIG.normalization_std, dtype=torch.float32).view(3, 1, 1)
+
 
 def load_class_map(path: Path | None = None) -> Tuple[Dict[int, str], Dict[str, int], Dict[str, str]]:
     target = path or CONFIG.class_map_path
@@ -33,11 +36,14 @@ def inference_model(num_classes: int, weights_path: Path) -> torch.nn.Module:
     return model
 
 
-def to_tensor(image: np.ndarray, add_batch_dim: bool = True) -> torch.Tensor:
+def normalize_tensor(tensor: torch.Tensor) -> torch.Tensor:
+    return (tensor - _MEAN) / _STD
+
+
+def to_tensor(image: np.ndarray, add_batch_dim: bool = True, normalize: bool = True) -> torch.Tensor:
     tensor = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0
-    mean = torch.tensor(CONFIG.normalization_mean, dtype=torch.float32).view(3, 1, 1)
-    std = torch.tensor(CONFIG.normalization_std, dtype=torch.float32).view(3, 1, 1)
-    tensor = (tensor - mean) / std
+    if normalize:
+        tensor = normalize_tensor(tensor)
     if add_batch_dim:
         tensor = tensor.unsqueeze(0)
     return tensor
