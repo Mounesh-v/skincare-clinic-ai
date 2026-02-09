@@ -1,21 +1,7 @@
 import axios from 'axios';
 
-const rawHost = import.meta.env.VITE_APP_HOST ?? import.meta.env.HOST ?? '127.0.0.1';
-const FALLBACK_HOST = `${rawHost}`.trim() || '127.0.0.1';
-const rawPort = import.meta.env.VITE_APP_PORT ?? import.meta.env.PORT ?? '5174';
-const FALLBACK_PORT = `${rawPort}`.trim() || '5174';
-
-const resolveDefaultBaseUrl = () => {
-	if (typeof window !== 'undefined' && window.location?.origin) {
-		return window.location.origin;
-	}
-	return `http://${FALLBACK_HOST}:${FALLBACK_PORT}`;
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim() || resolveDefaultBaseUrl();
-
 const apiClient = axios.create({
-	baseURL: API_BASE_URL,
+	baseURL: '',
 	timeout: 10_000,
 });
 
@@ -37,17 +23,17 @@ apiClient.interceptors.response.use(
 );
 
 export const analyzeAssessment = async (payload) => {
-	const { data } = await apiClient.post('/analyze', payload);
+	const { data } = await apiClient.post('/api/analyze', payload);
 	return data;
 };
 
 export const getHealthStatus = async () => {
-	const { data } = await apiClient.get('/health');
+	const { data } = await apiClient.get('/api/health');
 	return data;
 };
 
 export const loginWithGoogle = async (credential) => {
-	const { data } = await apiClient.post('/auth/google', { credential });
+	const { data } = await apiClient.post('/api/auth/google', { credential });
 	return data;
 };
 

@@ -1,998 +1,215 @@
-"""FastAPI service that generates lightweight skin-care assessment summaries.
-The logic is intentionally rule-based so it can run without ML weights while the
-product MVP is being built.
-"""
-
+"""Entry point for the local skin analysis microservice."""
 from __future__ import annotations
 
-import base64
-import binascii
-import hashlib
+import argparse
+import json
+import logging
+import mimetypes
 import os
-from datetime import datetime
-from io import BytesIO
+import signal
+import sys
+import threading
+import time
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import Any, Dict
+from urllib.parse import ParseResult, unquote, urlparse
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, EmailStr, Field, validator
+from .analyzer import SkinAnalyzerService
+from .auth import verify_google_token
 
-from .auth import get_or_create_user, issue_jwt, serialize_user, verify_google_token
-
-try:  # pragma: no cover - optional dependency
-    from PIL import Image, UnidentifiedImageError
-except Exception:  # pragma: no cover - pillow optional
-    Image = None  # type: ignore[assignment]
-    UnidentifiedImageError = None  # type: ignore[assignment]
-
-try:  # pragma: no cover - optional dependency
-    import numpy as np
-except Exception:  # pragma: no cover - numpy optional
-    np = None  # type: ignore[assignment]
-
-try:
-    from .model import load_predictor
-except Exception as predictor_import_error:  # pragma: no cover - optional dependency
-    load_predictor = None
-    print(f"[Startup] SkinTypePredictor unavailable: {predictor_import_error}")
-
-try:
-    from .recommendations import load_recommender
-except Exception as recommender_import_error:  # pragma: no cover - optional dependency
-    load_recommender = None
-    print(f"[Startup] ProductRecommender unavailable: {recommender_import_error}")
+LOGGER = logging.getLogger("ml_service")
+logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s")
 
 
-if TYPE_CHECKING:  # pragma: no cover - hints only
-    from .model.predictor import SkinTypePredictor
-    from .recommendations import ProductRecommender
-
-app = FastAPI(
-    title="SkinCare Clinic AI",
-    description="Rule-based analyzer for skin assessment responses.",
-    version="0.1.0",
-)
-
-# Allow local dev UIs (Vite + any staging origin) to hit the API without CORS noise.
-BASE_DIR = Path(__file__).resolve().parent
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
-)
-
-FRONTEND_DIST_DIR = (BASE_DIR.parent / "client" / "dist").resolve()
-FRONTEND_ASSETS_DIR = FRONTEND_DIST_DIR / "assets"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+STATIC_ROOT = PROJECT_ROOT / "client" / "dist"
+INDEX_FILE = STATIC_ROOT / "index.html"
 
 
-def spa_index_file() -> Optional[Path]:
-    index_path = FRONTEND_DIST_DIR / "index.html"
-    return index_path if index_path.exists() else None
+class SkinServiceHandler(BaseHTTPRequestHandler):
+    analyzer: SkinAnalyzerService | None = None
+    analyzer_lock = threading.Lock()
+    started_at = time.time()
+    static_root = STATIC_ROOT
+    index_file = INDEX_FILE
 
+    # Disable default noisy logging to stderr
+    def log_message(self, format: str, *args: Any) -> None:  # pragma: no cover - HTTPServer hook
+        LOGGER.info("%s - %s", self.address_string(), format % args)
 
-def spa_static_asset(path: str) -> Optional[Path]:
-    if not path:
-        return None
-    normalized = path.lstrip("/\\")
-    candidate = (FRONTEND_DIST_DIR / normalized).resolve()
-    try:
-        candidate.relative_to(FRONTEND_DIST_DIR)
-    except ValueError:
-        return None
-    return candidate if candidate.exists() and candidate.is_file() else None
+    def _set_cors_headers(self) -> None:
+        origin = self.headers.get("Origin") or "*"
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        self.send_header("Access-Control-Allow-Credentials", "true")
 
+    def _json_response(self, payload: Dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self._set_cors_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
-if FRONTEND_ASSETS_DIR.exists():
-    app.mount(
-        "/assets",
-        StaticFiles(directory=FRONTEND_ASSETS_DIR),
-        name="frontend-assets",
-    )
-else:
-    print(
-        "[Startup] Client build assets missing. Run `npm run build` inside client/ to "
-        "serve the UI from FastAPI."
-    )
+    def _json_error(self, message: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
+        self._json_response({"detail": message}, status=status)
 
+    def _read_json(self) -> Dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length) if length else b"{}"
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("JSON body must be an object")
+        return data
 
-class LeadInfo(BaseModel):
-    name: Optional[str] = Field(None, description="Customer's full name")
-    email: Optional[str] = Field(None, description="Email for follow-ups")
-    phone: Optional[str] = Field(None, description="Optional contact number")
-    consent: bool = Field(default=False, description="Marketing / follow-up consent flag")
+    @classmethod
+    def _get_analyzer(cls) -> SkinAnalyzerService:
+        if cls.analyzer is not None:
+            return cls.analyzer
+        with cls.analyzer_lock:
+            if cls.analyzer is None:
+                cls.analyzer = SkinAnalyzerService()
+        return cls.analyzer
 
-    @validator("email")
-    def normalise_email(cls, value: Optional[str]) -> Optional[str]:  # noqa: N805
-        if value:
-            trimmed = value.strip()
-            if "@" not in trimmed or "." not in trimmed.rsplit("@", 1)[-1]:
-                raise ValueError("email must be a valid email address")
-            return trimmed.lower()
-        return value
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self._set_cors_headers()
+        self.end_headers()
 
+    def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/"):
+            self._handle_api_get(parsed)
+            return
+        self._serve_static(parsed.path)
 
-class AssessmentRequest(BaseModel):
-    lead: Optional[LeadInfo] = Field(None, description="Optional lead capture metadata")
-    answers: Dict[str, str] = Field(..., description="Keyed answers from the assessment flow")
-    image_data: Optional[str] = Field(
-        default=None,
-        description="Optional data URL or base64 encoded facial image for analysis",
-    )
-
-    @validator("answers")
-    def ensure_answers_present(cls, value: Dict[str, str]) -> Dict[str, str]:  # noqa: N805
-        if not value:
-            raise ValueError("answers must contain at least one entry")
-        return {k: v.strip().lower() for k, v in value.items() if isinstance(v, str)}
-
-    @validator("image_data")
-    def validate_image_data(cls, value: Optional[str]) -> Optional[str]:  # noqa: N805
-        if not value:
-            return value
-        data = value.split(",", 1)[1] if "," in value else value
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if not parsed.path.startswith("/api/"):
+            self._json_error("Not Found", status=HTTPStatus.NOT_FOUND)
+            return
         try:
-            raw = base64.b64decode(data, validate=True)
-        except (binascii.Error, ValueError) as exc:  # pragma: no cover - validation path
-            raise ValueError("image_data must be valid base64") from exc
-        size_mb = len(raw) / (1024 * 1024)
-        if size_mb > 5:
-            raise ValueError("image_data exceeds 5MB limit")
-        return value
+            body = self._read_json()
+        except json.JSONDecodeError:
+            self._json_error("Invalid JSON payload", status=HTTPStatus.BAD_REQUEST)
+            return
+        except ValueError as exc:
+            self._json_error(str(exc), status=HTTPStatus.BAD_REQUEST)
+            return
 
+        if parsed.path == "/api/analyze":
+            try:
+                analyzer = self._get_analyzer()
+                result = analyzer.analyze_request(body)
+                self._json_response(result)
+            except FileNotFoundError as exc:
+                self._json_error(str(exc), status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            except Exception as exc:  # pragma: no cover - guardrail
+                LOGGER.exception("Failed to analyze payload")
+                self._json_error(str(exc), status=HTTPStatus.INTERNAL_SERVER_ERROR)
+            return
 
-class Recommendation(BaseModel):
-    title: str
-    summary: str
-    category: str
-    priority: str
-    price: Optional[int] = None
-    product_id: Optional[str] = None
-    image_url: Optional[str] = None
+        if parsed.path == "/api/auth/google":
+            credential = body.get("credential")
+            if not credential:
+                self._json_error("credential is required", status=HTTPStatus.BAD_REQUEST)
+                return
+            try:
+                auth_payload = verify_google_token(credential)
+                self._json_response(auth_payload)
+            except ValueError as exc:
+                self._json_error(str(exc), status=HTTPStatus.BAD_REQUEST)
+            return
 
+        self._json_error("Not Found", status=HTTPStatus.NOT_FOUND)
 
-class LifestyleSuggestion(BaseModel):
-    title: str
-    detail: str
+    def _handle_api_get(self, parsed_path: ParseResult) -> None:
+        if parsed_path.path == "/api/health":
+            uptime = time.time() - self.started_at
+            payload = {
+                "status": "ok",
+                "uptime": round(uptime, 2),
+                "model_loaded": self.analyzer is not None,
+            }
+            self._json_response(payload)
+            return
+        self._json_error("Not Found", status=HTTPStatus.NOT_FOUND)
 
+    def _serve_static(self, request_path: str) -> None:
+        if not self.static_root.exists():
+            self.send_error(HTTPStatus.NOT_FOUND, "Frontend build not found. Run `npm run build` inside client/ first.")
+            return
+        normalized = unquote(request_path.split("?", 1)[0].split("#", 1)[0])
+        relative = normalized.lstrip("/")
+        cache_forever = False
+        if not relative:
+            target = self.index_file
+        else:
+            target = (self.static_root / relative).resolve()
+            try:
+                target.relative_to(self.static_root)
+            except ValueError:
+                self.send_error(HTTPStatus.FORBIDDEN, "Invalid path")
+                return
+            if target.is_file():
+                cache_forever = relative.startswith("assets/")
+            else:
+                if "." in relative:
+                    self.send_error(HTTPStatus.NOT_FOUND, "Static asset not found")
+                    return
+                target = self.index_file
+        self._send_file(target, cache_forever)
 
-class FeatureInsight(BaseModel):
-    label: str
-    value: float
-    unit: str = Field(default="")
-
-
-class ImageAnalysis(BaseModel):
-    predicted_skin_type: str
-    confidence: float
-    feature_insights: List[FeatureInsight]
-    notes: Optional[str] = None
-    low_confidence: bool = Field(default=False)
-
-
-class TimelineMilestone(BaseModel):
-    month: int
-    title: str
-    description: str
-
-
-class CaseSnapshot(BaseModel):
-    month: int
-    label: str
-    summary: str
-
-
-class MatchedCase(BaseModel):
-    name: str
-    headline: str
-    story: str
-    snapshots: List[CaseSnapshot]
-
-
-class AssessmentResponse(BaseModel):
-    generated_at: datetime
-    skin_profile: str
-    severity: str
-    root_causes: List[str]
-    plan_focus: List[str]
-    recommendations: List[Recommendation]
-    lifestyle: List[LifestyleSuggestion]
-    image_analysis: Optional[ImageAnalysis] = None
-    stage_label: str
-    months_to_results: int
-    success_probability: float
-    timeline: List[TimelineMilestone]
-    matched_case: MatchedCase
-
-
-class AuthenticatedUser(BaseModel):
-    id: str
-    email: EmailStr
-    name: str
-    picture: Optional[str] = None
-
-
-class GoogleAuthPayload(BaseModel):
-    credential: str = Field(
-        ..., min_length=10, description="Google ID token retrieved from the client SDK"
-    )
-
-
-class AuthResponse(BaseModel):
-    token: str
-    token_type: str = Field(default="bearer")
-    expires_in: int = Field(..., ge=1, description="Seconds until the token expires")
-    user: AuthenticatedUser
-
-
-MODEL_DIR = BASE_DIR / "model"
-DATA_DIR = BASE_DIR / "data"
-
-PREDICTOR: Optional["SkinTypePredictor"]
-if load_predictor:
-    try:
-        PREDICTOR = load_predictor(MODEL_DIR)
-    except Exception as predictor_init_error:  # pragma: no cover - startup resilience
-        PREDICTOR = None
-        print(f"[Startup] Failed to initialise SkinTypePredictor: {predictor_init_error}")
-else:
-    PREDICTOR = None
-
-PRODUCT_RECOMMENDER: Optional["ProductRecommender"]
-if load_recommender:
-    try:
-        PRODUCT_RECOMMENDER = load_recommender(DATA_DIR)
-    except Exception as recommender_init_error:  # pragma: no cover - startup resilience
-        PRODUCT_RECOMMENDER = None
-        print(f"[Startup] Failed to initialise ProductRecommender: {recommender_init_error}")
-else:
-    PRODUCT_RECOMMENDER = None
-
-
-SKIN_TYPE_SUMMARY = {
-    "oily": "Your skin over-produces sebum, so we focus on balancing oil while keeping the moisture barrier intact.",
-    "dry": "Your skin struggles to retain moisture, so we prioritise barrier repair and deep hydration.",
-    "combination": "You have both dry and oily zones. A zonal routine keeps your T‑zone clear and cheeks nourished.",
-    "sensitive": "Your skin reacts easily. Our plan keeps formulas calming, fragrance-free, and barrier safe.",
-    "normal": "Your skin is well balanced. We maintain the baseline while addressing target concerns.",
-}
-
-CONCERN_PROTOCOLS = {
-    "acne": [
-        "Topical salicylic or azelaic acid for congestion",
-        "Oil-balancing gel moisturiser",
-        "Spot SOS treatment with benzoyl peroxide",
-    ],
-    "pigmentation": [
-        "Vitamin C and niacinamide for brightening",
-        "Night-time retinoid to reduce spots",
-        "Broad-spectrum SPF 50 every morning",
-    ],
-    "wrinkles": [
-        "Peptide + retinol night treatment",
-        "Broad-spectrum SPF 50 for prevention",
-        "Collagen-support supplement with vitamin C",
-    ],
-    "dullness": [
-        "Chemical exfoliation twice a week",
-        "Daily antioxidant serum",
-        "Hydrating sleeping mask 3x weekly",
-    ],
-    "dark_circles": [
-        "Caffeine + peptides eye serum",
-        "Cooling massage to improve microcirculation",
-        "Sleep hygiene plan and stress reduction",
-    ],
-    "rashes": [
-        "Dermatologist-formulated barrier cream",
-        "Anti-inflammatory oral supplement",
-        "Trigger audit for products, fabrics, allergens",
-    ],
-}
-
-STRESS_FACTORS = {
-    "very-high": "Chronic stress spikes cortisol which worsens inflammation and breakouts.",
-    "high": "Elevated stress is slowing your repair cycle and can trigger acne.",
-    "moderate": "Moderate stress can still impact your barrier. Mindfulness habits help.",
-}
-
-SLEEP_FACTORS = {
-    "less-5": "Severe sleep debt disrupts hormonal balance and slows skin recovery.",
-    "5-6": "Limited sleep lowers collagen synthesis. Aim for at least 7 hours.",
-}
-
-HYDRATION_FACTORS = {
-    "less-2": "Hydration is very low. We add electrolyte water goals and hydrating foods.",
-    "2-4": "Increase daily water intake to keep skin plump and detox pathways active.",
-}
-
-STAGE_LIBRARY = {
-    "Mild": {
-        "label": "Stage 1 · Glow Reboot",
-        "months": 3,
-        "success": 0.94,
-    },
-    "Moderate": {
-        "label": "Stage 2 · Barrier Rehab",
-        "months": 4,
-        "success": 0.89,
-    },
-    "High": {
-        "label": "Stage 3 · Intensive Reset",
-        "months": 5,
-        "success": 0.83,
-    },
-}
-
-
-def infer_severity(answers: Dict[str, str]) -> str:
-    stress = answers.get("stress")
-    sleep = answers.get("sleep")
-    concern = answers.get("main_concern")
-
-    severity_score = 0
-    if stress in {"very-high", "high"}:
-        severity_score += 2
-    elif stress == "moderate":
-        severity_score += 1
-
-    if sleep in {"less-5"}:
-        severity_score += 2
-    elif sleep == "5-6":
-        severity_score += 1
-
-    if concern in {"acne", "rashes"}:
-        severity_score += 1
-
-    if severity_score >= 4:
-        return "High"
-    if severity_score >= 2:
-        return "Moderate"
-    return "Mild"
-
-
-def build_root_causes(answers: Dict[str, str]) -> List[str]:
-    causes: List[str] = []
-    if answers.get("stress") in STRESS_FACTORS:
-        causes.append(STRESS_FACTORS[answers["stress"]])
-    if answers.get("sleep") in SLEEP_FACTORS:
-        causes.append(SLEEP_FACTORS[answers["sleep"]])
-    if answers.get("water") in HYDRATION_FACTORS:
-        causes.append(HYDRATION_FACTORS[answers["water"]])
-    diet = answers.get("diet")
-    if diet in {"average", "unhealthy"}:
-        causes.append("Diet gaps are depriving your skin of antioxidants and essential fatty acids.")
-    return causes
-
-
-def build_plan_focus(answers: Dict[str, str], severity: str) -> List[str]:
-    concern = answers.get("main_concern", "overall wellbeing").replace("_", " ")
-    focuses = [f"Tackle {concern} with dermatologist-formulated actives."]
-    if severity != "Mild":
-        focuses.append("Protect the skin barrier with layered hydration and SPF.")
-    if answers.get("stress") in {"high", "very-high"}:
-        focuses.append("Introduce stress-regulation rituals (breathwork, guided sleep audio).")
-    if answers.get("sleep") in {"less-5", "5-6"}:
-        focuses.append("Create a sleep wind-down plan to reach 7-8 hours of rest.")
-    return focuses
-
-
-def create_recommendations(
-    answers: Dict[str, str],
-    severity: str,
-    image_analysis: Optional[ImageAnalysis],
-) -> List[Recommendation]:
-    concern = answers.get("main_concern", "")
-    protocols = CONCERN_PROTOCOLS.get(concern, [
-        "Balanced cleanser + moisturiser routine",
-        "Broad-spectrum SPF 50 every morning",
-        "Monthly dermatologist review to tweak actives",
-    ])
-
-    priority = "High" if severity != "Mild" else "Medium"
-    recommendations = [
-        Recommendation(
-            title="AM Routine",
-            summary=protocols[0],
-            category="topical",
-            priority=priority,
-        ),
-        Recommendation(
-            title="PM Routine",
-            summary=protocols[1] if len(protocols) > 1 else protocols[0],
-            category="topical",
-            priority=priority,
-        ),
-    ]
-
-    if len(protocols) > 2:
-        recommendations.append(
-            Recommendation(
-                title="Targeted Booster",
-                summary=protocols[2],
-                category="booster",
-                priority="Medium",
-            )
-        )
-
-    if answers.get("diet") in {"average", "unhealthy"}:
-        recommendations.append(
-            Recommendation(
-                title="Nutrition Upgrade",
-                summary="Personalised meal plan rich in antioxidants, omega-3, and lean protein.",
-                category="lifestyle",
-                priority="High",
-            )
-        )
-
-    if PRODUCT_RECOMMENDER is not None:
-        predicted_type = image_analysis.predicted_skin_type if image_analysis else "normal"
+    def _send_file(self, file_path: Path, cache_forever: bool) -> None:
         try:
-            product_matches = PRODUCT_RECOMMENDER.recommend(predicted_type, concern, severity)
-        except Exception as recommender_error:  # pragma: no cover - defensive
-            print(f"[Recommender] Failed to score products: {recommender_error}")
-            product_matches = []
-
-        for product in product_matches[:3]:
-            benefits_raw = product.get("benefits")
-            benefits = [str(item) for item in benefits_raw] if isinstance(benefits_raw, list) else []
-
-            headline = "; ".join(benefits[:2]) if benefits else "Clinically aligned pick"
-            summary_parts = [headline]
-
-            price_obj = product.get("price")
-            price_value = int(price_obj) if isinstance(price_obj, (int, float)) else None
-            if price_value is not None:
-                summary_parts.append(f"Price approx INR {price_value}")
-
-            summary = " | ".join(part for part in summary_parts if part)
-
-            title_obj = product.get("name", "Recommended Product")
-            category_obj = product.get("category", "Product")
-            image_obj = product.get("image_url")
-            product_id_obj = product.get("id")
-
-            recommendations.append(
-                Recommendation(
-                    title=str(title_obj),
-                    summary=summary,
-                    category=str(category_obj),
-                    priority="High" if severity != "Mild" else "Medium",
-                    price=price_value,
-                    product_id=str(product_id_obj) if isinstance(product_id_obj, str) else None,
-                    image_url=str(image_obj) if isinstance(image_obj, str) else None,
-                )
-            )
-
-    return recommendations
+            content = file_path.read_bytes()
+        except FileNotFoundError:
+            self.send_error(HTTPStatus.NOT_FOUND, "File not found")
+            return
+        mime, _ = mimetypes.guess_type(str(file_path))
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", mime or "application/octet-stream")
+        self.send_header("Content-Length", str(len(content)))
+        cache_header = "public, max-age=31536000, immutable" if cache_forever else "no-cache"
+        self.send_header("Cache-Control", cache_header)
+        self.end_headers()
+        self.wfile.write(content)
 
 
-def summarise_image(image_data: Optional[str], answers: Dict[str, str]) -> Optional[ImageAnalysis]:
-    if not image_data:
-        return None
+def create_server(host: str, port: int) -> ThreadingHTTPServer:
+    SkinServiceHandler.started_at = time.time()
+    server = ThreadingHTTPServer((host, port), SkinServiceHandler)
+    LOGGER.info("Starting ML service on http://%s:%s serving %s", host, port, STATIC_ROOT)
+    return server
 
-    data = image_data.split(",", 1)[1] if "," in image_data else image_data
+
+def serve_forever(server: ThreadingHTTPServer) -> None:
+    def shutdown_handler(signum: int, _frame: Any) -> None:  # pragma: no cover - signal handler
+        LOGGER.info("Received signal %s, shutting down", signum)
+        server.shutdown()
+
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
     try:
-        raw = base64.b64decode(data, validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise HTTPException(status_code=400, detail="image_data must be valid base64") from exc
-
-    predictor = PREDICTOR
-    if predictor is None or not getattr(predictor, "available", False):
-        return _enhanced_heuristic_analysis(raw, answers)
-
-    try:
-        result = predictor.predict(raw)
-    except ValueError as prediction_error:
-        if "No_face_detected" in str(prediction_error):
-            raise HTTPException(status_code=422, detail="No face detected in uploaded image") from prediction_error
-        raise HTTPException(status_code=400, detail="Unable to analyse the uploaded image") from prediction_error
-    except Exception as prediction_error:  # pragma: no cover - resilience when runtime fails
-        raise HTTPException(status_code=500, detail="Skin analysis model failed to run") from prediction_error
-
-    if not isinstance(result, dict):
-        raise HTTPException(status_code=500, detail="Skin analysis model returned an unexpected response")
-
-    raw_feature_insights = result.get("feature_insights", [])
-    if isinstance(raw_feature_insights, dict):
-        iterable_feature_insights = raw_feature_insights.values()
-    elif isinstance(raw_feature_insights, (list, tuple, set)):
-        iterable_feature_insights = raw_feature_insights
-    elif raw_feature_insights:
-        iterable_feature_insights = [raw_feature_insights]
-    else:
-        iterable_feature_insights = []
-
-    feature_insights: List[FeatureInsight] = []
-    for raw_item in iterable_feature_insights:
-        if not isinstance(raw_item, dict):
-            continue
-        label_obj = raw_item.get("label", "Feature")
-        value_obj = raw_item.get("value", 0.0)
-        unit_obj = raw_item.get("unit", "")
-        label = str(label_obj)
-        value = float(value_obj) if isinstance(value_obj, (int, float)) else 0.0
-        unit = str(unit_obj) if isinstance(unit_obj, str) else ""
-        feature_insights.append(FeatureInsight(label=label, value=value, unit=unit))
-
-    confidence_obj = result.get("confidence", 0.6)
-    confidence = float(confidence_obj) if isinstance(confidence_obj, (int, float)) else 0.6
-    if not feature_insights:
-        feature_insights = [
-            FeatureInsight(label="Model Confidence", value=round(confidence * 100, 1), unit="%"),
-        ]
-
-    predicted_type_obj = result.get("predicted_skin_type")
-    predicted_type = str(predicted_type_obj) if isinstance(predicted_type_obj, str) else "combination"
-
-    notes_obj = result.get("notes")
-    notes = str(notes_obj) if isinstance(notes_obj, str) else None
-
-    low_confidence_obj = result.get("low_confidence")
-    low_confidence = bool(low_confidence_obj) if isinstance(low_confidence_obj, bool) else confidence < 0.6
-    if low_confidence and not notes:
-        notes = "Low confidence, retake image"
-
-    face_score_obj = result.get("face_score")
-    if face_score_obj is not None and isinstance(face_score_obj, (int, float)) and float(face_score_obj) < 0.12:
-        raise HTTPException(status_code=422, detail="No face detected in uploaded image")
-
-    return ImageAnalysis(
-        predicted_skin_type=predicted_type,
-        confidence=round(confidence, 2),
-        feature_insights=feature_insights,
-        notes=notes,
-        low_confidence=low_confidence,
-    )
-
-
-def _enhanced_heuristic_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis:
-    if Image is None or np is None:
-        return _digest_based_analysis(raw, answers)
-
-    np_module = cast(Any, np)
-
-    try:
-        with Image.open(BytesIO(raw)) as opened:
-            image = opened.convert("RGB")
-    except Exception as exc:
-        if UnidentifiedImageError is not None:
-            if isinstance(exc, UnidentifiedImageError):
-                raise HTTPException(status_code=422, detail="Unsupported image format") from exc
-        return _digest_based_analysis(raw, answers)
-
-    width, height = image.size
-    max_side = max(width, height)
-    if max_side > 720:
-        scale = 720 / float(max_side)
-        image = image.resize((max(64, int(width * scale)), max(64, int(height * scale))))
-
-    rgb = np_module.asarray(image, dtype=np_module.float32) / 255.0
-    hsv = np_module.asarray(image.convert("HSV"), dtype=np_module.float32) / 255.0
-    ycbcr = np_module.asarray(image.convert("YCbCr"), dtype=np_module.float32)
-
-    total_rows, total_cols, _ = rgb.shape
-    y0 = int(total_rows * 0.15)
-    y1 = int(total_rows * 0.85)
-    x0 = int(total_cols * 0.15)
-    x1 = int(total_cols * 0.85)
-    if y1 <= y0 or x1 <= x0:
-        y0, y1, x0, x1 = 0, total_rows, 0, total_cols
-
-    central_slice = (slice(y0, y1), slice(x0, x1))
-    skin_mask = (
-        (ycbcr[..., 1] >= 77)
-        & (ycbcr[..., 1] <= 127)
-        & (ycbcr[..., 2] >= 133)
-        & (ycbcr[..., 2] <= 173)
-    )
-
-    central_mask = skin_mask[central_slice]
-    if np_module.any(central_mask):
-        valid_mask = np_module.zeros_like(skin_mask, dtype=bool)
-        valid_mask[central_slice] = central_mask
-    else:
-        valid_mask = skin_mask
-    skin_ratio = float(np_module.mean(valid_mask)) if valid_mask.size else 0.0
-    if skin_ratio < 0.12:
-        raise HTTPException(status_code=422, detail="No face detected in uploaded image")
-
-    def _masked_stat(data: Any, mask: Any, attr: str) -> float:
-        if mask.size == 0 or not np_module.any(mask):
-            return float(getattr(np_module, attr)(data))
-        return float(getattr(np_module, attr)(data[mask]))
-
-    value = hsv[..., 2]
-    saturation = hsv[..., 1]
-
-    brightness_mean = _masked_stat(value, valid_mask, "mean")
-    brightness_std = _masked_stat(value, valid_mask, "std")
-    saturation_mean = _masked_stat(saturation, valid_mask, "mean")
-    saturation_std = _masked_stat(saturation, valid_mask, "std")
-
-    highlight_ratio = float(np_module.mean((value > 0.78) & valid_mask)) if valid_mask.size else float(np_module.mean(value > 0.78))
-    shadow_ratio = float(np_module.mean((value < 0.22) & valid_mask)) if valid_mask.size else float(np_module.mean(value < 0.22))
-
-    grad_y, grad_x = np_module.gradient(value)
-    gradient_magnitude = np_module.sqrt(np_module.square(grad_x) + np_module.square(grad_y))
-    texture_micro = _masked_stat(gradient_magnitude, valid_mask, "mean")
-
-    redness_map = rgb[..., 0] - np_module.maximum(rgb[..., 1], rgb[..., 2])
-    redness_mean = _masked_stat(np_module.clip(redness_map, 0.0, 1.0), valid_mask, "mean")
-
-    oil_score = 0.52 * highlight_ratio + 0.35 * saturation_mean + 0.13 * texture_micro
-    dry_score = 0.48 * (1.0 - saturation_mean) + 0.32 * brightness_std + 0.2 * shadow_ratio
-    sensitive_score = 0.6 * redness_mean + 0.4 * (saturation_std + brightness_std) / 2.0
-
-    diff = oil_score - dry_score
-    baseline_raw = answers.get("skin_type") if isinstance(answers, dict) else None
-    baseline_type = baseline_raw.lower() if isinstance(baseline_raw, str) else "combination"
-    if baseline_type not in SKIN_TYPE_SUMMARY:
-        baseline_type = "combination"
-    predicted_type = baseline_type
-
-    if sensitive_score > 0.18 and redness_mean > 0.08 and saturation_mean < 0.45:
-        predicted_type = "sensitive"
-    elif diff > 0.08:
-        predicted_type = "oily"
-    elif diff < -0.08:
-        predicted_type = "dry"
-    else:
-        mid_range = abs(diff)
-        predicted_type = "combination" if mid_range > 0.025 else "normal"
-
-    if baseline_type in {"oily", "dry", "sensitive"} and abs(diff) < 0.04:
-        predicted_type = baseline_type
-
-    separation = max(
-        abs(diff),
-        abs(oil_score - sensitive_score),
-        abs(dry_score - sensitive_score),
-    )
-    confidence = max(
-        0.62,
-        min(
-            0.95,
-            0.55 + separation * 0.7 + skin_ratio * 0.25 - max(0.0, saturation_std - 0.18) * 0.18,
-        ),
-    )
-
-    dryness_index = float(max(0.0, min(100.0, dry_score * 160)))
-    oil_index = float(max(0.0, min(100.0, oil_score * 160)))
-    redness_index = float(max(0.0, min(100.0, redness_mean * 320)))
-    hydration_balance = float(max(0.0, min(100.0, (1.0 - dry_score) * 100)))
-
-    feature_insights = [
-        FeatureInsight(label="Skin Coverage", value=round(skin_ratio * 100, 1), unit="%"),
-        FeatureInsight(label="Hydration Balance", value=round(hydration_balance, 1), unit=""),
-        FeatureInsight(label="Oil Activity", value=round(oil_index, 1), unit=""),
-        FeatureInsight(label="Redness Indicator", value=round(redness_index, 1), unit=""),
-    ]
-
-    notes: List[str] = []
-    if highlight_ratio > 0.28:
-        notes.append("Visible T-zone shine detected. Blot before moisturizer or add a mattifying serum.")
-    if brightness_std > 0.17 and saturation_mean < 0.35:
-        notes.append("Texture looks parched. Layer humectants plus ceramides for deeper hydration.")
-    if redness_mean > 0.09:
-        notes.append("Slight redness observed. Keep actives gentle and add barrier-calming ingredients.")
-
-    return ImageAnalysis(
-        predicted_skin_type=predicted_type,
-        confidence=round(confidence, 2),
-        feature_insights=feature_insights,
-        notes=" ".join(notes) if notes else None,
-        low_confidence=confidence < 0.6,
-    )
-
-
-def _digest_based_analysis(raw: bytes, answers: Dict[str, str]) -> ImageAnalysis:
-    digest = hashlib.sha256(raw).digest()
-
-    def scale(byte_value: int, low: float, high: float) -> float:
-        ratio = byte_value / 255
-        return round(low + ratio * (high - low), 2)
-
-    brightness = scale(digest[0], 120.0, 190.0)
-    lighting_variability = scale(digest[1], 50.0, 85.0)
-    oil_index = scale(digest[2], 180.0, 280.0)
-    dryness_index = scale(digest[3], 55.0, 85.0)
-    structure_score = digest[5] / 255
-    if structure_score < 0.12:
-        raise HTTPException(status_code=422, detail="No face detected in uploaded image")
-
-    baseline_raw = answers.get("skin_type") if isinstance(answers, dict) else None
-    inferred_type = baseline_raw if isinstance(baseline_raw, str) and baseline_raw else "combination"
-    if oil_index - dryness_index > 35:
-        inferred_type = "oily"
-    elif dryness_index - oil_index > 20:
-        inferred_type = "dry"
-    elif inferred_type not in SKIN_TYPE_SUMMARY:
-        inferred_type = "combination"
-
-    confidence = round(0.75 + (digest[4] / 255) * 0.2, 2)
-
-    notes: Optional[str] = None
-    if lighting_variability > 78:
-        notes = "Lighting variability is high. Try taking the next photo in even daylight."
-    elif dryness_index > 82:
-        notes = "Skin appears dehydrated. Layer hydration before the next scan."
-
-    return ImageAnalysis(
-        predicted_skin_type=inferred_type,
-        confidence=confidence,
-        feature_insights=[
-            FeatureInsight(label="Brightness Mean", value=brightness),
-            FeatureInsight(label="Lighting Variability", value=lighting_variability),
-            FeatureInsight(label="Oil Activity Index", value=oil_index),
-            FeatureInsight(label="Dryness Index", value=dryness_index),
-        ],
-        notes=notes,
-        low_confidence=confidence < 0.6,
-    )
-
-
-def _digest_feature_insights(raw: bytes) -> List[FeatureInsight]:
-    analysis = _enhanced_heuristic_analysis(raw, {})
-    return analysis.feature_insights
-
-
-def lifestyle_suggestions(answers: Dict[str, str]) -> List[LifestyleSuggestion]:
-    suggestions: List[LifestyleSuggestion] = []
-    if answers.get("water") in {"less-2", "2-4"}:
-        suggestions.append(
-            LifestyleSuggestion(
-                title="Hydration Ladder",
-                detail="Set reminders to sip 250ml water every hour until you reach 2.5L daily.",
-            )
-        )
-    if answers.get("stress") in {"high", "very-high"}:
-        suggestions.append(
-            LifestyleSuggestion(
-                title="Stress Reset",
-                detail="Daily 10 minute guided breathing or yoga nidra to regulate cortisol.",
-            )
-        )
-    if answers.get("sleep") in {"less-5", "5-6"}:
-        suggestions.append(
-            LifestyleSuggestion(
-                title="Sleep Hygiene",
-                detail="Create a dim-light wind-down 60 minutes before bed, limit screens, and keep room cool.",
-            )
-        )
-    if answers.get("diet") == "unhealthy":
-        suggestions.append(
-            LifestyleSuggestion(
-                title="Balanced Plate",
-                detail="Follow the 50-25-25 rule: half vegetables, quarter lean protein, quarter complex carbs.",
-            )
-        )
-    return suggestions
-
-
-def derive_stage_details(
-    severity: str,
-    answers: Dict[str, str],
-    image_analysis: Optional[ImageAnalysis],
-) -> Dict[str, str | float | int]:
-    base = STAGE_LIBRARY.get(severity, STAGE_LIBRARY["Moderate"]).copy()
-    months = base["months"]
-    success = base["success"]
-
-    stress = answers.get("stress")
-    if stress in {"high", "very-high"}:
-        months += 1
-        success -= 0.05
-    sleep = answers.get("sleep")
-    if sleep in {"less-5"}:
-        months += 1
-        success -= 0.03
-
-    if image_analysis:
-        confidence = image_analysis.confidence
-        if confidence < 0.82:
-            success -= 0.03
-        elif confidence > 0.88:
-            success += 0.02
-
-        oil_metric = next((item.value for item in image_analysis.feature_insights if item.label.lower().startswith("oil")), None)
-        dryness_metric = next((item.value for item in image_analysis.feature_insights if item.label.lower().startswith("dry")), None)
-        if oil_metric and oil_metric > 260:
-            months += 1
-        if dryness_metric and dryness_metric < 60:
-            success += 0.015
-
-    months = max(3, min(months, 6))
-    success = max(0.72, min(success, 0.97))
-
-    return {
-        "label": base["label"],
-        "months": months,
-        "success": success,
-    }
-
-
-def build_timeline(concern: str, months_to_results: int) -> List[TimelineMilestone]:
-    concern_readable = concern.replace("_", " ").title() if concern else "Skin Health"
-    phases = [
-        ("Reset", f"Stabilise inflammation and prime for {concern_readable.lower()} improvement."),
-        ("Repair", "Layer barrier-loving actives and nutrition habits."),
-        ("Transform", "Introduce performance boosters once skin stays calm."),
-        ("Maintain", "Lock results with simplified upkeep and follow-ups."),
-    ]
-
-    step = max(1, months_to_results // len(phases))
-    timeline: List[TimelineMilestone] = []
-    for index, (title, description) in enumerate(phases, start=1):
-        month = min(months_to_results, index * step)
-        timeline.append(
-            TimelineMilestone(
-                month=month,
-                title=f"Month {month}: {title}",
-                description=description,
-            )
-        )
-    if timeline:
-        timeline[-1].month = months_to_results
-        timeline[-1].title = f"Month {months_to_results}: Maintain"
-    return timeline
-
-
-def build_matched_case(severity: str, concern: str) -> MatchedCase:
-    concern_readable = concern.replace("_", " ").title() if concern else "Skin Health"
-    persona_pool = [
-        ("Elena", "Marketing strategist"),
-        ("Suraj", "Med student"),
-        ("Maya", "Travel photographer"),
-        ("Dev", "Product designer"),
-    ]
-    index = hash(concern + severity) % len(persona_pool)
-    name, role = persona_pool[index]
-
-    snapshots = [
-        CaseSnapshot(month=1, label="Month 1", summary="Reset routine and track triggers."),
-        CaseSnapshot(month=2, label="Month 2", summary="Texture calmer, fewer flare-ups."),
-        CaseSnapshot(month=3, label="Month 3", summary="Visible clarity boost and balanced tone."),
-        CaseSnapshot(month=5, label="Month 5", summary="Maintaining glow with lighter routine."),
-    ]
-
-    story = (
-        f"{name} is a {role} who struggled with {concern_readable.lower()} concerns. "
-        f"Following the phased plan, they moved from reactive flare-ups to a calm, balanced complexion." 
-        " Weekly check-ins kept the routine adaptive and achievable."
-    )
-
-    headline = f"Here is {name}, who matches your profile"
-
-    return MatchedCase(
-        name=name,
-        headline=headline,
-        story=story,
-        snapshots=snapshots,
-    )
-
-
-@app.post("/auth/google", response_model=AuthResponse)
-def authenticate_with_google(payload: GoogleAuthPayload) -> AuthResponse:
-    try:
-        id_info = verify_google_token(payload.credential)
-    except ValueError as validation_error:
-        raise HTTPException(status_code=401, detail=str(validation_error)) from validation_error
-    except RuntimeError as runtime_error:  # pragma: no cover - depends on env config
-        raise HTTPException(status_code=500, detail=str(runtime_error)) from runtime_error
-
-    try:
-        user_record = get_or_create_user(id_info)
-    except ValueError as persistence_error:
-        raise HTTPException(status_code=400, detail=str(persistence_error)) from persistence_error
-    except Exception as db_error:  # pragma: no cover - sqlite failure path
-        raise HTTPException(status_code=500, detail="Unable to persist user account") from db_error
-
-    try:
-        token, expires_at = issue_jwt(user_record)
-    except RuntimeError as jwt_error:  # pragma: no cover - depends on jwt config
-        raise HTTPException(status_code=500, detail=str(jwt_error)) from jwt_error
-
-    expires_in = max(1, int((expires_at - datetime.utcnow()).total_seconds()))
-
-    user_payload = serialize_user(user_record)
-    return AuthResponse(
-        token=token,
-        expires_in=expires_in,
-        user=AuthenticatedUser(
-            id=user_record.id,
-            email=user_record.email,
-            name=user_record.name,
-            picture=user_payload.get("picture"),
-        ),
-    )
-
-
-@app.get("/health")
-def health_check() -> Dict[str, str]:
-    """Simple uptime probe for monitoring."""
-    return {"status": "ok"}
-
-
-@app.post("/analyze", response_model=AssessmentResponse)
-def analyze_assessment(payload: AssessmentRequest) -> AssessmentResponse:
-    try:
-        answers = payload.answers
-    except Exception as exc:  # pragma: no cover - defensive for malformed JSON
-        raise HTTPException(status_code=400, detail="Invalid assessment payload") from exc
-
-    image_analysis = summarise_image(payload.image_data, answers)
-    profile_key = image_analysis.predicted_skin_type if image_analysis else "balanced"
-    skin_profile = SKIN_TYPE_SUMMARY.get(
-        profile_key,
-        "We craft a balanced routine that adapts to your unique skin behaviour.",
-    )
-
-    severity = infer_severity(answers)
-    root_causes = build_root_causes(answers)
-    if not root_causes:
-        root_causes.append("Your routine mainly needs optimisation of actives and consistency.")
-
-    plan_focus = build_plan_focus(answers, severity)
-    recommendations = create_recommendations(answers, severity, image_analysis)
-    lifestyle = lifestyle_suggestions(answers)
-    stage_info = derive_stage_details(severity, answers, image_analysis)
-    timeline = build_timeline(answers.get("main_concern", ""), int(stage_info["months"]))
-    matched_case = build_matched_case(severity, answers.get("main_concern", ""))
-
-    return AssessmentResponse(
-        generated_at=datetime.utcnow(),
-        skin_profile=skin_profile,
-        severity=severity,
-        root_causes=root_causes,
-        plan_focus=plan_focus,
-        recommendations=recommendations,
-        lifestyle=lifestyle,
-        image_analysis=image_analysis,
-        stage_label=str(stage_info["label"]),
-        months_to_results=int(stage_info["months"]),
-        success_probability=round(float(stage_info["success"]), 2),
-        timeline=timeline,
-        matched_case=matched_case,
-    )
-
-
-@app.get("/", include_in_schema=False)
-async def serve_frontend_root() -> FileResponse:
-    index_file = spa_index_file()
-    if not index_file:
-        raise HTTPException(
-            status_code=503,
-            detail="SkinCare AI UI build missing. Run `npm run build` inside client/.",
-        )
-    return FileResponse(index_file)
-
-
-@app.get("/{full_path:path}", include_in_schema=False)
-async def serve_frontend_paths(full_path: str) -> FileResponse:
-    asset_file = spa_static_asset(full_path)
-    if asset_file:
-        return FileResponse(asset_file)
-    index_file = spa_index_file()
-    if not index_file:
-        raise HTTPException(status_code=404, detail="Route not found.")
-    return FileResponse(index_file)
+        server.serve_forever()
+    finally:
+        server.server_close()
+        LOGGER.info("ML service stopped")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Run the skin analysis microservice")
+    parser.add_argument("--host", default=os.getenv("APP_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.getenv("APP_PORT", "5174")))
+    args = parser.parse_args(argv)
+
+    server = create_server(args.host, args.port)
+    serve_forever(server)
 
 
 if __name__ == "__main__":
-    import uvicorn
-
-    host = os.getenv("APP_HOST", os.getenv("HOST", "127.0.0.1"))
-    port_raw = os.getenv("APP_PORT", os.getenv("PORT", "5174")) or "5174"
-    reload_flag = os.getenv("APP_RELOAD", "0").lower() in {"1", "true", "yes"}
-    uvicorn.run(
-        "ml_service.main:app",
-        host=host,
-        port=int(port_raw),
-        reload=reload_flag,
-    )
+    main(sys.argv[1:])

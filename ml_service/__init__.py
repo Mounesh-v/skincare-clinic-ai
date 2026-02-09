@@ -1,10 +1,6 @@
-from pathlib import Path
+"""Skin analysis microservice for the skincare clinic app."""
+from .analyzer import SkinAnalyzerService
+from .auth import verify_google_token
+from .main import create_server
 
-try:
-    from dotenv import load_dotenv
-except ImportError:  # pragma: no cover - optional dev dependency
-    load_dotenv = None
-else:
-    base_dir = Path(__file__).resolve().parent
-    load_dotenv(base_dir / ".env", override=False)
-    load_dotenv(base_dir / ".env.local", override=True)
+__all__ = ["SkinAnalyzerService", "verify_google_token", "create_server"]
