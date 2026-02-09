@@ -1,0 +1,26 @@
+{
+  "weights": "skin_classifier.pt",
+  "class_map": {
+    "idx_to_label": {
+      "0": "dry",
+      "1": "oily",
+      "2": "normal"
+    },
+    "label_to_idx": {
+      "dry": 0,
+      "oily": 1,
+      "normal": 2
+    },
+    "display_labels": {
+      "dry": "Dry",
+      "oily": "Oily",
+      "normal": "Normal"
+    }
+  },
+  "image_size": [
+    224,
+    224
+  ],
+  "model": "efficientnet_b0",
+  "timestamp": 1770616953.1824813
+}

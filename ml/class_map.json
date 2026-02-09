@@ -1,0 +1,17 @@
+{
+  "idx_to_label": {
+    "0": "dry",
+    "1": "oily",
+    "2": "normal"
+  },
+  "label_to_idx": {
+    "dry": 0,
+    "oily": 1,
+    "normal": 2
+  },
+  "display_labels": {
+    "dry": "Dry",
+    "oily": "Oily",
+    "normal": "Normal"
+  }
+}
