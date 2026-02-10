@@ -1,27 +1,33 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from 'lucide-react';
-import Button from '../../components/common/Button';
-import toast from 'react-hot-toast';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
+import Button from "../../components/common/Button";
+import toast from "react-hot-toast";
+
+import api from "../../utils/api";
 
 // Import your background image
-import loginBg from '../../assets/Signup-bg.jpg';
-import { loginWithGoogle } from '../../services/api';
+import loginBg from "../../assets/Signup-bg.jpg";
+import { loginWithGoogle } from "../../services/api";
 
-const GOOGLE_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
-const RAW_DEV_PORT = import.meta.env.VITE_APP_PORT ?? import.meta.env.PORT ?? '5174';
-const DEFAULT_DEV_PORT = `${RAW_DEV_PORT}`.trim() || '5174';
-const LOCAL_DEV_ORIGINS = [`http://localhost:${DEFAULT_DEV_PORT}`, `http://127.0.0.1:${DEFAULT_DEV_PORT}`];
+const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+const RAW_DEV_PORT =
+  import.meta.env.VITE_APP_PORT ?? import.meta.env.PORT ?? "5174";
+const DEFAULT_DEV_PORT = `${RAW_DEV_PORT}`.trim() || "5174";
+const LOCAL_DEV_ORIGINS = [
+  `http://localhost:${DEFAULT_DEV_PORT}`,
+  `http://127.0.0.1:${DEFAULT_DEV_PORT}`,
+];
 
 const resolveAllowedOrigins = () => {
   const envOrigins = import.meta.env.VITE_ALLOWED_ORIGINS;
   if (envOrigins) {
     return envOrigins
-      .split(',')
+      .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean);
   }
-  if (typeof window !== 'undefined' && window.location?.origin) {
+  if (typeof window !== "undefined" && window.location?.origin) {
     return Array.from(new Set([window.location.origin, ...LOCAL_DEV_ORIGINS]));
   }
   return LOCAL_DEV_ORIGINS;
@@ -30,59 +36,61 @@ const resolveAllowedOrigins = () => {
 const ALLOWED_ORIGINS = resolveAllowedOrigins();
 let googleScriptPromise = null;
 
-const ensureBase64Padding = (input = '') => {
-  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+const ensureBase64Padding = (input = "") => {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   if (!normalized) {
-    return '';
+    return "";
   }
   const remainder = normalized.length % 4;
-  const padding = remainder === 0 ? '' : '='.repeat(4 - remainder);
+  const padding = remainder === 0 ? "" : "=".repeat(4 - remainder);
   return normalized + padding;
 };
 
 const decodeGoogleJwt = (credential) => {
-  if (typeof window === 'undefined' || !credential) {
+  if (typeof window === "undefined" || !credential) {
     return null;
   }
   try {
-    const [, payload] = credential.split('.');
+    const [, payload] = credential.split(".");
     const decoded = JSON.parse(window.atob(ensureBase64Padding(payload)));
     return decoded;
   } catch (error) {
-    console.warn('Failed to decode Google credential payload', error);
+    console.warn("Failed to decode Google credential payload", error);
     return null;
   }
 };
 
 const describePromptIssue = (notification) => {
   if (!notification) {
-    return 'Google sign-in did not complete. Please try again.';
+    return "Google sign-in did not complete. Please try again.";
   }
   const reason =
     notification.getNotDisplayedReason?.() ||
     notification.getSkippedReason?.() ||
     notification.getDismissedReason?.();
-  if (!reason || reason === 'credential_returned') {
-    return '';
+  if (!reason || reason === "credential_returned") {
+    return "";
   }
   switch (reason) {
-    case 'popup_closed_by_user':
-    case 'user_cancelled':
-      return 'You closed the Google sign-in popup before finishing.';
-    case 'suppressed_by_user':
-      return 'Google sign-in is temporarily suppressed in this browser session.';
-    case 'ios_private_browsing':
-      return 'Google sign-in is blocked in private browsing mode. Please use a standard window.';
-    case 'not_loaded':
-      return 'Google sign-in could not load. Please disable blockers and try again.';
+    case "popup_closed_by_user":
+    case "user_cancelled":
+      return "You closed the Google sign-in popup before finishing.";
+    case "suppressed_by_user":
+      return "Google sign-in is temporarily suppressed in this browser session.";
+    case "ios_private_browsing":
+      return "Google sign-in is blocked in private browsing mode. Please use a standard window.";
+    case "not_loaded":
+      return "Google sign-in could not load. Please disable blockers and try again.";
     default:
       return `Google sign-in could not continue (${reason}). Please try again.`;
   }
 };
 
 const loadGoogleIdentityScript = () => {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Google Sign-In is only available in the browser.'));
+  if (typeof window === "undefined") {
+    return Promise.reject(
+      new Error("Google Sign-In is only available in the browser."),
+    );
   }
   if (googleScriptPromise) {
     return googleScriptPromise;
@@ -96,39 +104,43 @@ const loadGoogleIdentityScript = () => {
       return false;
     };
 
-    const existingScript = document.querySelector(`script[src="${GOOGLE_SCRIPT_SRC}"]`);
+    const existingScript = document.querySelector(
+      `script[src="${GOOGLE_SCRIPT_SRC}"]`,
+    );
     if (existingScript) {
       if (resolveWithGoogle()) {
         return;
       }
       const handleReady = () => {
         if (!resolveWithGoogle()) {
-          reject(new Error('Google Identity Services is unavailable after loading.'));
+          reject(
+            new Error("Google Identity Services is unavailable after loading."),
+          );
         }
       };
       const handleError = () => {
         googleScriptPromise = null;
-        reject(new Error('Failed to load Google Identity Services.'));
+        reject(new Error("Failed to load Google Identity Services."));
       };
-      existingScript.addEventListener('load', handleReady, { once: true });
-      existingScript.addEventListener('error', handleError, { once: true });
+      existingScript.addEventListener("load", handleReady, { once: true });
+      existingScript.addEventListener("error", handleError, { once: true });
       return;
     }
 
-    const script = document.createElement('script');
-    script.id = 'google-gsi-script';
+    const script = document.createElement("script");
+    script.id = "google-gsi-script";
     script.src = GOOGLE_SCRIPT_SRC;
     script.async = true;
     script.defer = true;
     script.onload = () => {
       if (!resolveWithGoogle()) {
         googleScriptPromise = null;
-        reject(new Error('Google Identity Services failed to initialise.'));
+        reject(new Error("Google Identity Services failed to initialise."));
       }
     };
     script.onerror = () => {
       googleScriptPromise = null;
-      reject(new Error('Failed to load Google Identity Services.'));
+      reject(new Error("Failed to load Google Identity Services."));
     };
     document.head.appendChild(script);
   });
@@ -141,7 +153,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleError, setGoogleError] = useState('');
+  const [googleError, setGoogleError] = useState("");
   const googleInitializedRef = useRef(false);
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
@@ -149,7 +161,8 @@ const Login = () => {
     async (response) => {
       const credential = response?.credential;
       if (!credential) {
-        const message = 'Google did not return any login credentials. Please try again.';
+        const message =
+          "Google did not return any login credentials. Please try again.";
         setGoogleLoading(false);
         setGoogleError(message);
         toast.error(message);
@@ -159,48 +172,50 @@ const Login = () => {
         const decodedProfile = decodeGoogleJwt(credential);
         if (decodedProfile) {
           const { name, email, picture } = decodedProfile;
-          console.info('Google profile decoded', { name, email, picture });
+          console.info("Google profile decoded", { name, email, picture });
         }
         const authData = await loginWithGoogle(credential);
-        const firstName = authData?.user?.name?.split?.(' ')?.[0] || 'there';
+        const firstName = authData?.user?.name?.split?.(" ")?.[0] || "there";
         try {
-          localStorage.setItem('authToken', authData.token);
-          localStorage.setItem('authUser', JSON.stringify(authData.user));
+          localStorage.setItem("authToken", authData.token);
+          localStorage.setItem("authUser", JSON.stringify(authData.user));
+          window.dispatchEvent(new Event("auth:updated"));
         } catch (storageError) {
-          console.error('Failed to persist Google auth session', storageError);
+          console.error("Failed to persist Google auth session", storageError);
         }
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new Event('auth:updated'));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("auth:updated"));
         }
-        setGoogleError('');
+        setGoogleError("");
         toast.success(`Welcome back, ${firstName}!`);
-        navigate('/dashboard');
+        navigate("/dashboard");
       } catch (error) {
-        const message = error?.message || 'Google login failed. Please try again.';
+        const message =
+          error?.message || "Google login failed. Please try again.";
         setGoogleError(message);
         toast.error(message);
       } finally {
         setGoogleLoading(false);
       }
     },
-    [navigate, setGoogleError]
+    [navigate, setGoogleError],
   );
 
   const validateOrigin = useCallback(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return {
         allowed: false,
-        message: 'Google login is only available in the browser.',
+        message: "Google login is only available in the browser.",
       };
     }
     const origin = window.location.origin;
     if (!ALLOWED_ORIGINS.includes(origin)) {
       return {
         allowed: false,
-        message: `Google login is limited to ${ALLOWED_ORIGINS.join(' or ')} (current: ${origin}).`,
+        message: `Google login is limited to ${ALLOWED_ORIGINS.join(" or ")} (current: ${origin}).`,
       };
     }
-    return { allowed: true, message: '' };
+    return { allowed: true, message: "" };
   }, []);
 
   const initialiseGoogleClient = useCallback(
@@ -224,17 +239,19 @@ const Login = () => {
       google.accounts.id.initialize({
         client_id: googleClientId,
         callback: handleGoogleCredential,
-        ux_mode: 'popup',
+        ux_mode: "popup",
         auto_select: false,
       });
       googleInitializedRef.current = true;
     },
-    [googleClientId, handleGoogleCredential, validateOrigin]
+    [googleClientId, handleGoogleCredential, validateOrigin],
   );
 
   useEffect(() => {
     if (!googleClientId) {
-      setGoogleError('Google login is not configured. Please set VITE_GOOGLE_CLIENT_ID.');
+      setGoogleError(
+        "Google login is not configured. Please set VITE_GOOGLE_CLIENT_ID.",
+      );
       return undefined;
     }
 
@@ -257,14 +274,14 @@ const Login = () => {
         if (cancelled) {
           return;
         }
-        console.error('Google Identity Services failed to load', error);
+        console.error("Google Identity Services failed to load", error);
         setGoogleError(error.message);
         toast.error(error.message);
       });
 
     return () => {
       cancelled = true;
-      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      if (typeof window !== "undefined" && window.google?.accounts?.id) {
         window.google.accounts.id.cancel();
         window.google.accounts.id.disableAutoSelect();
       }
@@ -278,7 +295,7 @@ const Login = () => {
       return;
     }
     if (!googleClientId) {
-      const message = 'Google login is not configured yet.';
+      const message = "Google login is not configured yet.";
       setGoogleError(message);
       toast.error(message);
       return;
@@ -291,12 +308,13 @@ const Login = () => {
     }
     const google = window.google;
     if (!google?.accounts?.id || !googleInitializedRef.current) {
-      const message = 'Google Sign-In is still loading. Please try again in a moment.';
+      const message =
+        "Google Sign-In is still loading. Please try again in a moment.";
       setGoogleError(message);
       toast.error(message);
       return;
     }
-    setGoogleError('');
+    setGoogleError("");
     setGoogleLoading(true);
     google.accounts.id.prompt((notification) => {
       const issueMessage = describePromptIssue(notification);
@@ -309,8 +327,8 @@ const Login = () => {
   }, [googleClientId, googleLoading, validateOrigin]);
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
     rememberMe: false,
   });
 
@@ -318,7 +336,7 @@ const Login = () => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
@@ -326,18 +344,30 @@ const Login = () => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
-      toast.error('Please fill in all fields');
+      toast.error("Please fill in all fields");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+      const res = await api.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      // Save token
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      toast.success(res.data.message || "Welcome back! 👋");
+
+      navigate("/");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
       setLoading(false);
-      toast.success('Welcome back! 👋');
-      navigate('/dashboard');
-    }, 2000);
+    }
   };
 
   return (
@@ -362,14 +392,18 @@ const Login = () => {
                   SkinCare AI
                 </span>
               </div>
-              <p className="text-sm text-slate-600">Your personalized skincare companion</p>
+              <p className="text-sm text-slate-600">
+                Your personalized skincare companion
+              </p>
             </div>
 
             {/* Form Header */}
             <div className="mb-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
-                <span className="text-xs font-semibold text-emerald-700">Secure Login</span>
+                <span className="text-xs font-semibold text-emerald-700">
+                  Secure Login
+                </span>
               </div>
               <h2 className="mb-3 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent lg:text-4xl">
                 Welcome Back! 👋
@@ -409,7 +443,7 @@ const Login = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
@@ -423,7 +457,11 @@ const Login = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -499,7 +537,10 @@ const Login = () => {
                   aria-busy={googleLoading}
                   className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
-                  <svg className="h-5 w-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                  <svg
+                    className="h-5 w-5 transition-transform group-hover:scale-110"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       fill="#4285F4"
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -517,17 +558,25 @@ const Login = () => {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  <span className="text-sm font-semibold text-slate-700">Google</span>
+                  <span className="text-sm font-semibold text-slate-700">
+                    Google
+                  </span>
                 </button>
 
                 <button
                   type="button"
                   className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
-                  <svg className="h-5 w-5 transition-transform group-hover:scale-110" fill="#1877F2" viewBox="0 0 24 24">
+                  <svg
+                    className="h-5 w-5 transition-transform group-hover:scale-110"
+                    fill="#1877F2"
+                    viewBox="0 0 24 24"
+                  >
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
-                  <span className="text-sm font-semibold text-slate-700">Facebook</span>
+                  <span className="text-sm font-semibold text-slate-700">
+                    Facebook
+                  </span>
                 </button>
               </div>
               {googleError && (
@@ -540,7 +589,7 @@ const Login = () => {
             {/* Signup Link */}
             <div className="mt-8 rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm">
               <p className="text-sm text-slate-600">
-                Don't have an account?{' '}
+                Don't have an account?{" "}
                 <Link
                   to="/signup"
                   className="group inline-flex items-center gap-1 font-bold text-emerald-600 transition-colors hover:text-emerald-700"
@@ -558,9 +607,13 @@ const Login = () => {
                   <Shield className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="mb-1 text-sm font-bold text-slate-900">Bank-Level Security</p>
+                  <p className="mb-1 text-sm font-bold text-slate-900">
+                    Bank-Level Security
+                  </p>
                   <p className="text-xs leading-relaxed text-slate-600">
-                    Your data is encrypted with 256-bit SSL and protected by advanced security protocols. We never share your information.
+                    Your data is encrypted with 256-bit SSL and protected by
+                    advanced security protocols. We never share your
+                    information.
                   </p>
                 </div>
               </div>
@@ -569,30 +622,41 @@ const Login = () => {
             {/* Trust Indicators */}
             <div className="mt-6 flex items-center justify-center gap-6 opacity-60">
               <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="h-4 w-4 text-emerald-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fillRule="evenodd"
                     d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-xs font-medium text-slate-600">SSL Secured</span>
+                <span className="text-xs font-medium text-slate-600">
+                  SSL Secured
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                <svg
+                  className="h-4 w-4 text-emerald-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fillRule="evenodd"
                     d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-xs font-medium text-slate-600">GDPR Compliant</span>
+                <span className="text-xs font-medium text-slate-600">
+                  GDPR Compliant
+                </span>
               </div>
             </div>
           </div>
         </div>
       </div>
-
 
       {/* Right Side - Image Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700">
@@ -613,7 +677,9 @@ const Login = () => {
                 <span className="text-3xl">🌿</span>
               </div>
               <div>
-                <h1 className="text-2xl font-display font-bold text-white">SkinCare AI</h1>
+                <h1 className="text-2xl font-display font-bold text-white">
+                  SkinCare AI
+                </h1>
                 <p className="text-sm text-white/80">Continue your journey</p>
               </div>
             </div>
@@ -626,7 +692,8 @@ const Login = () => {
                 Welcome Back!
               </h2>
               <p className="text-base text-white/90 leading-relaxed">
-                Continue tracking your skin health journey with personalized insights and expert recommendations.
+                Continue tracking your skin health journey with personalized
+                insights and expert recommendations.
               </p>
             </div>
 

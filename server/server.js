@@ -1,24 +1,32 @@
-
-import express from 'express';
-import dotenv from 'dotenv';
-import connectDB from './config/database.js';
+import express from "express";
+import dotenv from "dotenv";
+import connectDB from "./config/database.js";
+import authUser from "./router/auth.js";
+import cors from "cors";
 
 dotenv.config();
-const app= express();
+const app = express();
 
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  }),
+);
 
 //Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 connectDB();
 
+app.get("/", (req, res) => {
+  res.json({ message: "Heyy server is running" });
+});
 
-app.get('/', (req,res) => {
-    res.json({ message:"Heyy server is running"});
-})
+app.use("/api/auth", authUser);
 
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => {
-    console.log(`server is running ${process.env.NODE_ENV}`);
-
-})
+  console.log(`server is running ${process.env.NODE_ENV}`);
+});
