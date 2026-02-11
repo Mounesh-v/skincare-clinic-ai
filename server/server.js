@@ -4,6 +4,10 @@ import connectDB from "./config/database.js";
 import authUser from "./router/auth.js";
 import cors from "cors";
 
+
+import productRoutes from "./router/productRoutes.js"
+import orderRoutes from "./router/orderRoutes.js"
+
 dotenv.config();
 const app = express();
 
@@ -25,6 +29,9 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authUser);
+
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
 
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => {
