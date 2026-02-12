@@ -1,10 +1,22 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, Sparkles, TrendingUp, Award, Package } from 'lucide-react';
-import ProductCard from '../components/products/ProductCard';
-import Button from '../components/common/Button';
-import { products, PRODUCT_CATEGORIES, SKIN_TYPES_FILTER } from '../data/products';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  Sparkles,
+  TrendingUp,
+  Award,
+  Package,
+} from "lucide-react";
+import ProductCard from "../components/products/ProductCard";
+import Button from "../components/common/Button";
+import {
+  products,
+  PRODUCT_CATEGORIES,
+  SKIN_TYPES_FILTER,
+} from "../data/products";
+import toast from "react-hot-toast";
 
 /**
  * Products Page
@@ -12,37 +24,41 @@ import toast from 'react-hot-toast';
  */
 const ProductsPage = () => {
   const navigate = useNavigate();
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedSkinType, setSelectedSkinType] = useState('all');
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSkinType, setSelectedSkinType] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 5000]);
-  const [sortBy, setSortBy] = useState('featured');
+  const [sortBy, setSortBy] = useState("featured");
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter products
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.shortDescription.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesSkinType = selectedSkinType === 'all' || 
-                            product.skinTypes.includes(selectedSkinType) || 
-                            product.skinTypes.includes(SKIN_TYPES_FILTER.ALL);
-    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-    
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.shortDescription.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" || product.category === selectedCategory;
+    const matchesSkinType =
+      selectedSkinType === "all" ||
+      product.skinTypes.includes(selectedSkinType) ||
+      product.skinTypes.includes(SKIN_TYPES_FILTER.ALL);
+    const matchesPrice =
+      product.price >= priceRange[0] && product.price <= priceRange[1];
+
     return matchesSearch && matchesCategory && matchesSkinType && matchesPrice;
   });
 
   // Sort products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
-      case 'price-low':
+      case "price-low":
         return a.price - b.price;
-      case 'price-high':
+      case "price-high":
         return b.price - a.price;
-      case 'rating':
+      case "rating":
         return b.rating - a.rating;
-      case 'newest':
+      case "newest":
         return b.id.localeCompare(a.id);
       default:
         return 0;
@@ -58,17 +74,17 @@ const ProductsPage = () => {
   };
 
   const clearFilters = () => {
-    setSelectedCategory('all');
-    setSelectedSkinType('all');
+    setSelectedCategory("all");
+    setSelectedSkinType("all");
     setPriceRange([0, 5000]);
-    setSearchTerm('');
+    setSearchTerm("");
   };
 
   const activeFiltersCount = [
-    selectedCategory !== 'all',
-    selectedSkinType !== 'all',
+    selectedCategory !== "all",
+    selectedSkinType !== "all",
     priceRange[1] !== 5000,
-    searchTerm !== ''
+    searchTerm !== "",
   ].filter(Boolean).length;
 
   return (
@@ -80,7 +96,9 @@ const ProductsPage = () => {
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-4 py-2 backdrop-blur-sm">
               <Sparkles className="h-4 w-4 text-emerald-600" />
-              <span className="text-sm font-semibold text-emerald-700">Premium Skincare Collection</span>
+              <span className="text-sm font-semibold text-emerald-700">
+                Premium Skincare Collection
+              </span>
             </div>
             <h1 className="mb-4 bg-gradient-to-r from-emerald-700 via-teal-600 to-cyan-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl lg:text-6xl">
               Discover Your Perfect Match
@@ -93,14 +111,25 @@ const ProductsPage = () => {
           {/* Quick Stats */}
           <div className="mt-10 grid grid-cols-3 gap-4 sm:gap-6">
             {[
-              { icon: Package, label: 'Products', value: products.length + '+' },
-              { icon: Award, label: 'Verified', value: '100%' },
-              { icon: TrendingUp, label: 'Satisfaction', value: '98%' }
+              {
+                icon: Package,
+                label: "Products",
+                value: products.length + "+",
+              },
+              { icon: Award, label: "Verified", value: "100%" },
+              { icon: TrendingUp, label: "Satisfaction", value: "98%" },
             ].map((stat, index) => (
-              <div key={index} className="group rounded-xl border border-slate-200 bg-white/60 p-4 text-center backdrop-blur-sm transition-all hover:bg-white hover:shadow-lg sm:p-6">
+              <div
+                key={index}
+                className="group rounded-xl border border-slate-200 bg-white/60 p-4 text-center backdrop-blur-sm transition-all hover:bg-white hover:shadow-lg sm:p-6"
+              >
                 <stat.icon className="mx-auto mb-2 h-6 w-6 text-emerald-600 transition-transform group-hover:scale-110 sm:h-8 sm:w-8" />
-                <p className="text-xl font-bold text-slate-900 sm:text-2xl">{stat.value}</p>
-                <p className="text-xs text-slate-600 sm:text-sm">{stat.label}</p>
+                <p className="text-xl font-bold text-slate-900 sm:text-2xl">
+                  {stat.value}
+                </p>
+                <p className="text-xs text-slate-600 sm:text-sm">
+                  {stat.label}
+                </p>
               </div>
             ))}
           </div>
@@ -109,9 +138,8 @@ const ProductsPage = () => {
 
       <div className="container-custom py-8 sm:py-12">
         <div className="grid gap-8 lg:grid-cols-4">
-          
           {/* Filters Sidebar */}
-          <div className={`${showFilters ? 'block' : 'hidden'} lg:block`}>
+          <div className={`${showFilters ? "block" : "hidden"} lg:block`}>
             <div className="sticky top-4 overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-lg">
               {/* Filter Header */}
               <div className="border-b-2 border-slate-100 bg-gradient-to-r from-slate-50 to-white p-6">
@@ -121,7 +149,9 @@ const ProductsPage = () => {
                       <SlidersHorizontal className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900">Filters</h2>
+                      <h2 className="text-lg font-bold text-slate-900">
+                        Filters
+                      </h2>
                       {activeFiltersCount > 0 && (
                         <span className="text-xs font-medium text-emerald-600">
                           {activeFiltersCount} active
@@ -163,7 +193,7 @@ const ProductsPage = () => {
                     />
                     {searchTerm && (
                       <button
-                        onClick={() => setSearchTerm('')}
+                        onClick={() => setSearchTerm("")}
                         className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-slate-100"
                       >
                         <X className="h-4 w-4 text-slate-400" />
@@ -179,18 +209,26 @@ const ProductsPage = () => {
                   </label>
                   <div className="space-y-2">
                     <button
-                      onClick={() => setSelectedCategory('all')}
+                      onClick={() => setSelectedCategory("all")}
                       className={`group w-full rounded-xl px-4 py-3 text-left text-sm font-medium transition-all ${
-                        selectedCategory === 'all'
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
-                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                        selectedCategory === "all"
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30"
+                          : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                       }`}
                     >
                       <span className="flex items-center justify-between">
                         All Products
-                        {selectedCategory === 'all' && (
-                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        {selectedCategory === "all" && (
+                          <svg
+                            className="h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         )}
                       </span>
@@ -201,15 +239,23 @@ const ProductsPage = () => {
                         onClick={() => setSelectedCategory(category)}
                         className={`group w-full rounded-xl px-4 py-3 text-left text-sm font-medium capitalize transition-all ${
                           selectedCategory === category
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30'
-                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30"
+                            : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         <span className="flex items-center justify-between">
-                          {category.replace('_', ' ')}
+                          {category.replace("_", " ")}
                           {selectedCategory === category && (
-                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            <svg
+                              className="h-4 w-4"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           )}
                         </span>
@@ -230,8 +276,8 @@ const ProductsPage = () => {
                         onClick={() => setSelectedSkinType(value)}
                         className={`rounded-xl px-3 py-2 text-sm font-medium capitalize transition-all ${
                           selectedSkinType === value
-                            ? 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-md'
-                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100'
+                            ? "bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-md"
+                            : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         {key.toLowerCase()}
@@ -252,15 +298,21 @@ const ProductsPage = () => {
                       max="5000"
                       step="100"
                       value={priceRange[1]}
-                      onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
+                      onChange={(e) =>
+                        setPriceRange([0, parseInt(e.target.value)])
+                      }
                       className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200"
                       style={{
-                        background: `linear-gradient(to right, #10b981 0%, #10b981 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 100%)`
+                        background: `linear-gradient(to right, #10b981 0%, #10b981 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 100%)`,
                       }}
                     />
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="rounded-lg bg-white px-3 py-1 text-sm font-bold text-slate-900">₹0</span>
-                      <span className="rounded-lg bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700">₹{priceRange[1]}</span>
+                      <span className="rounded-lg bg-white px-3 py-1 text-sm font-bold text-slate-900">
+                        ₹0
+                      </span>
+                      <span className="rounded-lg bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700">
+                        ₹{priceRange[1]}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -278,12 +330,19 @@ const ProductsPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">
-                    Showing <span className="font-bold text-slate-900">{sortedProducts.length}</span> of{' '}
-                    <span className="font-bold text-slate-900">{products.length}</span> products
+                    Showing{" "}
+                    <span className="font-bold text-slate-900">
+                      {sortedProducts.length}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-bold text-slate-900">
+                      {products.length}
+                    </span>{" "}
+                    products
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 {/* Mobile Filter Toggle */}
                 <button
@@ -312,8 +371,18 @@ const ProductsPage = () => {
                     <option value="rating">Highest Rated</option>
                     <option value="newest">Newest First</option>
                   </select>
-                  <svg className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -336,12 +405,14 @@ const ProductsPage = () => {
                 <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200">
                   <Search className="h-12 w-12 text-slate-400" />
                 </div>
-                <h3 className="mb-2 text-2xl font-bold text-slate-900">No products found</h3>
-                <p className="mb-6 text-slate-600">Try adjusting your filters or search term to find what you're looking for</p>
-                <Button 
-                  onClick={clearFilters}
-                  className="mx-auto"
-                >
+                <h3 className="mb-2 text-2xl font-bold text-slate-900">
+                  No products found
+                </h3>
+                <p className="mb-6 text-slate-600">
+                  Try adjusting your filters or search term to find what you're
+                  looking for
+                </p>
+                <Button onClick={clearFilters} className="mx-auto">
                   Clear All Filters
                 </Button>
               </div>
@@ -354,4 +425,3 @@ const ProductsPage = () => {
 };
 
 export default ProductsPage;
- 

@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
-import AdminSidebar from './AdminSidebar';
-import AdminHeader from './AdminHeader';
+import React, { useState } from "react";
+import { Outlet, Navigate } from "react-router-dom";
+import AdminSidebar from "./AdminSidebar";
+import AdminHeader from "./AdminHeader";
 
 const AdminLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  
+  const [isOpen, setIsOpen] = useState(true);
+
   // Check if admin is authenticated
-  const isAuthenticated = localStorage.getItem('adminToken');
-  
+  const isAuthenticated = localStorage.getItem("adminToken");
+
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
@@ -16,15 +16,13 @@ const AdminLayout = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
-      <AdminSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-
+      <AdminSidebar isOpen={isOpen} setOpen={setIsOpen} />
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
+      <div
+        className={`transition-all duration-300 ${isOpen ? "lg:ml-64" : "lg:ml-20"}`}
+      >
         {/* Header */}
-        <AdminHeader 
-          sidebarOpen={sidebarOpen} 
-          setSidebarOpen={setSidebarOpen}
-        />
+        <AdminHeader isOpen={isOpen} setOpen={setIsOpen} />
 
         {/* Page Content */}
         <main className="p-6">

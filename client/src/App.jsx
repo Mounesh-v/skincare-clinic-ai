@@ -29,6 +29,8 @@ import ProductCreate from './pages/admin/Products/ProductCreate';
 import OrderList from './pages/admin/Orders/OrderList';
 import OrderDetail from './pages/admin/Orders/OrderDetail';
 import AssessmentList from './pages/admin/Assessments/AssessmentList';
+import ProductView from './pages/admin/Products/ProductView';
+import ProductEdit from './pages/admin/Products/ProductEdit';
 
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
@@ -128,7 +130,8 @@ function App() {
             <Route path="users/:id" element={<UserDetail />} />
             <Route path="products" element={<ProductList />} />
             <Route path="products/create" element={<ProductCreate />} />
-            <Route path="products/:id/edit" element={<ProductCreate />} />
+            <Route path="/admin/products/:id/edit" element={<ProductEdit />} />
+            <Route path="/admin/products/:id" element={<ProductView />} />
             <Route path="orders" element={<OrderList />} />
             <Route path="orders/:id" element={<OrderDetail />} />
             <Route path="assessments" element={<AssessmentList />} />
