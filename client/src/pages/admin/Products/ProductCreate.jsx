@@ -44,14 +44,12 @@ const ProductCreate = () => {
   };
 
   const toBase64 = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-
-
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -81,14 +79,24 @@ const ProductCreate = () => {
       const payload = {
         ...formData,
 
-        ingredients: formData.ingredients.split("\n").filter(Boolean),
+        price: Number(formData.price),
+        stock: Number(formData.stock),
+        originalPrice: formData.originalPrice
+          ? Number(formData.originalPrice)
+          : 0,
 
-        benefits: formData.benefits.split("\n").filter(Boolean),
+        ingredients: formData.ingredients
+          ? formData.ingredients.split("\n").filter(Boolean)
+          : [],
 
-        images: base64Images,
+        benefits: formData.benefits
+          ? formData.benefits.split("\n").filter(Boolean)
+          : [],
+
+        images: base64Images, // 🔥 IMPORTANT FIX
       };
 
-      const res = await api.post("/products/", payload);
+      const res = await api.post("/products", payload);
 
       toast.success("Product created successfully");
       navigate("/admin/products");
