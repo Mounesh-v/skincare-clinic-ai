@@ -18,7 +18,7 @@ class SkinConfig:
     assets_dir: Path = base_dir / "assets"
     class_map_path: Path = base_dir / "class_map.json"
     mediapipe_face_model: Path = assets_dir / "face_detection_short_range.tflite"
-    dataset_root: Path = Path(os.getenv("SKINCARE_DATASET_ROOT", "data/raw/Skin_v2"))
+    dataset_root: Path = Path(os.getenv("SKINCARE_DATASET_ROOT", str(base_dir / "data" / "raw" / "Skin v2")))
     train_split: str = os.getenv("SKINCARE_TRAIN_SPLIT", "train")
     val_split: str = os.getenv("SKINCARE_VAL_SPLIT", "val")
     image_size: int = 224

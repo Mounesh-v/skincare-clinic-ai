@@ -10,7 +10,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import ImageFolder
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'Skin_v2')
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'Skin v2')
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'models', 'results')
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
@@ -308,45 +308,65 @@ def main() -> None:
     set_seed(CONFIG.rng_seed)
     device = torch.device(CONFIG.default_device)
 
-    train_items = build_items(CONFIG.train_split)
-    val_items = build_items(CONFIG.val_split)
 
-    if args.overfit:
-        train_items = train_items[:10]
-        val_items = train_items
-
-    summarize_distribution(train_items, "train")
-    summarize_distribution(val_items, "val")
-
-    if not args.no_balance and not args.overfit:
-        train_items = rebalance_items(train_items, len(CONFIG.canonical_labels))
-
-    train_dataset = SkinDataset(train_items, enforce_face=not args.overfit, augment=not args.no_augment)
-    val_dataset = SkinDataset(val_items, enforce_face=False)
-
-    sampler, class_weights = make_sampler(train_items, len(CONFIG.canonical_labels))
-
+    # Use PyTorch's ImageFolder for faster training (no custom preprocessing)
+    from torchvision.datasets import ImageFolder
+    from torchvision import transforms
+    
+    # Define transforms
+    train_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    
+    val_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    
+    # Load datasets
+    train_root = CONFIG.dataset_root / CONFIG.train_split
+    val_root = CONFIG.dataset_root / CONFIG.val_split
+    
+    train_dataset = ImageFolder(str(train_root), transform=train_transform)
+    val_dataset = ImageFolder(str(val_root), transform=val_transform)
+    
+    print(f"Train dataset: {len(train_dataset)} images", flush=True)
+    print(f"Val dataset: {len(val_dataset)} images", flush=True)
+    
+    # Create data loaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        sampler=sampler,
+        shuffle=True,
         num_workers=args.num_workers,
+        pin_memory=True if device.type == "cuda" else False
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
+        pin_memory=True if device.type == "cuda" else False
     )
 
+    print("Creating model...", flush=True)
     model = create_model(len(CONFIG.canonical_labels)).to(device)
-    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+    print("Model created successfully", flush=True)
+    criterion = nn.CrossEntropyLoss()  # No class weights for simpler, faster training
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    print("Starting training...", flush=True)
 
     best_acc = 0.0
     best_state = None
 
     for epoch in range(1, args.epochs + 1):
+        print(f"Starting epoch {epoch}...", flush=True)
         train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
         print(
