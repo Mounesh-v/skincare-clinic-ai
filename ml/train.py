@@ -1,6 +1,72 @@
+from __future__ import annotations
+# Imports and directory setup
+
+# === DATASET PIPELINE ===
+import os
+import json
+import random
+import torch
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, random_split
+from torchvision.datasets import ImageFolder
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'Skin_v2')
+RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'models', 'results')
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+# Scan classes and generate class_map.json
+class_names = sorted([d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d))])
+class_map = {
+    "idx_to_label": {str(i): name for i, name in enumerate(class_names)},
+    "label_to_idx": {name: i for i, name in enumerate(class_names)},
+    "display_labels": {name: name.replace('_', ' ').title() for name in class_names}
+}
+with open(os.path.join(os.path.dirname(__file__), 'class_map.json'), 'w') as f:
+    json.dump(class_map, f, indent=2)
+
+# Transforms
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD = [0.229, 0.224, 0.225]
+train_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(15),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.15, hue=0.05),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+])
+val_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+])
+
+# ImageFolder dataset
+full_dataset = datasets.ImageFolder(DATA_DIR)
+num_classes = len(full_dataset.classes)
+
+# Split train/val (80/20)
+SEED = 42
+random.seed(SEED)
+torch.manual_seed(SEED)
+num_total = len(full_dataset)
+num_val = int(0.2 * num_total)
+num_train = num_total - num_val
+train_set, val_set = random_split(full_dataset, [num_train, num_val], generator=torch.Generator().manual_seed(SEED))
+
+
+# Patch transforms for each split (ImageFolder always has 'transform')
+train_set.dataset.transform = train_transform  # type: ignore[attr-defined]
+val_set.dataset.transform = val_transform  # type: ignore[attr-defined]
+
+# DataLoaders
+BATCH_SIZE = 16
+train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0, pin_memory=False)
+val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=0, pin_memory=False)
 """Training script for the skin-type EfficientNet-B0 classifier."""
 
-from __future__ import annotations
+
+
 
 import argparse
 import json
