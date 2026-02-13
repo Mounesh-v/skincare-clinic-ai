@@ -1,17 +1,23 @@
 {
   "idx_to_label": {
-    "0": "dry",
-    "1": "oily",
-    "2": "normal"
+    "0": "acne",
+    "1": "blackheads",
+    "2": "dark spots",
+    "3": "pores",
+    "4": "wrinkles"
   },
   "label_to_idx": {
-    "dry": 0,
-    "oily": 1,
-    "normal": 2
+    "acne": 0,
+    "blackheads": 1,
+    "dark spots": 2,
+    "pores": 3,
+    "wrinkles": 4
   },
   "display_labels": {
-    "dry": "Dry",
-    "oily": "Oily",
-    "normal": "Normal"
+    "acne": "Acne",
+    "blackheads": "Blackheads",
+    "dark spots": "Dark Spots",
+    "pores": "Pores",
+    "wrinkles": "Wrinkles"
   }
 }

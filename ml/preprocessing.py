@@ -160,15 +160,22 @@ def preprocess_array(
 ) -> Tuple[np.ndarray, float]:
     if image_rgb.ndim != 3 or image_rgb.shape[2] != 3:
         raise ValueError("Expected an RGB image with three channels")
-    local_detection = detection or detect_face_bbox(image_rgb, CONFIG.min_face_score)
-    if local_detection is None and enforce_face:
-        retry_score = max(0.1, CONFIG.min_face_score * 0.5)
-        local_detection = detect_face_bbox(image_rgb, retry_score)
-    if local_detection is None and enforce_face:
-        raise ValueError(
-            "Unable to detect a face with sufficient confidence."
-            " Ensure good lighting and keep your face centered in the frame."
-        )
+    # Only run face detection if enforce_face is True or detection is provided
+    if detection is not None:
+        local_detection = detection
+    elif enforce_face:
+        local_detection = detect_face_bbox(image_rgb, CONFIG.min_face_score)
+        if local_detection is None:
+            retry_score = max(0.1, CONFIG.min_face_score * 0.5)
+            local_detection = detect_face_bbox(image_rgb, retry_score)
+        if local_detection is None:
+            raise ValueError(
+                "Unable to detect a face with sufficient confidence."
+                " Ensure good lighting and keep your face centered in the frame."
+            )
+    else:
+        local_detection = None
+    
     fallback_to_center = local_detection is None
     cropped = crop_to_face(image_rgb, local_detection, CONFIG.face_padding if not fallback_to_center else 0.0)
     # Ensure image_size is a tuple (width, height)
