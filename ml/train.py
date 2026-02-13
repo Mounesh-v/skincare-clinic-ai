@@ -29,7 +29,6 @@ DATA_DIR = Path(__file__).parent / "data" / "raw" / "Skin v2"
 def set_seed(seed: int) -> None:
     """Set random seed for reproducibility."""
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
 
 
 def create_model(num_classes: int) -> nn.Module:
