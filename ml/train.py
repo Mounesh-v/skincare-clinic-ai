@@ -1,237 +1,84 @@
 from __future__ import annotations
-# Imports and directory setup
-
-# === DATASET PIPELINE ===
-import os
-import json
-import random
-import torch
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, random_split
-from torchvision.datasets import ImageFolder
-
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'Skin v2')
-RESULTS_DIR = os.path.join(os.path.dirname(__file__), 'models', 'results')
-os.makedirs(RESULTS_DIR, exist_ok=True)
-
-# Scan classes and generate class_map.json
-class_names = sorted([d for d in os.listdir(DATA_DIR) if os.path.isdir(os.path.join(DATA_DIR, d))])
-class_map = {
-    "idx_to_label": {str(i): name for i, name in enumerate(class_names)},
-    "label_to_idx": {name: i for i, name in enumerate(class_names)},
-    "display_labels": {name: name.replace('_', ' ').title() for name in class_names}
-}
-with open(os.path.join(os.path.dirname(__file__), 'class_map.json'), 'w') as f:
-    json.dump(class_map, f, indent=2)
-
-# Transforms
-IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD = [0.229, 0.224, 0.225]
-train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(15),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.15, hue=0.05),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
-])
-val_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
-])
-
-# ImageFolder dataset
-full_dataset = datasets.ImageFolder(DATA_DIR)
-num_classes = len(full_dataset.classes)
-
-# Split train/val (80/20)
-SEED = 42
-random.seed(SEED)
-torch.manual_seed(SEED)
-num_total = len(full_dataset)
-num_val = int(0.2 * num_total)
-num_train = num_total - num_val
-train_set, val_set = random_split(full_dataset, [num_train, num_val], generator=torch.Generator().manual_seed(SEED))
-
-
-# Patch transforms for each split (ImageFolder always has 'transform')
-train_set.dataset.transform = train_transform  # type: ignore[attr-defined]
-val_set.dataset.transform = val_transform  # type: ignore[attr-defined]
-
-# DataLoaders
-BATCH_SIZE = 16
-train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=0, pin_memory=False)
-val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=0, pin_memory=False)
-"""Training script for the skin-type EfficientNet-B0 classifier."""
-
-
-
 
 import argparse
 import json
-import random
 import time
-from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence, Tuple, cast
+from typing import Tuple
 
-import numpy as np
 import torch
-from torch import nn, optim
-from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
-from torchvision import models
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import models, transforms
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
 
-from .config import CONFIG
-from .model_utils import normalize_tensor, to_tensor
-from .preprocessing import iter_labelled_files, preprocess_image_file
+# Import config
+import sys
+sys.path.insert(0, str(Path(__file__).parent))
+from config import CONFIG
+
+
+# =============================================================================
+# DATASET CONFIGURATION
+# =============================================================================
+DATA_DIR = Path(__file__).parent / "data" / "raw" / "Skin v2"
 
 
 def set_seed(seed: int) -> None:
-    random.seed(seed)
-    np.random.seed(seed)
+    """Set random seed for reproducibility."""
     torch.manual_seed(seed)
-
-
-@dataclass
-class DatasetItem:
-    path: str
-    label_idx: int
-
-
-class SkinDataset(Dataset[Tuple[torch.Tensor, int]]):
-    def __init__(
-        self,
-        items: Sequence[DatasetItem],
-        enforce_face: bool = True,
-        augment: bool = False,
-    ) -> None:
-        self.items = list(items)
-        self.enforce_face = enforce_face
-        self.augment = augment
-
-    def __len__(self) -> int:
-        return len(self.items)
-
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
-        item = self.items[index]
-        try:
-            image, _ = preprocess_image_file(item.path, enforce_face=self.enforce_face)
-        except ValueError:
-            image, _ = preprocess_image_file(item.path, enforce_face=False)
-        tensor = to_tensor(image, add_batch_dim=False, normalize=False)
-        if self.augment:
-            tensor = self._augment_tensor(tensor)
-        tensor = normalize_tensor(tensor)
-        return tensor, item.label_idx
-
-    def _augment_tensor(self, tensor: torch.Tensor) -> torch.Tensor:
-        if torch.rand(1).item() < 0.5:
-            tensor = torch.flip(tensor, dims=[2])
-        brightness = 1.0 + (torch.rand(1).item() - 0.5) * 0.2
-        tensor = torch.clamp(tensor * brightness, 0.0, 1.0)
-        if torch.rand(1).item() < 0.3:
-            tensor = torch.clamp(tensor + torch.randn_like(tensor) * 0.02, 0.0, 1.0)
-        return tensor
-
-
-def build_items(split: str) -> List[DatasetItem]:
-    dataset_root = Path(CONFIG.dataset_root)
-    if not dataset_root.exists():
-        raise FileNotFoundError(f"Dataset root not found: {dataset_root}")
-    items: List[DatasetItem] = []
-    for file_path, label in iter_labelled_files(dataset_root, split):
-        label = label.lower()
-        if label not in CONFIG.canonical_labels:
-            continue
-        idx = CONFIG.canonical_labels.index(label)
-        items.append(DatasetItem(str(file_path), idx))
-    if not items:
-        raise RuntimeError(f"No labelled samples found for split '{split}'")
-    return items
-
-
-def make_sampler(items: Sequence[DatasetItem], num_classes: int) -> Tuple[WeightedRandomSampler, torch.Tensor]:
-    labels = np.array([item.label_idx for item in items], dtype=np.int64)
-    class_counts = np.bincount(labels, minlength=num_classes).astype(np.float32)
-    class_counts = np.maximum(class_counts, 1.0)
-    class_weights = 1.0 / class_counts
-    sample_weights = class_weights[labels].astype(np.float64)
-    sampler = WeightedRandomSampler(weights=sample_weights.tolist(), num_samples=len(items), replacement=True)
-    criterion_weights = torch.tensor(class_weights, dtype=torch.float32)
-    return sampler, criterion_weights
-
-
-def summarize_distribution(items: Sequence[DatasetItem], split_name: str) -> None:
-    counts = Counter(item.label_idx for item in items)
-    total = len(items)
-    pieces = []
-    for idx, label in enumerate(CONFIG.canonical_labels):
-        pieces.append(f"{label}:{counts.get(idx, 0)}")
-    summary = ", ".join(pieces)
-    print(f"{split_name} distribution -> total={total} ({summary})", flush=True)
-
-
-def rebalance_items(items: Sequence[DatasetItem], num_classes: int) -> List[DatasetItem]:
-    counts = Counter(item.label_idx for item in items)
-    if not counts:
-        return list(items)
-    max_count = max(counts.values())
-    rng = random.Random(CONFIG.rng_seed)
-    balanced: List[DatasetItem] = list(items)
-    for class_idx in range(num_classes):
-        pool = [item for item in items if item.label_idx == class_idx]
-        if not pool:
-            continue
-        needed = max_count - counts.get(class_idx, 0)
-        for _ in range(needed):
-            balanced.append(rng.choice(pool))
-    rng.shuffle(balanced)
-    print(
-        f"Applied oversampling balance: before={len(items)} after={len(balanced)} max_class={max_count}",
-        flush=True,
-    )
-    return balanced
-
-
-def diagnose_predictions(
-    model: nn.Module,
-    loader: DataLoader,
-    device: torch.device,
-    num_classes: int,
-) -> None:
-    totals = torch.zeros(num_classes, dtype=torch.long)
-    correct = torch.zeros(num_classes, dtype=torch.long)
-    predicted = torch.zeros(num_classes, dtype=torch.long)
-    with torch.no_grad():
-        for images, labels in loader:
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-            preds = torch.argmax(outputs, dim=1)
-            for idx in range(num_classes):
-                mask = labels == idx
-                totals[idx] += int(mask.sum().item())
-                if mask.any().item():
-                    correct[idx] += int((preds[mask] == idx).sum().item())
-            for idx in range(num_classes):
-                predicted[idx] += int((preds == idx).sum().item())
-    diagnostics = []
-    for idx, label in enumerate(CONFIG.canonical_labels):
-        total = totals[idx].item()
-        acc = (correct[idx].item() / total) if total else 0.0
-        diagnostics.append(f"{label}:acc={acc:.2f} preds={predicted[idx].item()} samples={total}")
-    print("Validation diagnostics " + " | ".join(diagnostics), flush=True)
+    torch.cuda.manual_seed_all(seed)
 
 
 def create_model(num_classes: int) -> nn.Module:
+    """Create EfficientNet-B0 model."""
     weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1
     model = models.efficientnet_b0(weights=weights)
-    classifier_head = cast(nn.Linear, model.classifier[1])
-    in_features = classifier_head.in_features
+    
+    # Replace classifier
+    in_features = model.classifier[1].in_features
     model.classifier[1] = nn.Linear(in_features, num_classes)
+    
     return model
+
+
+def freeze_backbone(model: nn.Module) -> None:
+    """Freeze all layers except the classifier."""
+    for name, param in model.named_parameters():
+        if 'classifier' not in name:
+            param.requires_grad = False
+    print("✓ Backbone frozen (only classifier trainable)", flush=True)
+
+
+def unfreeze_backbone(model: nn.Module) -> None:
+    """Unfreeze all layers."""
+    for param in model.parameters():
+        param.requires_grad = True
+    print("✓ Backbone unfrozen (all layers trainable)", flush=True)
+
+
+def get_optimizer(model: nn.Module, lr_backbone: float, lr_classifier: float) -> optim.Optimizer:
+    """Create optimizer with differential learning rates."""
+    backbone_params = []
+    classifier_params = []
+    
+    for name, param in model.named_parameters():
+        if not param.requires_grad:
+            continue
+        if 'classifier' in name:
+            classifier_params.append(param)
+        else:
+            backbone_params.append(param)
+    
+    param_groups = []
+    if backbone_params:
+        param_groups.append({'params': backbone_params, 'lr': lr_backbone})
+    if classifier_params:
+        param_groups.append({'params': classifier_params, 'lr': lr_classifier})
+    
+    return optim.AdamW(param_groups, weight_decay=1e-4)
 
 
 def train_one_epoch(
@@ -240,47 +87,86 @@ def train_one_epoch(
     criterion: nn.Module,
     optimizer: optim.Optimizer,
     device: torch.device,
+    epoch: int,
 ) -> Tuple[float, float]:
+    """Train for one epoch with batch progress tracking."""
     model.train()
     running_loss = 0.0
     correct = 0
     total = 0
-    for images, labels in loader:
+    
+    # Use tqdm for progress bar
+    pbar = tqdm(loader, desc=f"Epoch {epoch} [Train]", unit="batch")
+    
+    for batch_idx, (images, labels) in enumerate(pbar, 1):
         images = images.to(device)
         labels = labels.to(device)
+        
         optimizer.zero_grad()
         outputs = model(images)
         loss = criterion(outputs, labels)
         loss.backward()
+        
+        # Gradient clipping for stability
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        
         optimizer.step()
+        
         running_loss += loss.item() * images.size(0)
         _, preds = torch.max(outputs, 1)
         correct += (preds == labels).sum().item()
         total += labels.size(0)
-    return running_loss / total, correct / total
+        
+        # Update progress bar
+        batch_acc = 100 * correct / total
+        batch_loss = running_loss / total
+        pbar.set_postfix({'loss': f'{batch_loss:.4f}', 'acc': f'{batch_acc:.2f}%'})
+    
+    epoch_loss = running_loss / total
+    epoch_acc = correct / total
+    return epoch_loss, epoch_acc
 
 
-def evaluate(model: nn.Module, loader: DataLoader, criterion: nn.Module, device: torch.device) -> Tuple[float, float]:
-    model.eval()
+def evaluate(
+    model: nn.Module,
+    loader: DataLoader,
+    criterion: nn.Module,
+    device: torch.device,
+) -> Tuple[float, float]:
+    """Evaluate the model with progress bar."""
+    model.eval()  # Set to evaluation mode
     running_loss = 0.0
     correct = 0
     total = 0
-    with torch.no_grad():
-        for images, labels in loader:
+    
+    # Use tqdm for progress bar
+    pbar = tqdm(loader, desc="Validation", unit="batch")
+    
+    with torch.no_grad():  # Disable gradient computation
+        for batch_idx, (images, labels) in enumerate(pbar, 1):
             images = images.to(device)
             labels = labels.to(device)
             outputs = model(images)
             loss = criterion(outputs, labels)
+            
             running_loss += loss.item() * images.size(0)
             _, preds = torch.max(outputs, 1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
+            
+            # Update progress bar
+            batch_acc = 100 * correct / total
+            batch_loss = running_loss / total
+            pbar.set_postfix({'loss': f'{batch_loss:.4f}', 'acc': f'{batch_acc:.2f}%'})
+    
     return running_loss / total, correct / total
 
 
 def save_checkpoint(model: nn.Module, weights_path: Path, metadata_path: Path) -> None:
+    """Save model checkpoint and metadata."""
     weights_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), weights_path)
+    
     metadata = {
         "weights": weights_path.name,
         "class_map": json.loads(CONFIG.class_map_path.read_text(encoding="utf-8")),
@@ -292,33 +178,61 @@ def save_checkpoint(model: nn.Module, weights_path: Path, metadata_path: Path) -
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train the skin-type classifier")
-    parser.add_argument("--epochs", type=int, default=12)
-    parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--lr", type=float, default=3e-4)
-    parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--overfit", action="store_true", help="Overfit a tiny subset for debugging")
-    parser.add_argument("--no-balance", action="store_true", help="Disable oversampling class balance")
-    parser.add_argument("--no-augment", action="store_true", help="Disable training-time augmentations")
+    """Main training function."""
+    parser = argparse.ArgumentParser(description="Train skin-type classifier (CPU-optimized)")
+    parser.add_argument("--epochs", type=int, default=15)
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--lr-backbone", type=float, default=1e-4)
+    parser.add_argument("--lr-classifier", type=float, default=3e-4)
+    parser.add_argument("--freeze-epochs", type=int, default=3, help="Epochs to freeze backbone")
+    parser.add_argument("--early-stop-patience", type=int, default=5)
     parser.add_argument("--weights-out", type=Path, default=CONFIG.models_dir / "skin_classifier.pt")
     parser.add_argument("--metadata-out", type=Path, default=CONFIG.models_dir / "model_metadata.json")
     args = parser.parse_args()
-
-    set_seed(CONFIG.rng_seed)
-    device = torch.device(CONFIG.default_device)
-
-
-    # Use PyTorch's ImageFolder for faster training (no custom preprocessing)
-    from torchvision.datasets import ImageFolder
-    from torchvision import transforms
     
-    # Define transforms
+    print("="*70)
+    print("SKIN TYPE CLASSIFICATION TRAINING")
+    print("="*70)
+    
+    # STEP 4 - SAFETY CHECK
+    device = torch.device("cpu")  # Force CPU
+    print(f"Device: {device}")
+    print(f"Epochs: {args.epochs}")
+    print(f"Batch size: {args.batch_size}")
+    print(f"LR backbone: {args.lr_backbone}")
+    print(f"LR classifier: {args.lr_classifier}")
+    print(f"Freeze epochs: {args.freeze_epochs}")
+    print(f"Early stop patience: {args.early_stop_patience}")
+    print("="*70)
+    
+    set_seed(CONFIG.rng_seed)
+    
+    # STEP 1 - DATASET SOURCE FIX
+    print(f"\n{'='*70}")
+    print(f"STEP 1 - DATASET SOURCE VALIDATION")
+    print(f"{'='*70}")
+    print(f"Dataset root (DATA_DIR): {DATA_DIR}")
+    print(f"Absolute path: {DATA_DIR.resolve()}")
+    print(f"Path exists: {DATA_DIR.exists()}")
+    
+    if not DATA_DIR.exists():
+        raise FileNotFoundError(f"Dataset directory not found: {DATA_DIR}")
+    
+    # Count total images
+    total_jpg = len(list(DATA_DIR.glob("**/*.jpg")))
+    total_jpeg = len(list(DATA_DIR.glob("**/*.jpeg")))
+    total_png = len(list(DATA_DIR.glob("**/*.png")))
+    total_images = total_jpg + total_jpeg + total_png
+    
+    print(f"\nTotal images found: {total_images}")
+    print(f"  - JPG files: {total_jpg}")
+    print(f"  - JPEG files: {total_jpeg}")
+    print(f"  - PNG files: {total_png}")
+    
+    # CPU-optimized transforms (no heavy augmentation)
     train_transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(15),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -329,63 +243,154 @@ def main() -> None:
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
-    # Load datasets
-    train_root = CONFIG.dataset_root / CONFIG.train_split
-    val_root = CONFIG.dataset_root / CONFIG.val_split
+    # Load full dataset from root directory
+    print(f"\nLoading dataset from: {DATA_DIR}")
+    full_dataset = ImageFolder(str(DATA_DIR), transform=None)
     
-    train_dataset = ImageFolder(str(train_root), transform=train_transform)
-    val_dataset = ImageFolder(str(val_root), transform=val_transform)
+    print(f"\n📊 Dataset loaded successfully!")
+    print(f"Total samples: {len(full_dataset)}")
+    print(f"Number of classes: {len(full_dataset.classes)}")
+    print(f"Class names: {full_dataset.classes}")
     
-    print(f"Train dataset: {len(train_dataset)} images", flush=True)
-    print(f"Val dataset: {len(val_dataset)} images", flush=True)
+    # STEP 3 - DATA VERIFICATION LOGS
+    print(f"\n{'='*70}")
+    print(f"STEP 3 - PER-CLASS DISTRIBUTION")
+    print(f"{'='*70}")
     
-    # Create data loaders
+    from collections import Counter
+    labels = [label for _, label in full_dataset.samples]
+    class_counts = Counter(labels)
+    
+    for idx, class_name in enumerate(full_dataset.classes):
+        count = class_counts.get(idx, 0)
+        print(f"  {class_name}: {count} images")
+    
+    # Print first 5 sample paths to verify real dataset usage
+    print(f"\nFirst 5 sample file paths (verification):")
+    for i, (path, label) in enumerate(full_dataset.samples[:5]):
+        class_name = full_dataset.classes[label]
+        print(f"  {i+1}. [{class_name}] {path}")
+    
+    # 80/20 random split
+    train_size = int(0.8 * len(full_dataset))
+    val_size = len(full_dataset) - train_size
+    
+    print(f"\n{'='*70}")
+    print(f"PERFORMING 80/20 RANDOM SPLIT")
+    print(f"{'='*70}")
+    print(f"Train size: {train_size} ({train_size/len(full_dataset)*100:.1f}%)")
+    print(f"Val size: {val_size} ({val_size/len(full_dataset)*100:.1f}%)")
+    
+    # Split dataset
+    train_dataset, val_dataset = random_split(
+        full_dataset,
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(CONFIG.rng_seed)
+    )
+    
+    # Apply transforms to splits
+    train_dataset.dataset.transform = train_transform
+    val_dataset.dataset.transform = val_transform
+    
+    # STEP 4 - SAFETY CHECK: CPU-optimized data loaders
+    print(f"\n{'='*70}")
+    print(f"STEP 4 - SAFETY CHECK")
+    print(f"{'='*70}")
+    print(f"✓ Device: CPU (forced)")
+    print(f"✓ num_workers: 0 (CPU optimization)")
+    print(f"✓ pin_memory: False (CPU optimization)")
+    print(f"✓ Mixed precision: Disabled")
+    print(f"✓ Oversampling: Disabled (not needed for large dataset)")
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=True if device.type == "cuda" else False
+        num_workers=0,  # CPU optimization
+        pin_memory=False  # CPU optimization
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=True if device.type == "cuda" else False
+        num_workers=0,  # CPU optimization
+        pin_memory=False  # CPU optimization
     )
-
-    print("Creating model...", flush=True)
-    model = create_model(len(CONFIG.canonical_labels)).to(device)
-    print("Model created successfully", flush=True)
-    criterion = nn.CrossEntropyLoss()  # No class weights for simpler, faster training
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    print("Starting training...", flush=True)
-
-    best_acc = 0.0
+    
+    print(f"\n🔧 Creating model...")
+    model = create_model(len(full_dataset.classes)).to(device)
+    print(f"✓ Model created: EfficientNet-B0")
+    
+    criterion = nn.CrossEntropyLoss()
+    
+    # Training loop
+    best_val_acc = 0.0
     best_state = None
-
+    patience_counter = 0
+    
+    print(f"\n🚀 Starting training...\n")
+    print("="*70)
+    
     for epoch in range(1, args.epochs + 1):
-        print(f"Starting epoch {epoch}...", flush=True)
-        train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        print(f"\n{'='*70}")
+        print(f"EPOCH {epoch}/{args.epochs}")
+        print(f"{'='*70}")
+        
+        # Freeze/unfreeze backbone
+        if epoch == 1:
+            freeze_backbone(model)
+            optimizer = get_optimizer(model, args.lr_backbone, args.lr_classifier)
+        elif epoch == args.freeze_epochs + 1:
+            unfreeze_backbone(model)
+            optimizer = get_optimizer(model, args.lr_backbone, args.lr_classifier)
+        
+        # Training
+        train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device, epoch)
+        
+        # STEP 2 - VALIDATION FREEZE FIX (with tqdm progress bar)
         val_loss, val_acc = evaluate(model, val_loader, criterion, device)
-        print(
-            f"Epoch {epoch:02d}: train_loss={train_loss:.4f} train_acc={train_acc:.3f} "
-            f"val_loss={val_loss:.4f} val_acc={val_acc:.3f}",
-            flush=True,
-        )
-        if val_acc >= best_acc:
-            best_acc = val_acc
+        
+        # Summary
+        print(f"\n{'─'*70}")
+        print(f"EPOCH {epoch} SUMMARY:")
+        print(f"  Train Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%")
+        print(f"  Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc*100:.2f}%")
+        
+        # STEP 5 - CONFIRM TRAINING LOSS DECREASES
+        if epoch > 1:
+            print(f"  Loss change: {train_loss - prev_train_loss:+.4f}")
+        prev_train_loss = train_loss
+        
+        print(f"{'─'*70}")
+        
+        # Save best model
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
             best_state = model.state_dict()
-
-    if best_state is None:
-        raise RuntimeError("Training did not run any epochs")
-
-    model.load_state_dict(best_state)
-    save_checkpoint(model, args.weights_out, args.metadata_out)
-    print(f"Saved weights to {args.weights_out}")
-    print(f"Saved metadata to {args.metadata_out}")
-    diagnose_predictions(model, val_loader, device, len(CONFIG.canonical_labels))
+            patience_counter = 0
+            print(f"✅ New best validation accuracy: {best_val_acc*100:.2f}%")
+        else:
+            patience_counter += 1
+            print(f"⏳ No improvement (patience: {patience_counter}/{args.early_stop_patience})")
+        
+        # Early stopping
+        if patience_counter >= args.early_stop_patience:
+            print(f"\n🛑 Early stopping triggered (no improvement for {args.early_stop_patience} epochs)")
+            break
+    
+    # Save final model
+    if best_state is not None:
+        model.load_state_dict(best_state)
+        save_checkpoint(model, args.weights_out, args.metadata_out)
+        print(f"\n{'='*70}")
+        print(f"✅ TRAINING COMPLETE")
+        print(f"{'='*70}")
+        print(f"Best validation accuracy: {best_val_acc*100:.2f}%")
+        print(f"Model saved to: {args.weights_out}")
+        print(f"Metadata saved to: {args.metadata_out}")
+        print(f"{'='*70}\n")
+    else:
+        print(f"\n❌ Training failed - no best state saved")
 
 
 if __name__ == "__main__":
