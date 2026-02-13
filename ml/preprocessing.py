@@ -171,7 +171,9 @@ def preprocess_array(
         )
     fallback_to_center = local_detection is None
     cropped = crop_to_face(image_rgb, local_detection, CONFIG.face_padding if not fallback_to_center else 0.0)
-    resized = cv2.resize(cropped, CONFIG.image_size, interpolation=cv2.INTER_AREA)
+    # Ensure image_size is a tuple (width, height)
+    dsize = (CONFIG.image_size, CONFIG.image_size) if isinstance(CONFIG.image_size, int) else CONFIG.image_size
+    resized = cv2.resize(cropped, dsize, interpolation=cv2.INTER_AREA)
     normalised = normalise_lighting(resized)
     tensor_ready = np.clip(normalised, 0, 255).astype(np.uint8)
     face_score = local_detection.score if local_detection else 0.0

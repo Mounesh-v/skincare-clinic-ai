@@ -42,14 +42,17 @@ def annotate_status(frame: np.ndarray, message: str) -> None:
 
 
 def run_loop(weights: Path, class_map: Path, camera_index: int, min_score: float, mirror: bool) -> None:
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     idx_to_label, _, display_labels = load_class_map(class_map)
     model = inference_model(len(idx_to_label), weights)
-    device = torch.device(CONFIG.default_device)
+    device = torch.device("cpu")
     model.to(device)
 
     cap = cv2.VideoCapture(camera_index)
     if not cap.isOpened():
-        raise RuntimeError(f"Unable to open camera index {camera_index}")
+        logging.error(f"Unable to open camera index {camera_index}")
+        return
 
     last_prediction = "Initializing"
     fps_start = time.time()
@@ -73,12 +76,26 @@ def run_loop(weights: Path, class_map: Path, camera_index: int, min_score: float
                 with torch.no_grad():
                     logits = model(tensor)
                     probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
+                # Map condition scores to skin type
+                idx_values = list(idx_to_label.values())
+                acne = probs[idx_values.index('acne')] if 'acne' in idx_values else 0.0
+                pores = probs[idx_values.index('pores')] if 'pores' in idx_values else 0.0
+                wrinkles = probs[idx_values.index('wrinkles')] if 'wrinkles' in idx_values else 0.0
+                scores = probs
+                if acne > 0.5 and pores > 0.6:
+                    skin_type = "Oily"
+                elif wrinkles > 0.5:
+                    skin_type = "Dry"
+                elif all(0.3 < s < 0.6 for s in scores):
+                    skin_type = "Normal"
+                else:
+                    skin_type = "Combination"
                 best_idx = int(np.argmax(probs))
                 label_key = idx_to_label[best_idx]
                 friendly = display_labels.get(label_key, label_key.title())
                 confidence = float(probs[best_idx])
                 draw_label(frame, detection, friendly, confidence)
-                last_prediction = f"{friendly}: {confidence * 100:.1f}%"
+                last_prediction = f"{friendly}: {confidence * 100:.1f}% | Skin type: {skin_type}"
             frames += 1
             elapsed = time.time() - fps_start
             fps = frames / elapsed if elapsed > 0 else 0.0
