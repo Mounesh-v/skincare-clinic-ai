@@ -22,15 +22,28 @@ import FindDoctors from './pages/FindDoctors';
 // Admin Pages
 import AdminLogin from './pages/auth/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
+
+// Admin - Users
 import UserList from './pages/admin/Users/UserList';
 import UserDetail from './pages/admin/Users/UserDetail';
+
+// Admin - Products
 import ProductList from './pages/admin/Products/ProductList';
 import ProductCreate from './pages/admin/Products/ProductCreate';
-import OrderList from './pages/admin/Orders/OrderList';
-import OrderDetail from './pages/admin/Orders/OrderDetail';
-import AssessmentList from './pages/admin/Assessments/AssessmentList';
 import ProductView from './pages/admin/Products/ProductView';
 import ProductEdit from './pages/admin/Products/ProductEdit';
+
+// Admin - Orders
+import OrderList from './pages/admin/Orders/OrderList';
+import OrderDetail from './pages/admin/Orders/OrderDetail';
+
+// Admin - Assessments
+import AssessmentList from './pages/admin/Assessments/AssessmentList';
+
+// Admin - Doctors
+import DoctorList from './pages/admin/Doctors/DoctorList';
+import DoctorDetails from './pages/admin/Doctors/DoctorDetails';
+import DoctorCreate from './pages/admin/Doctors/DoctorCreate';
 
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
@@ -122,24 +135,47 @@ function App() {
         />
 
         <Routes>
+          {/* ============================================ */}
+          {/* ADMIN ROUTES (No Header/Footer) */}
+          {/* ============================================ */}
           <Route path="/admin/login" element={<AdminLogin />} />
+          
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            
+            {/* Users Management */}
             <Route path="users" element={<UserList />} />
             <Route path="users/:id" element={<UserDetail />} />
+            
+            {/* Products Management */}
             <Route path="products" element={<ProductList />} />
             <Route path="products/create" element={<ProductCreate />} />
-            <Route path="/admin/products/:id/edit" element={<ProductEdit />} />
-            <Route path="/admin/products/:id" element={<ProductView />} />
+            <Route path="products/:id" element={<ProductView />} />
+            <Route path="products/:id/edit" element={<ProductEdit />} />
+            
+            {/* Orders Management */}
             <Route path="orders" element={<OrderList />} />
             <Route path="orders/:id" element={<OrderDetail />} />
+            
+            {/* Assessments Management */}
             <Route path="assessments" element={<AssessmentList />} />
+            
+            {/* Doctors Management */}
+            <Route path="doctors" element={<DoctorList />} />
+            <Route path="doctors/create" element={<DoctorCreate />} />
+            <Route path="doctors/:id" element={<DoctorDetails />} />
+            <Route path="doctors/:id/edit" element={<DoctorCreate />} />
+            
+            {/* Placeholder Routes */}
             <Route path="content" element={<ComingSoon title="Content Management" />} />
             <Route path="analytics" element={<ComingSoon title="Analytics & Reports" />} />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
           </Route>
 
+          {/* ============================================ */}
+          {/* PUBLIC ROUTES (With Header/Footer) */}
+          {/* ============================================ */}
           <Route
             path="/*"
             element={(
@@ -158,6 +194,9 @@ function App() {
   );
 }
 
+/**
+ * Public Routes Component (with Header/Footer)
+ */
 function PublicAppRoutes({
   isAuthenticated,
   user,
@@ -168,12 +207,19 @@ function PublicAppRoutes({
   return (
     <Layout isAuthenticated={isAuthenticated} user={user} onLogout={onLogout}>
       <Routes>
+        {/* Home */}
         <Route path="/" element={<TrayaStyleHome />} />
+        
+        {/* Contact */}
         <Route path="/contact" element={<Contact />} />
+        
+        {/* Assessment Flow */}
         <Route
           path="/assessment"
           element={<AssessmentWrapper onComplete={onAssessmentComplete} />}
         />
+        
+        {/* Results Page */}
         <Route
           path="/results"
           element={
@@ -184,18 +230,31 @@ function PublicAppRoutes({
             )
           }
         />
+        
+        {/* Find Doctors */}
         <Route path="/find-doctors" element={<FindDoctors />} />
+        
+        {/* Products */}
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/:productId" element={<ProductDetail />} />
+        
+        {/* Checkout */}
         <Route path="/checkout" element={<CheckoutPage />} />
+        
+        {/* Auth */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+        
+        {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
   );
 }
 
+/**
+ * Layout Component - Conditionally renders Header/Footer
+ */
 function Layout({ isAuthenticated, user, onLogout, children }) {
   const location = useLocation();
   const hideHeaderFooter = location.pathname === '/assessment';
@@ -211,6 +270,9 @@ function Layout({ isAuthenticated, user, onLogout, children }) {
   );
 }
 
+/**
+ * Assessment Wrapper Component
+ */
 function AssessmentWrapper({ onComplete }) {
   const navigate = useNavigate();
 
@@ -222,6 +284,9 @@ function AssessmentWrapper({ onComplete }) {
   return <StartAssessment onComplete={handleComplete} />;
 }
 
+/**
+ * Coming Soon Component (for admin placeholder pages)
+ */
 function ComingSoon({ title }) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -234,6 +299,9 @@ function ComingSoon({ title }) {
   );
 }
 
+/**
+ * 404 Not Found Component
+ */
 function NotFound() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center bg-slate-50">
