@@ -137,10 +137,13 @@ const SkinAnalysisResults = ({ assessmentData }) => {
 
     const analysis = assessmentData.analysis;
 
-    const imageAnalysis = analysis.image_analysis ?? null;
-    const predictedKey = imageAnalysis?.predicted_skin_type ?? 'combination';
-    const skinTypeLabel = formatSkinLabel(predictedKey);
+    // Get SKIN TYPE (Oily/Dry/Normal/Combination) from new response structure
+    const skinTypeValue = analysis.skin_type ?? 'Combination';
+    const skinTypeLabel = formatSkinLabel(skinTypeValue);
     const predictedSkinType = skinTypeLabel;
+
+    // Image analysis data (for feature insights,quality metrics)
+    const imageAnalysis = analysis.image_analysis ?? null;
 
     const rootCauses = (analysis.root_causes ?? []).map((cause, index) => ({
       id: index + 1,
@@ -200,15 +203,15 @@ const SkinAnalysisResults = ({ assessmentData }) => {
     const matchedCaseRaw = analysis.matched_case ?? null;
     const matchedCase = matchedCaseRaw
       ? {
-          name: matchedCaseRaw.name ?? defaultAnalysis.matchedCase.name,
-          headline: matchedCaseRaw.headline ?? defaultAnalysis.matchedCase.headline,
-          story: matchedCaseRaw.story ?? defaultAnalysis.matchedCase.story,
-          snapshots: (matchedCaseRaw.snapshots ?? []).map((snap, snapIndex) => ({
-            month: snap.month ?? snapIndex + 1,
-            label: snap.label ?? `Month ${snapIndex + 1}`,
-            summary: snap.summary ?? '',
-          })),
-        }
+        name: matchedCaseRaw.name ?? defaultAnalysis.matchedCase.name,
+        headline: matchedCaseRaw.headline ?? defaultAnalysis.matchedCase.headline,
+        story: matchedCaseRaw.story ?? defaultAnalysis.matchedCase.story,
+        snapshots: (matchedCaseRaw.snapshots ?? []).map((snap, snapIndex) => ({
+          month: snap.month ?? snapIndex + 1,
+          label: snap.label ?? `Month ${snapIndex + 1}`,
+          summary: snap.summary ?? '',
+        })),
+      }
       : defaultAnalysis.matchedCase;
 
     return {
@@ -261,7 +264,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       popular: false,
       price: 1999,
       originalPrice: 2999,
-      discount: 33,   
+      discount: 33,
       includes: [
         'Customized skin analysis',
         'Medicated creams & serums',
@@ -310,181 +313,181 @@ const SkinAnalysisResults = ({ assessmentData }) => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-     {/* Hero Section - Analysis Complete */}
-<section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 lg:py-24 text-white overflow-hidden">
-  {/* Background Pattern */}
-  <div className="absolute inset-0 opacity-10">
-    <div 
-      className="absolute inset-0"
-      style={{
-        backgroundImage: `radial-gradient(circle, #10b981 1px, transparent 1px)`,
-        backgroundSize: '30px 30px'
-      }}
-    ></div>
-  </div>
-
-  {/* Decorative Blur Elements */}
-  <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
-  <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl"></div>
-
-  <div className="container-custom relative z-10">
-    <div className="mx-auto max-w-6xl">
-      {/* Header Section */}
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between mb-12">
-        <div className="space-y-6 flex-1">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/90">
-              Personalized Assessment Report
-            </p>
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight">
-            {assessmentData?.lead?.name ? (
-              <>
-                <span className="text-emerald-400">{assessmentData.lead.name},</span>
-                <br />
-                your skin reboot starts now.
-              </>
-            ) : (
-              <>
-                <span className="text-emerald-400">Hey,</span>
-                <br />
-                your skin reboot starts now.
-              </>
-            )}
-          </h1>
-          
-          <p className="max-w-2xl text-base md:text-lg text-white/80 leading-relaxed">
-            Our AI analyzed your responses, lifestyle patterns, and skin photo to create a personalized treatment plan. 
-            Follow the routine consistently and expect visible improvements in{' '}
-            <span className="font-semibold text-emerald-400">{analysisResults.monthsToResults} months</span>.
-          </p>
+      {/* Hero Section - Analysis Complete */}
+      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 lg:py-24 text-white overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `radial-gradient(circle, #10b981 1px, transparent 1px)`,
+              backgroundSize: '30px 30px'
+            }}
+          ></div>
         </div>
 
-        {/* Success Card */}
-        <div className="w-full lg:w-80 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 shadow-2xl">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-white/70">
-              {analysisResults.stageLabel}
-            </p>
-            <Shield className="h-5 w-5 text-emerald-400" />
-          </div>
-          
-          <div className="flex items-end gap-3 mb-6">
-            <span className="text-6xl font-bold leading-none bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-              {successPercent}%
-            </span>
-            <span className="pb-2 text-sm font-medium text-white/70">
-              success rate
-            </span>
-          </div>
+        {/* Decorative Blur Elements */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl"></div>
 
-          {/* Mini Progress Bar */}
-          <div className="mb-4">
-            <div className="h-2 w-full rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-1000"
-                style={{ width: `${successPercent}%` }}
-              />
+        <div className="container-custom relative z-10">
+          <div className="mx-auto max-w-6xl">
+            {/* Header Section */}
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between mb-12">
+              <div className="space-y-6 flex-1">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-white/90">
+                    Personalized Assessment Report
+                  </p>
+                </div>
+
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight">
+                  {assessmentData?.lead?.name ? (
+                    <>
+                      <span className="text-emerald-400">{assessmentData.lead.name},</span>
+                      <br />
+                      your skin reboot starts now.
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-emerald-400">Hey,</span>
+                      <br />
+                      your skin reboot starts now.
+                    </>
+                  )}
+                </h1>
+
+                <p className="max-w-2xl text-base md:text-lg text-white/80 leading-relaxed">
+                  Our AI analyzed your responses, lifestyle patterns, and skin photo to create a personalized treatment plan.
+                  Follow the routine consistently and expect visible improvements in{' '}
+                  <span className="font-semibold text-emerald-400">{analysisResults.monthsToResults} months</span>.
+                </p>
+              </div>
+
+              {/* Success Card */}
+              <div className="w-full lg:w-80 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 shadow-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-white/70">
+                    {analysisResults.stageLabel}
+                  </p>
+                  <Shield className="h-5 w-5 text-emerald-400" />
+                </div>
+
+                <div className="flex items-end gap-3 mb-6">
+                  <span className="text-6xl font-bold leading-none bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                    {successPercent}%
+                  </span>
+                  <span className="pb-2 text-sm font-medium text-white/70">
+                    success rate
+                  </span>
+                </div>
+
+                {/* Mini Progress Bar */}
+                <div className="mb-4">
+                  <div className="h-2 w-full rounded-full bg-white/20">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-1000"
+                      style={{ width: `${successPercent}%` }}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Based on adherence to recommended routine, nutrition guidelines, and monthly progress check-ins.
+                </p>
+              </div>
+            </div>
+
+            {/* Progress Bar Section */}
+            <div className="mb-10">
+              <div className="relative">
+                <div className="h-4 w-full rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 transition-all duration-1000 shadow-lg shadow-emerald-500/50"
+                    style={{ width: `${successPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium text-white/75">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <CheckCircle className="h-4 w-4 text-emerald-400" />
+                  <span>{analysisResults.stageLabel}</span>
+                </div>
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <Clock className="h-4 w-4 text-teal-400" />
+                  <span>Results in ~{analysisResults.monthsToResults} months</span>
+                </div>
+                {confidencePercent && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                    <Shield className="h-4 w-4 text-blue-400" />
+                    <span>Photo confidence {confidencePercent}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Card 1 */}
+              <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/20">
+                <div className="absolute top-4 right-4 w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+                <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
+                  Predicted Skin Type
+                </p>
+                <p className="text-3xl font-bold mb-3 text-white group-hover:text-emerald-400 transition-colors">
+                  {analysisResults.predictedSkinType}
+                </p>
+                <p className="text-sm text-white/70 leading-relaxed">
+                  Photo analysis confirmed your questionnaire responses for accuracy.
+                </p>
+              </div>
+
+              {/* Card 2 */}
+              <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-teal-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20">
+                <div className="absolute top-4 right-4 w-12 h-12 bg-teal-400/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
+                  Primary Focus
+                </p>
+                <p className="text-3xl font-bold mb-3 text-white group-hover:text-teal-400 transition-colors">
+                  {primaryFocus}
+                </p>
+                <p className="text-sm text-white/70 leading-relaxed">
+                  We prioritize the most impactful treatment for faster visible results.
+                </p>
+              </div>
+
+              {/* Card 3 */}
+              <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-blue-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 sm:col-span-2 lg:col-span-1">
+                <div className="absolute top-4 right-4 w-12 h-12 bg-blue-400/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
+                  Lifestyle Levers
+                </p>
+                <p className="text-3xl font-bold mb-3 text-white group-hover:text-blue-400 transition-colors">
+                  {lifestyleTips.length} key habits
+                </p>
+                <p className="text-sm text-white/70 leading-relaxed">
+                  Essential daily rituals to amplify your topical skincare routine.
+                </p>
+              </div>
             </div>
           </div>
-          
-          <p className="text-xs text-white/60 leading-relaxed">
-            Based on adherence to recommended routine, nutrition guidelines, and monthly progress check-ins.
-          </p>
         </div>
-      </div>
-
-      {/* Progress Bar Section */}
-      <div className="mb-10">
-        <div className="relative">
-          <div className="h-4 w-full rounded-full bg-white/10 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 transition-all duration-1000 shadow-lg shadow-emerald-500/50"
-              style={{ width: `${successPercent}%` }}
-            />
-          </div>
-        </div>
-        
-        <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium text-white/75">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
-            <CheckCircle className="h-4 w-4 text-emerald-400" />
-            <span>{analysisResults.stageLabel}</span>
-          </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
-            <Clock className="h-4 w-4 text-teal-400" />
-            <span>Results in ~{analysisResults.monthsToResults} months</span>
-          </div>
-          {confidencePercent && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Shield className="h-4 w-4 text-blue-400" />
-              <span>Photo confidence {confidencePercent}%</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Card 1 */}
-        <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/20">
-          <div className="absolute top-4 right-4 w-12 h-12 bg-emerald-400/10 rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </div>
-          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
-            Predicted Skin Type
-          </p>
-          <p className="text-3xl font-bold mb-3 text-white group-hover:text-emerald-400 transition-colors">
-            {analysisResults.predictedSkinType}
-          </p>
-          <p className="text-sm text-white/70 leading-relaxed">
-            Photo analysis confirmed your questionnaire responses for accuracy.
-          </p>
-        </div>
-
-        {/* Card 2 */}
-        <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-teal-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20">
-          <div className="absolute top-4 right-4 w-12 h-12 bg-teal-400/10 rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
-            Primary Focus
-          </p>
-          <p className="text-3xl font-bold mb-3 text-white group-hover:text-teal-400 transition-colors">
-            {primaryFocus}
-          </p>
-          <p className="text-sm text-white/70 leading-relaxed">
-            We prioritize the most impactful treatment for faster visible results.
-          </p>
-        </div>
-
-        {/* Card 3 */}
-        <div className="group relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 hover:border-blue-400/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 sm:col-span-2 lg:col-span-1">
-          <div className="absolute top-4 right-4 w-12 h-12 bg-blue-400/10 rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
-            Lifestyle Levers
-          </p>
-          <p className="text-3xl font-bold mb-3 text-white group-hover:text-blue-400 transition-colors">
-            {lifestyleTips.length} key habits
-          </p>
-          <p className="text-sm text-white/70 leading-relaxed">
-            Essential daily rituals to amplify your topical skincare routine.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+      </section>
 
       {/* Main Analysis Section */}
       <section className="py-16">
@@ -514,190 +517,190 @@ const SkinAnalysisResults = ({ assessmentData }) => {
               </CardBody>
             </Card>
 
-  {/* Photo + Quick Analysis */}
-<div className="grid gap-6 lg:grid-cols-3 mb-10">
-  {/* Tips Card */}
-  <div className="lg:col-span-1">
-    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow h-full">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-md">
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-bold text-slate-900">Tips for Best Results</h3>
-      </div>
-      
-      <ul className="space-y-4">
-        <li className="flex gap-3 items-start">
-          <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p className="text-sm text-slate-700 leading-relaxed">
-            Stand near natural light and keep your face centered
-          </p>
-        </li>
-        
-        <li className="flex gap-3 items-start">
-          <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p className="text-sm text-slate-700 leading-relaxed">
-            Remove heavy makeup to let the AI see real skin texture
-          </p>
-        </li>
-        
-        <li className="flex gap-3 items-start">
-          <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p className="text-sm text-slate-700 leading-relaxed">
-            Avoid blurry photos—steady your hand or use the capture button
-          </p>
-        </li>
-      </ul>
-    </div>
-  </div>
-
-  {/* Analysis Card */}
-  <div className="lg:col-span-2">
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-6 lg:p-8">
-        <div className="grid gap-8 lg:grid-cols-2">
-          
-          {/* Image Section */}
-          <div className="space-y-4">
-            <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-50">
-              {submittedImage ? (
-                <>
-                  <img 
-                    src={submittedImage} 
-                    alt="Your submitted image" 
-                    className="w-full aspect-[4/3] object-cover"
-                  />
-                  <div className="absolute top-3 right-3">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-full shadow-lg">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            {/* Photo + Quick Analysis */}
+            <div className="grid gap-6 lg:grid-cols-3 mb-10">
+              {/* Tips Card */}
+              <div className="lg:col-span-1">
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow h-full">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
-                      Analyzed
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="aspect-[4/3] flex flex-col items-center justify-center">
-                  <svg className="w-16 h-16 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-sm font-medium text-slate-500">Upload a clear photo for richer insights</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-full shadow-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Your submitted image
-            </div>
-          </div>
-
-          {/* Analysis Results */}
-          <div className="space-y-5">
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
-                <span className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </span>
-                Your AI Analysis
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                We detected the closest skin type match based on your answers and uploaded image cues
-              </p>
-            </div>
-
-            {/* Main Result */}
-            <div className="relative rounded-2xl bg-gradient-to-r from-[#c9f5d8] via-[#ccecf5] to-[#c4e1ff] p-6 shadow-md overflow-hidden border border-emerald-200">
-              <div className="absolute inset-0 opacity-20">
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-teal-400 rounded-full blur-3xl"></div>
-              </div>
-              
-              <div className="relative">
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">
-                  Predicted Skin Type
-                </p>
-                <p className="text-4xl font-bold text-slate-900 mb-3">
-                  {analysisResults.predictedSkinType}
-                </p>
-                
-                {analysisResults.imageConfidence !== null && analysisResults.imageConfidence !== undefined && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-700">Confidence Level</span>
-                      <span className="text-slate-900">{(analysisResults.imageConfidence * 100).toFixed(0)}%</span>
                     </div>
-                    <div className="h-2 bg-white/40 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full transition-all duration-1000 ease-out"
-                        style={{ width: `${analysisResults.imageConfidence * 100}%` }}
-                      ></div>
+                    <h3 className="text-lg font-bold text-slate-900">Tips for Best Results</h3>
+                  </div>
+
+                  <ul className="space-y-4">
+                    <li className="flex gap-3 items-start">
+                      <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        Stand near natural light and keep your face centered
+                      </p>
+                    </li>
+
+                    <li className="flex gap-3 items-start">
+                      <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        Remove heavy makeup to let the AI see real skin texture
+                      </p>
+                    </li>
+
+                    <li className="flex gap-3 items-start">
+                      <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        Avoid blurry photos—steady your hand or use the capture button
+                      </p>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Analysis Card */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-6 lg:p-8">
+                    <div className="grid gap-8 lg:grid-cols-2">
+
+                      {/* Image Section */}
+                      <div className="space-y-4">
+                        <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 shadow-lg bg-slate-50">
+                          {submittedImage ? (
+                            <>
+                              <img
+                                src={submittedImage}
+                                alt="Your submitted image"
+                                className="w-full aspect-[4/3] object-cover"
+                              />
+                              <div className="absolute top-3 right-3">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-full shadow-lg">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Analyzed
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="aspect-[4/3] flex flex-col items-center justify-center">
+                              <svg className="w-16 h-16 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <p className="text-sm font-medium text-slate-500">Upload a clear photo for richer insights</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-full shadow-md">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Your submitted image
+                        </div>
+                      </div>
+
+                      {/* Analysis Results */}
+                      <div className="space-y-5">
+                        <div>
+                          <h3 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                            <span className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                              </svg>
+                            </span>
+                            Your AI Analysis
+                          </h3>
+                          <p className="text-sm text-slate-600 leading-relaxed">
+                            We detected the closest skin type match based on your answers and uploaded image cues
+                          </p>
+                        </div>
+
+                        {/* Main Result */}
+                        <div className="relative rounded-2xl bg-gradient-to-r from-[#c9f5d8] via-[#ccecf5] to-[#c4e1ff] p-6 shadow-md overflow-hidden border border-emerald-200">
+                          <div className="absolute inset-0 opacity-20">
+                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-400 rounded-full blur-3xl"></div>
+                            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-teal-400 rounded-full blur-3xl"></div>
+                          </div>
+
+                          <div className="relative">
+                            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">
+                              Predicted Skin Type
+                            </p>
+                            <p className="text-4xl font-bold text-slate-900 mb-3">
+                              {analysisResults.predictedSkinType}
+                            </p>
+
+                            {analysisResults.imageConfidence !== null && analysisResults.imageConfidence !== undefined && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs font-semibold">
+                                  <span className="text-slate-700">Confidence Level</span>
+                                  <span className="text-slate-900">{(analysisResults.imageConfidence * 100).toFixed(0)}%</span>
+                                </div>
+                                <div className="h-2 bg-white/40 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ width: `${analysisResults.imageConfidence * 100}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Feature Insights */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {featureInsights.slice(0, 4).map((insight) => (
+                            <div
+                              key={insight.label}
+                              className="group rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 hover:shadow-md hover:border-emerald-300 transition-all duration-300"
+                            >
+                              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                              <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1.5">
+                                {insight.label}
+                              </p>
+                              <p className="text-xl font-bold text-slate-900">
+                                {insight.unit ? `${insight.value} ${insight.unit}` : insight.value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* AI Notes */}
+                        {analysisResults.imageNotes && (
+                          <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
+                            <div className="flex gap-3">
+                              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <div>
+                                <p className="text-xs font-bold text-blue-900 mb-1 uppercase tracking-wide">AI Observation</p>
+                                <p className="text-sm text-blue-800 leading-relaxed">
+                                  {analysisResults.imageNotes}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
-            {/* Feature Insights */}
-            <div className="grid grid-cols-2 gap-3">
-              {featureInsights.slice(0, 4).map((insight) => (
-                <div 
-                  key={insight.label} 
-                  className="group rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 hover:shadow-md hover:border-emerald-300 transition-all duration-300"
-                >
-                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-t-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1.5">
-                    {insight.label}
-                  </p>
-                  <p className="text-xl font-bold text-slate-900">
-                    {insight.unit ? `${insight.value} ${insight.unit}` : insight.value}
-                  </p>
-                </div>
-              ))}
-            </div>
 
-            {/* AI Notes */}
-            {analysisResults.imageNotes && (
-              <div className="rounded-xl bg-blue-50 border border-blue-200 p-4">
-                <div className="flex gap-3">
-                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-xs font-bold text-blue-900 mb-1 uppercase tracking-wide">AI Observation</p>
-                    <p className="text-sm text-blue-800 leading-relaxed">
-                      {analysisResults.imageNotes}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-            
             {/* Your Skin Type */}
             <Card className="mb-8 animate-fadeIn">
               <CardHeader>
@@ -708,16 +711,16 @@ const SkinAnalysisResults = ({ assessmentData }) => {
               </CardHeader>
               <CardBody>
                 <p className="text-slate-600">
-                  Based on your responses, we see <strong className="text-slate-900">{analysisResults.skinType}</strong> tendencies. 
-                  The AI photo scan leans <strong className="text-slate-900">{analysisResults.predictedSkinType}</strong> with 
-                  <strong className="text-orange-600">{analysisResults.severity}</strong> severity, 
+                  Based on your responses, we see <strong className="text-slate-900">{analysisResults.skinType}</strong> tendencies.
+                  The AI photo scan leans <strong className="text-slate-900">{analysisResults.predictedSkinType}</strong> with
+                  <strong className="text-orange-600">{analysisResults.severity}</strong> severity,
                   so we balance oil control with gentle barrier repair across zones.
                 </p>
               </CardBody>
             </Card>
 
             {/* Root Causes Analysis */}
-            <Card className="mb-8 animate-slideUp" style={{animationDelay: '0.1s'}}>
+            <Card className="mb-8 animate-slideUp" style={{ animationDelay: '0.1s' }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertCircle className="h-6 w-6 text-orange-500" />
@@ -730,7 +733,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
               <CardBody>
                 <div className="space-y-4">
                   {analysisResults.rootCauses.map((item, index) => (
-                    <div 
+                    <div
                       key={item.id}
                       className="flex items-start gap-4 p-4 rounded-lg bg-slate-50 border border-slate-200"
                     >
@@ -741,9 +744,9 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                           <span className="text-sm text-slate-600">Impact:</span>
                           <span className={`
                             px-3 py-1 rounded-full text-xs font-medium
-                            ${item.impact === 'High' ? 'bg-red-100 text-red-700' : 
-                              item.impact === 'Medium' ? 'bg-orange-100 text-orange-700' : 
-                              'bg-yellow-100 text-yellow-700'}
+                            ${item.impact === 'High' ? 'bg-red-100 text-red-700' :
+                              item.impact === 'Medium' ? 'bg-orange-100 text-orange-700' :
+                                'bg-yellow-100 text-yellow-700'}
                           `}>
                             {item.impact}
                           </span>
@@ -799,7 +802,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
             </Card>
 
             {/* Treatment Recommendations */}
-            <Card className="mb-8 animate-slideUp" style={{animationDelay: '0.2s'}}>
+            <Card className="mb-8 animate-slideUp" style={{ animationDelay: '0.2s' }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Award className="h-6 w-6 text-primary-600" />
@@ -978,13 +981,12 @@ const SkinAnalysisResults = ({ assessmentData }) => {
 
               <div className="grid md:grid-cols-3 gap-6">
                 {treatmentPlans.map((plan) => (
-                  <Card 
+                  <Card
                     key={plan.id}
-                    className={`relative ${
-                      plan.popular 
-                        ? 'border-2 border-primary-600 shadow-xl shadow-primary-500/20' 
-                        : ''
-                    }`}
+                    className={`relative ${plan.popular
+                      ? 'border-2 border-primary-600 shadow-xl shadow-primary-500/20'
+                      : ''
+                      }`}
                     hoverable
                   >
                     {/* Popular Badge */}
@@ -1057,7 +1059,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                       100% Money-Back Guarantee
                     </h3>
                     <p className="text-slate-700">
-                      If you don't see visible improvements in your skin within your chosen plan duration, 
+                      If you don't see visible improvements in your skin within your chosen plan duration,
                       we'll refund your complete payment. No questions asked.
                     </p>
                   </div>
@@ -1093,8 +1095,8 @@ const SkinAnalysisResults = ({ assessmentData }) => {
               <Button variant="ghost" onClick={() => setShowPlanModal(false)} fullWidth>
                 Cancel
               </Button>
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 onClick={() => navigate('/checkout')}
                 fullWidth
                 rightIcon={<ArrowRight className="h-5 w-5" />}

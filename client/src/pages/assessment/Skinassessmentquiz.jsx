@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import Button from "../../components/common/Button";
-   import Card from "../../components/common/Card";
+import Card from "../../components/common/Card";
 // import { ASSESSMENT_STEPS } from '../../utils/constants';
 
 
@@ -16,7 +16,7 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
     {
       id: 'main_concern',
       question: 'What is your main skin concern?',
-      subtitle: 'Choose your primary concern (you can add more later)',
+      subtitle: 'What would you like to improve? (Optional - for recommendations only)',
       type: 'single-choice',
       options: [
         { id: 'acne', label: 'Acne & Breakouts', icon: '🔴' },
@@ -25,6 +25,7 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
         { id: 'dullness', label: 'Dull & Uneven Skin', icon: '😐' },
         { id: 'dark_circles', label: 'Dark Circles & Puffiness', icon: '😴' },
         { id: 'rashes', label: 'Rashes & Irritation', icon: '🔥' },
+        { id: 'none', label: 'No specific concern', icon: '✨' },
       ]
     },
     {
@@ -114,7 +115,7 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
         ...answers,
         [currentQuestion.id]: selectedOption
       });
-      
+
       if (currentStep < questions.length - 1) {
         setCurrentStep(currentStep + 1);
         setSelectedOption(answers[questions[currentStep + 1]?.id] || null);
@@ -146,7 +147,7 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
             </span>
           </div>
           <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-primary transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
@@ -197,9 +198,8 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
 
                     {/* Content */}
                     <div className="flex-1">
-                      <h3 className={`text-lg font-bold mb-1 ${
-                        selectedOption === option.id ? 'text-primary-700' : 'text-slate-900'
-                      }`}>
+                      <h3 className={`text-lg font-bold mb-1 ${selectedOption === option.id ? 'text-primary-700' : 'text-slate-900'
+                        }`}>
                         {option.label}
                       </h3>
                       {option.description && (
@@ -242,13 +242,12 @@ const SkinAssessmentQuiz = ({ onComplete }) => {
             {questions.map((_, index) => (
               <div
                 key={index}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentStep
-                    ? 'w-8 bg-primary-600'
-                    : index < currentStep
+                className={`h-2 rounded-full transition-all duration-300 ${index === currentStep
+                  ? 'w-8 bg-primary-600'
+                  : index < currentStep
                     ? 'w-2 bg-primary-400'
                     : 'w-2 bg-slate-300'
-                }`}
+                  }`}
               />
             ))}
           </div>

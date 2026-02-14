@@ -123,8 +123,8 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
     sorted_scores = sorted(all_scores.values(), reverse=True)
     second_score = sorted_scores[1] if len(sorted_scores) > 1 else 0.0
     
-    # Handle uncertainty
-    if max_score < 0.60:
+    #Handle uncertainty - ONLY if all skin type scores are very low
+    if max_score < 0.40:
         skin_type = "Uncertain - Retake image"
         explanation = f"Low confidence across all types (max: {max_score:.2f}). Please retake image in better lighting."
     

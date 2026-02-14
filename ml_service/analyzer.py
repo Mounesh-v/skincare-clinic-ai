@@ -17,6 +17,7 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import preprocess_image_bytes
+from ml.skin_type_inference import infer_skin_type
 
 from .recommendations import build_personalized_plan
 
@@ -161,27 +162,48 @@ class SkinAnalyzerService:
         except ValueError as exc:
             raise ValueError(str(exc))
         prediction = self._run_prediction(processed)
+        
+        # Infer skin type from condition probabilities
+        skin_type_result = infer_skin_type(prediction.probabilities)
+        
         plan = build_personalized_plan(prediction.label_key, answers)
         severity_label, months_to_results = self._severity(prediction.probability)
         success_probability = round(0.5 + prediction.probability * 0.4, 2)
         feature_insights = self._feature_insights(processed)
         image_notes = self._compose_image_notes(face_score, answers)
+        
+        # Structure response with skin_type as PRIMARY result
         response = {
+            # PRIMARY RESULT: Skin Type (Oily/Dry/Normal/Combination)
+            "skin_type": skin_type_result["skin_type"],
+            "confidence": skin_type_result["confidence"],
+            "skin_type_scores": skin_type_result["scores"],
+            "explanation": skin_type_result["explanation"],
+            
+            # SECONDARY: Detected conditions (internal use, recommendations)
+            "conditions_detected": {
+                "primary": prediction.label_key,
+                "label": prediction.label_name,
+                "confidence": prediction.probability,
+                "all_conditions": prediction.probabilities,
+                "top_predictions": prediction.top_predictions,
+            },
+            
+            # User info
             "lead": {
                 "name": lead.get("name", "Guest"),
                 "age": lead.get("age"),
                 "gender": lead.get("gender"),
             },
+            
+            # Image quality metrics
             "image_analysis": {
-                "predicted_skin_type": prediction.label_key,
-                "label": prediction.label_name,
-                "confidence": prediction.probability,
                 "face_score": face_score,
-                "top_probabilities": prediction.top_predictions,
-                "probability_map": prediction.probabilities,
                 "feature_insights": feature_insights,
                 "notes": image_notes,
             },
+            
+            # Recommendations and plan (uses condition for context)
             "severity": severity_label,
             "stage_label": plan["stage_label"],
             "root_causes": plan["root_causes"],
