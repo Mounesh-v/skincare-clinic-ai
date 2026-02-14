@@ -2,8 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle, AlertCircle, TrendingUp,
-  Award, Shield, Clock, ArrowRight, X
+  Award, Shield, Clock, ArrowRight, X,
+  MapPin, Star, ExternalLink, Calendar
 } from 'lucide-react';
+import { getTopDoctors } from '../../data/doctors';
 import Button from "../../components/common/Button";
 import Card, { CardHeader, CardTitle, CardBody } from "../../components/common/Card";
 // import { formatCurrency } from '../utils/formatters';
@@ -970,74 +972,64 @@ const SkinAnalysisResults = ({ assessmentData }) => {
               </CardBody>
             </Card>
 
-            {/* Treatment Plans */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-display font-bold text-center text-slate-900 mb-3">
-                Choose Your Treatment Plan
-              </h2>
-              <p className="text-center text-slate-600 mb-10 max-w-2xl mx-auto">
-                Select a plan that works for you. All plans include personalized treatment, doctor consultations, and ongoing support.
-              </p>
+            {/* Recommended Doctors Section */}
+            <div className="mb-12">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl font-display font-bold text-slate-900 mb-3">
+                  Recommended Specialists
+                </h2>
+                <p className="text-slate-600 max-w-2xl mx-auto">
+                  Based on your {(analysisResults.predictedSkinType || 'Combination').toLowerCase()} skin profile,
+                  we've matched you with top-rated dermatologists who specialize in your specific needs.
+                </p>
+              </div>
 
               <div className="grid md:grid-cols-3 gap-6">
-                {treatmentPlans.map((plan) => (
-                  <Card
-                    key={plan.id}
-                    className={`relative ${plan.popular
-                      ? 'border-2 border-primary-600 shadow-xl shadow-primary-500/20'
-                      : ''
-                      }`}
-                    hoverable
-                  >
-                    {/* Popular Badge */}
-                    {plan.popular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <div className="px-4 py-1 bg-gradient-primary text-white text-sm font-bold rounded-full shadow-lg">
-                          MOST POPULAR
+                {getTopDoctors(assessmentData?.analysis?.skin_type, 3).map((doctor) => (
+                  <Card key={doctor.id} className="h-full flex flex-col" hoverable>
+                    <CardBody className="flex flex-col h-full p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 text-2xl font-bold border-2 border-primary-50">
+                          {doctor.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-sm font-bold">
+                          <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
+                          {doctor.rating}
                         </div>
                       </div>
-                    )}
 
-                    <CardBody>
-                      <div className="text-center mb-6">
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">
-                          {plan.duration}
-                        </h3>
-                        <div className="mb-3">
-                          <span className="text-4xl font-bold text-primary-600">
-                            {formatCurrency(plan.price)}
-                          </span>
-                          <span className="text-slate-500">/month</span>
+                      <div className="mb-6 flex-grow">
+                        <h3 className="text-xl font-bold text-slate-900 mb-1">{doctor.name}</h3>
+                        <p className="text-primary-600 font-semibold text-sm mb-3">{doctor.specialty}</p>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Award className="w-4 h-4 text-slate-400" />
+                            <span>{doctor.experience} Experience</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <MapPin className="w-4 h-4 text-slate-400" />
+                            <span>{doctor.location}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <Calendar className="w-4 h-4 text-slate-400" />
+                            <span>{doctor.availability}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <span className="text-sm text-slate-500 line-through">
-                            {formatCurrency(plan.originalPrice)}
-                          </span>
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
-                            {plan.discount}% OFF
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-600">{plan.description}</p>
                       </div>
 
-                      <ul className="space-y-3 mb-6">
-                        {plan.includes.map((item, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm">
-                            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                            <span className="text-slate-700">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="pt-4 border-t border-slate-100 italic text-sm text-slate-500 mb-6">
+                        "{doctor.about}"
+                      </div>
 
                       <Button
-                        variant={plan.popular ? 'primary' : 'outline'}
+                        variant="primary"
                         fullWidth
-                        onClick={() => {
-                          setSelectedPlan(plan);
-                          setShowPlanModal(true);
-                        }}
+                        className="mt-auto group"
+                        onClick={() => window.open(doctor.bookingLink, '_blank')}
                       >
-                        Choose Plan
+                        Book Consultation
+                        <ExternalLink className="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                       </Button>
                     </CardBody>
                   </Card>

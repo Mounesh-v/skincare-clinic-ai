@@ -1008,7 +1008,7 @@ const StartAssessment = ({ onComplete }) => {
                                     iconPosition="right"
                                     className="bg-[#5d5f63] uppercase tracking-wide hover:bg-[#4d4f52]"
                                 >
-                                    Generate My Plan
+                                    Get Analysis & Match Doctors
                                 </Button>
                             )}
                         </div>
