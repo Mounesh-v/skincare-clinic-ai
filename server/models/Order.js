@@ -39,7 +39,14 @@ const orderSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["COD", "Credit Card", "Debit Card", "UPI", "Net Banking", "Wallet"],
+      enum: [
+        "COD",
+        "Credit Card",
+        "Debit Card",
+        "UPI",
+        "Net Banking",
+        "Wallet",
+      ],
     },
 
     paymentStatus: {
@@ -71,7 +78,7 @@ const orderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // GENERATE ORDER NUMBER
@@ -85,12 +92,20 @@ orderSchema.pre("save", async function (next) {
 
 // TIMELINE UPDATE
 orderSchema.pre("save", function (next) {
+  if (this.isNew) {
+    this.timeline.push({
+      status: this.orderStatus,
+      timestamp: new Date(),
+    });
+  }
+
   if (this.isModified("orderStatus")) {
     this.timeline.push({
       status: this.orderStatus,
       timestamp: new Date(),
     });
   }
+
   next();
 });
 
