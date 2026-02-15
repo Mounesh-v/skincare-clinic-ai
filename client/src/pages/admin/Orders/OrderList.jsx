@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Download, Truck, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Eye } from "lucide-react";
 import DataTable from "../../../components/admin/DataTable";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -13,26 +13,23 @@ const OrderList = () => {
 
   const API_URL = "http://localhost:5005/api/orders";
 
-  /* ==============================
-     FETCH ORDERS FROM BACKEND
-  ============================== */
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL);
 
-      // Transform backend data to frontend format
       const formattedOrders = data.orders.map((order) => ({
         id: order._id,
         orderNumber: order.orderNumber,
-        customer: order.user?.name,
-        email: order.user?.email,
-        products: order.items.map((i) => i.name || i.product?.name).join(", "),
+        customer: order.user?.name ?? "N/A",
+        email: order.user?.email || "",
+        products: order.items
+          .map((i) => i.name || i.product?.name)
+          .join(", "),
         totalAmount: order.total,
         paymentStatus: order.paymentStatus,
         orderStatus: order.orderStatus,
         date: new Date(order.createdAt).toLocaleDateString(),
-        shippingAddress: "N/A",
       }));
 
       setOrders(formattedOrders);
@@ -47,9 +44,6 @@ const OrderList = () => {
     fetchOrders();
   }, []);
 
-  /* ==============================
-     UPDATE ORDER STATUS
-  ============================== */
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       await axios.put(`${API_URL}/${orderId}`, {
@@ -57,24 +51,14 @@ const OrderList = () => {
       });
 
       toast.success("Order updated successfully");
-      fetchOrders(); // refresh data
+      fetchOrders();
     } catch (error) {
       toast.error("Failed to update order");
     }
   };
 
-  const handleExport = () => {
-    toast.success("Export feature coming soon");
-  };
-
-  /* ==============================
-     TABLE COLUMNS
-  ============================== */
   const columns = [
-    {
-      header: "Order ID",
-      accessor: "orderNumber",
-    },
+    { header: "Order ID", accessor: "orderNumber" },
     {
       header: "Customer",
       accessor: "customer",
@@ -85,10 +69,7 @@ const OrderList = () => {
         </div>
       ),
     },
-    {
-      header: "Products",
-      accessor: "products",
-    },
+    { header: "Products", accessor: "products" },
     {
       header: "Amount",
       accessor: "totalAmount",
@@ -98,18 +79,9 @@ const OrderList = () => {
         </span>
       ),
     },
-    {
-      header: "Payment",
-      accessor: "paymentStatus",
-    },
-    {
-      header: "Status",
-      accessor: "orderStatus",
-    },
-    {
-      header: "Date",
-      accessor: "date",
-    },
+    { header: "Payment", accessor: "paymentStatus" },
+    { header: "Status", accessor: "orderStatus" },
+    { header: "Date", accessor: "date" },
   ];
 
   return (
@@ -149,6 +121,7 @@ const OrderList = () => {
                     <option value="Pending">Pending</option>
                     <option value="Processing">Processing</option>
                     <option value="Shipped">Shipped</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
                     <option value="Delivered">Delivered</option>
                     <option value="Cancelled">Cancelled</option>
                   </select>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   MapPin,
   Search,
@@ -15,148 +15,91 @@ import {
   Briefcase,
   Users,
   Grid,
-  Map as MapIcon
-} from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+  Map as MapIcon,
+} from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import axios from "axios";
+const API_BASE_URL = "http://localhost:5005/api";
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
 const FindDoctors = () => {
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'map'
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'map'
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [location, setLocation] = useState('Mumbai, India');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [location, setLocation] = useState("Mumbai, India");
+
   // Filter states
   const [filters, setFilters] = useState({
-    specialization: 'all',
-    availability: 'all',
-    gender: 'all',
-    experience: 'all',
-    rating: 'all',
+    specialization: "all",
+    availability: "all",
+    gender: "all",
+    experience: "all",
+    rating: "all",
     priceRange: [0, 5000],
-    consultationType: 'all'
+    consultationType: "all",
   });
 
-  // Sample doctor data
-  const doctorsData = [
-    {
-      id: 1,
-      name: 'Dr. Priya Sharma',
-      specialization: 'Dermatologist',
-      qualification: 'MBBS, MD (Dermatology)',
-      experience: 12,
-      rating: 4.8,
-      reviews: 156,
-      consultationFee: 1500,
-      address: 'Apollo Clinic, Bandra West, Mumbai',
-      location: { lat: 19.0596, lng: 72.8295 },
-      availability: ['Mon', 'Wed', 'Fri', 'Sat'],
-      nextAvailable: '2026-02-08',
-      gender: 'Female',
-      languages: ['English', 'Hindi', 'Marathi'],
-      about: 'Specialist in acne treatment, skin rejuvenation, and laser therapy. 12+ years of experience treating complex skin conditions.',
-      image: 'https://i.pravatar.cc/300?img=47',
-      consultationType: ['In-clinic', 'Video'],
-      featured: true,
-      timeSlots: ['10:00 AM', '11:30 AM', '2:00 PM', '4:30 PM']
-    },
-    {
-      id: 2,
-      name: 'Dr. Rajesh Kumar',
-      specialization: 'Dermatologist',
-      qualification: 'MBBS, MD, DNB',
-      experience: 15,
-      rating: 4.9,
-      reviews: 203,
-      consultationFee: 2000,
-      address: 'Lilavati Hospital, Bandra West, Mumbai',
-      location: { lat: 19.0563, lng: 72.8302 },
-      availability: ['Mon', 'Tue', 'Thu', 'Sat'],
-      nextAvailable: '2026-02-07',
-      gender: 'Male',
-      languages: ['English', 'Hindi', 'Tamil'],
-      about: 'Expert in cosmetic dermatology, hair transplant, and anti-aging treatments. Gold medalist from AIIMS.',
-      image: 'https://i.pravatar.cc/300?img=12',
-      consultationType: ['In-clinic', 'Video', 'Home Visit'],
-      featured: true,
-      timeSlots: ['9:00 AM', '11:00 AM', '3:00 PM', '5:00 PM']
-    },
-    {
-      id: 3,
-      name: 'Dr. Anjali Desai',
-      specialization: 'Cosmetologist',
-      qualification: 'MBBS, MD (Dermatology)',
-      experience: 8,
-      rating: 4.7,
-      reviews: 98,
-      consultationFee: 1200,
-      address: 'Skin Clinic, Andheri East, Mumbai',
-      location: { lat: 19.1136, lng: 72.8697 },
-      availability: ['Tue', 'Wed', 'Fri', 'Sun'],
-      nextAvailable: '2026-02-09',
-      gender: 'Female',
-      languages: ['English', 'Hindi', 'Gujarati'],
-      about: 'Specializes in non-surgical facial treatments, chemical peels, and laser hair removal.',
-      image: 'https://i.pravatar.cc/300?img=26',
-      consultationType: ['In-clinic', 'Video'],
-      featured: false,
-      timeSlots: ['10:30 AM', '1:00 PM', '3:30 PM', '5:30 PM']
-    },
-    {
-      id: 4,
-      name: 'Dr. Suresh Menon',
-      specialization: 'Dermatologist',
-      qualification: 'MBBS, MD, FAAD',
-      experience: 20,
-      rating: 4.9,
-      reviews: 312,
-      consultationFee: 2500,
-      address: 'Breach Candy Hospital, Mumbai',
-      location: { lat: 18.9756, lng: 72.8066 },
-      availability: ['Mon', 'Wed', 'Sat'],
-      nextAvailable: '2026-02-10',
-      gender: 'Male',
-      languages: ['English', 'Hindi', 'Malayalam'],
-      about: '20+ years of experience in treating psoriasis, eczema, and autoimmune skin disorders.',
-      image: 'https://i.pravatar.cc/300?img=33',
-      consultationType: ['In-clinic'],
-      featured: true,
-      timeSlots: ['9:30 AM', '12:00 PM', '4:00 PM']
-    },
-    {
-      id: 5,
-      name: 'Dr. Meera Nair',
-      specialization: 'Aesthetic Physician',
-      qualification: 'MBBS, MD (Aesthetics)',
-      experience: 10,
-      rating: 4.6,
-      reviews: 127,
-      consultationFee: 1800,
-      address: 'Fortis Hospital, Mulund, Mumbai',
-      location: { lat: 19.1727, lng: 72.9560 },
-      availability: ['Mon', 'Tue', 'Thu', 'Fri'],
-      nextAvailable: '2026-02-08',
-      gender: 'Female',
-      languages: ['English', 'Hindi'],
-      about: 'Expert in Botox, fillers, thread lifts, and advanced skin rejuvenation techniques.',
-      image: 'https://i.pravatar.cc/300?img=32',
-      consultationType: ['In-clinic', 'Video'],
-      featured: false,
-      timeSlots: ['11:00 AM', '2:30 PM', '5:00 PM']
-    },
-  ];
+  const [doctorsData, setDoctorsData] = useState([]);
+  const [filteredDoctors, setFilteredDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [filteredDoctors, setFilteredDoctors] = useState(doctorsData);
+  // fetch
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        setLoading(true);
+
+        const res = await axios.get(`${API_BASE_URL}/doctors`);
+        const doctors = res.data.data.map((doc) => ({
+          id: doc._id,
+          name: doc.name,
+          specialization: doc.specialization,
+          qualification: doc.qualification,
+          experience: doc.experience,
+          rating: doc.ratings?.average || 0,
+          reviews: doc.reviews || 0,
+          consultationFee: doc.consultationFee,
+          address: doc.address,
+          location:
+            doc.location?.lat && doc.location?.lng
+              ? { lat: doc.location.lat, lng: doc.location.lng }
+              : { lat: 19.076, lng: 72.8777 },
+
+          availability: doc.availability || [],
+          nextAvailable: doc.nextAvailable || new Date(),
+          gender: doc.gender,
+          languages: doc.languages || [],
+          about: doc.about,
+          image: doc.image,
+          consultationType: doc.consultationType || [],
+          featured: doc.featured,
+          timeSlots: doc.timeSlots || [],
+          phone: doc.phone || "",
+          email: doc.email || "",
+        }));
+
+        setDoctorsData(doctors);
+        setFilteredDoctors(doctors);
+      } catch (error) {
+        console.error("Failed to fetch doctors:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
 
   // Apply filters
   useEffect(() => {
@@ -164,49 +107,61 @@ const FindDoctors = () => {
 
     // Search filter
     if (searchQuery) {
-      result = result.filter(doc =>
-        doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.specialization.toLowerCase().includes(searchQuery.toLowerCase())
+      result = result.filter(
+        (doc) =>
+          doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          doc.specialization.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
     // Specialization filter
-    if (filters.specialization !== 'all') {
-      result = result.filter(doc => doc.specialization === filters.specialization);
+    if (filters.specialization !== "all") {
+      result = result.filter(
+        (doc) => doc.specialization === filters.specialization,
+      );
     }
 
     // Gender filter
-    if (filters.gender !== 'all') {
-      result = result.filter(doc => doc.gender === filters.gender);
+    if (filters.gender !== "all") {
+      result = result.filter((doc) => doc.gender === filters.gender);
     }
 
     // Rating filter
-    if (filters.rating !== 'all') {
+    if (filters.rating !== "all") {
       const minRating = parseFloat(filters.rating);
-      result = result.filter(doc => doc.rating >= minRating);
+      result = result.filter((doc) => doc.rating >= minRating);
     }
 
     // Experience filter
-    if (filters.experience !== 'all') {
+    if (filters.experience !== "all") {
       const minExp = parseInt(filters.experience);
-      result = result.filter(doc => doc.experience >= minExp);
+      result = result.filter((doc) => doc.experience >= minExp);
     }
 
     // Price range filter
-    result = result.filter(doc =>
-      doc.consultationFee >= filters.priceRange[0] &&
-      doc.consultationFee <= filters.priceRange[1]
+    result = result.filter(
+      (doc) =>
+        doc.consultationFee >= filters.priceRange[0] &&
+        doc.consultationFee <= filters.priceRange[1],
     );
 
     // Consultation type filter
-    if (filters.consultationType !== 'all') {
-      result = result.filter(doc =>
-        doc.consultationType.includes(filters.consultationType)
+    if (filters.consultationType !== "all") {
+      result = result.filter((doc) =>
+        doc.consultationType.includes(filters.consultationType),
       );
     }
 
     setFilteredDoctors(result);
   }, [searchQuery, filters]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -251,21 +206,21 @@ const FindDoctors = () => {
             {/* View Toggle */}
             <div className="flex gap-2">
               <button
-                onClick={() => setViewMode('grid')}
+                onClick={() => setViewMode("grid")}
                 className={`p-3 rounded-lg transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  viewMode === "grid"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 <Grid className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setViewMode('map')}
+                onClick={() => setViewMode("map")}
                 className={`p-3 rounded-lg transition-colors ${
-                  viewMode === 'map'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  viewMode === "map"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 <MapIcon className="w-5 h-5" />
@@ -275,7 +230,11 @@ const FindDoctors = () => {
 
           {/* Results Count */}
           <div className="mt-4 text-sm text-slate-600">
-            Found <span className="font-semibold text-slate-900">{filteredDoctors.length}</span> doctors in {location}
+            Found{" "}
+            <span className="font-semibold text-slate-900">
+              {filteredDoctors.length}
+            </span>{" "}
+            doctors in {location}
           </div>
         </div>
       </div>
@@ -292,7 +251,7 @@ const FindDoctors = () => {
 
           {/* Doctor List or Map */}
           <div className="flex-1">
-            {viewMode === 'grid' ? (
+            {viewMode === "grid" ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {filteredDoctors.map((doctor) => (
                   <DoctorCard
@@ -303,7 +262,10 @@ const FindDoctors = () => {
                 ))}
               </div>
             ) : (
-              <MapView doctors={filteredDoctors} onMarkerClick={setSelectedDoctor} />
+              <MapView
+                doctors={filteredDoctors}
+                onMarkerClick={setSelectedDoctor}
+              />
             )}
           </div>
         </div>
@@ -329,13 +291,13 @@ const FilterSidebar = ({ filters, setFilters }) => {
         <button
           onClick={() =>
             setFilters({
-              specialization: 'all',
-              availability: 'all',
-              gender: 'all',
-              experience: 'all',
-              rating: 'all',
+              specialization: "all",
+              availability: "all",
+              gender: "all",
+              experience: "all",
+              rating: "all",
               priceRange: [0, 5000],
-              consultationType: 'all'
+              consultationType: "all",
             })
           }
           className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
@@ -352,7 +314,9 @@ const FilterSidebar = ({ filters, setFilters }) => {
           </label>
           <select
             value={filters.specialization}
-            onChange={(e) => setFilters({ ...filters, specialization: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, specialization: e.target.value })
+            }
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="all">All Specializations</option>
@@ -368,17 +332,17 @@ const FilterSidebar = ({ filters, setFilters }) => {
             Gender
           </label>
           <div className="flex gap-2">
-            {['all', 'Male', 'Female'].map((gender) => (
+            {["all", "Male", "Female"].map((gender) => (
               <button
                 key={gender}
                 onClick={() => setFilters({ ...filters, gender })}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filters.gender === gender
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                {gender === 'all' ? 'Any' : gender}
+                {gender === "all" ? "Any" : gender}
               </button>
             ))}
           </div>
@@ -408,7 +372,9 @@ const FilterSidebar = ({ filters, setFilters }) => {
           </label>
           <select
             value={filters.experience}
-            onChange={(e) => setFilters({ ...filters, experience: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, experience: e.target.value })
+            }
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="all">Any Experience</option>
@@ -425,7 +391,9 @@ const FilterSidebar = ({ filters, setFilters }) => {
           </label>
           <select
             value={filters.consultationType}
-            onChange={(e) => setFilters({ ...filters, consultationType: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, consultationType: e.target.value })
+            }
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           >
             <option value="all">All Types</option>
@@ -438,7 +406,8 @@ const FilterSidebar = ({ filters, setFilters }) => {
         {/* Price Range */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Consultation Fee: ₹{filters.priceRange[0]} - ₹{filters.priceRange[1]}
+            Consultation Fee: ₹{filters.priceRange[0]} - ₹
+            {filters.priceRange[1]}
           </label>
           <input
             type="range"
@@ -447,7 +416,10 @@ const FilterSidebar = ({ filters, setFilters }) => {
             step="100"
             value={filters.priceRange[1]}
             onChange={(e) =>
-              setFilters({ ...filters, priceRange: [0, parseInt(e.target.value)] })
+              setFilters({
+                ...filters,
+                priceRange: [0, parseInt(e.target.value)],
+              })
             }
             className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
           />
@@ -481,16 +453,22 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
 
         {/* Doctor Info */}
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-slate-900 mb-1">{doctor.name}</h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-1">
+            {doctor.name}
+          </h3>
           <p className="text-sm text-slate-600 mb-2">{doctor.specialization}</p>
 
           {/* Rating */}
           <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-md">
               <Star className="w-4 h-4 fill-emerald-600 text-emerald-600" />
-              <span className="text-sm font-semibold text-emerald-700">{doctor.rating}</span>
+              <span className="text-sm font-semibold text-emerald-700">
+                {doctor.rating}
+              </span>
             </div>
-            <span className="text-sm text-slate-500">({doctor.reviews} reviews)</span>
+            <span className="text-sm text-slate-500">
+              ({doctor.reviews} reviews)
+            </span>
           </div>
 
           {/* Quick Info */}
@@ -505,7 +483,9 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <DollarSign className="w-4 h-4" />
-              <span className="font-semibold text-slate-900">₹{doctor.consultationFee}</span>
+              <span className="font-semibold text-slate-900">
+                ₹{doctor.consultationFee}
+              </span>
               <span>consultation fee</span>
             </div>
           </div>
@@ -520,10 +500,12 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
             <span className="text-sm text-slate-600">Next available:</span>
           </div>
           <span className="text-sm font-semibold text-emerald-600">
-            {new Date(doctor.nextAvailable).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric'
-            })}
+            {doctor.nextAvailable
+              ? new Date(doctor.nextAvailable).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })
+              : "Not specified"}
           </span>
         </div>
 
@@ -545,16 +527,20 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
 
 // Map View Component
 const MapView = ({ doctors, onMarkerClick }) => {
-  const center = doctors.length > 0 
-    ? [doctors[0].location.lat, doctors[0].location.lng]
-    : [19.0760, 72.8777]; // Mumbai default
+  const center =
+    doctors.length > 0
+      ? [doctors[0].location.lat, doctors[0].location.lng]
+      : [19.076, 72.8777]; // Mumbai default
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden" style={{ height: '700px' }}>
+    <div
+      className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+      style={{ height: "700px" }}
+    >
       <MapContainer
         center={center}
         zoom={12}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -571,8 +557,12 @@ const MapView = ({ doctors, onMarkerClick }) => {
             <Popup>
               <div className="p-2">
                 <h4 className="font-bold text-sm">{doctor.name}</h4>
-                <p className="text-xs text-slate-600">{doctor.specialization}</p>
-                <p className="text-xs text-slate-600 mt-1">₹{doctor.consultationFee}</p>
+                <p className="text-xs text-slate-600">
+                  {doctor.specialization}
+                </p>
+                <p className="text-xs text-slate-600 mt-1">
+                  ₹{doctor.consultationFee}
+                </p>
               </div>
             </Popup>
           </Marker>
@@ -612,9 +602,15 @@ const DoctorModal = ({ doctor, onClose }) => {
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="text-2xl font-bold text-slate-900">{doctor.name}</h3>
-                  <p className="text-lg text-slate-600">{doctor.specialization}</p>
-                  <p className="text-sm text-slate-500">{doctor.qualification}</p>
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {doctor.name}
+                  </h3>
+                  <p className="text-lg text-slate-600">
+                    {doctor.specialization}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {doctor.qualification}
+                  </p>
                 </div>
                 {doctor.featured && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
@@ -627,12 +623,18 @@ const DoctorModal = ({ doctor, onClose }) => {
               <div className="flex items-center gap-4 mt-4">
                 <div className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 rounded-lg">
                   <Star className="w-5 h-5 fill-emerald-600 text-emerald-600" />
-                  <span className="text-lg font-bold text-emerald-700">{doctor.rating}</span>
-                  <span className="text-sm text-slate-600">({doctor.reviews} reviews)</span>
+                  <span className="text-lg font-bold text-emerald-700">
+                    {doctor.rating}
+                  </span>
+                  <span className="text-sm text-slate-600">
+                    ({doctor.reviews} reviews)
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">
                   <Briefcase className="w-5 h-5" />
-                  <span className="font-semibold">{doctor.experience} years</span>
+                  <span className="font-semibold">
+                    {doctor.experience} years
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-600">
                   <Users className="w-5 h-5" />
@@ -654,9 +656,13 @@ const DoctorModal = ({ doctor, onClose }) => {
             <div className="p-4 bg-slate-50 rounded-xl">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-5 h-5 text-emerald-600" />
-                <h5 className="font-semibold text-slate-900">Consultation Fee</h5>
+                <h5 className="font-semibold text-slate-900">
+                  Consultation Fee
+                </h5>
               </div>
-              <p className="text-2xl font-bold text-emerald-600">₹{doctor.consultationFee}</p>
+              <p className="text-2xl font-bold text-emerald-600">
+                ₹{doctor.consultationFee}
+              </p>
             </div>
 
             {/* Address */}
@@ -685,7 +691,9 @@ const DoctorModal = ({ doctor, onClose }) => {
 
             {/* Consultation Types */}
             <div className="p-4 bg-slate-50 rounded-xl">
-              <h5 className="font-semibold text-slate-900 mb-2">Consultation Types</h5>
+              <h5 className="font-semibold text-slate-900 mb-2">
+                Consultation Types
+              </h5>
               <div className="flex flex-wrap gap-2">
                 {doctor.consultationType.map((type) => (
                   <span
@@ -701,15 +709,17 @@ const DoctorModal = ({ doctor, onClose }) => {
 
           {/* Availability */}
           <div className="mb-6">
-            <h4 className="text-lg font-bold text-slate-900 mb-3">Available Days</h4>
+            <h4 className="text-lg font-bold text-slate-900 mb-3">
+              Available Days
+            </h4>
             <div className="flex flex-wrap gap-2">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                 <span
                   key={day}
                   className={`px-4 py-2 rounded-lg text-sm font-medium ${
                     doctor.availability.includes(day)
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 text-slate-400'
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-400"
                   }`}
                 >
                   {day}
@@ -720,7 +730,9 @@ const DoctorModal = ({ doctor, onClose }) => {
 
           {/* Time Slots */}
           <div className="mb-6">
-            <h4 className="text-lg font-bold text-slate-900 mb-3">Available Time Slots</h4>
+            <h4 className="text-lg font-bold text-slate-900 mb-3">
+              Available Time Slots
+            </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {doctor.timeSlots.map((time) => (
                 <button
@@ -728,8 +740,8 @@ const DoctorModal = ({ doctor, onClose }) => {
                   onClick={() => setSelectedTime(time)}
                   className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                     selectedTime === time
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                   }`}
                 >
                   {time}
@@ -740,7 +752,16 @@ const DoctorModal = ({ doctor, onClose }) => {
 
           {/* Contact Buttons */}
           <div className="flex gap-3">
-            <button className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors">
+            <button
+              onClick={() => {
+                if (!doctor.phone) {
+                  alert("Phone number not available");
+                  return;
+                }
+                window.location.href = `tel:${doctor.phone}`;
+              }}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors"
+            >
               <Phone className="w-5 h-5" />
               Call Now
             </button>

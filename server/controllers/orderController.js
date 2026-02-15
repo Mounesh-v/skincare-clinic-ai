@@ -1,20 +1,35 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import Login from "../models/Login.js";
 
-// CREATE ORDER
+/* ==============================
+   CREATE ORDER
+============================== */
 export const createOrder = async (req, res) => {
   try {
     const order = await Order.create(req.body);
 
-    // Update product stock & sold count
     for (const item of order.items) {
       const product = await Product.findById(item.product);
 
-      if (product) {
-        product.stock -= item.quantity;
-        product.sold += item.quantity;
-        await product.save();
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found",
+        });
       }
+
+      if (product.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${product.name}`,
+        });
+      }
+
+      product.stock -= item.quantity;
+      product.sold += item.quantity || 0;
+
+      await product.save();
     }
 
     res.status(201).json({
@@ -30,11 +45,13 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// GET ALL ORDERS
+/* ==============================
+   GET ALL ORDERS
+============================== */
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("user", "name email")
+      .populate("user") // ← remove field limitation
       .populate("items.product");
 
     res.status(200).json({
@@ -50,11 +67,13 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// GET SINGLE ORDER
+/* ==============================
+   GET SINGLE ORDER
+============================== */
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate("user", "name email")
+      .populate("user") // ← full user object
       .populate("items.product");
 
     if (!order) {
@@ -76,7 +95,9 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-// UPDATE ORDER STATUS
+/* ==============================
+   UPDATE ORDER STATUS
+============================== */
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderStatus, paymentStatus } = req.body;
@@ -101,7 +122,7 @@ export const updateOrderStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Order updated",
+      message: "Order updated successfully",
       order,
     });
   } catch (error) {
@@ -112,7 +133,9 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-// DELETE ORDER
+/* ==============================
+   DELETE ORDER
+============================== */
 export const deleteOrder = async (req, res) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
@@ -126,7 +149,7 @@ export const deleteOrder = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Order deleted",
+      message: "Order deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
