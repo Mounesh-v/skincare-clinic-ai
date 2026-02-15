@@ -1,5 +1,4 @@
 import express from "express";
-const router = express.Router();
 import {
   createOrder,
   getAllOrders,
@@ -7,6 +6,8 @@ import {
   updateOrderStatus,
   deleteOrder,
 } from "../controllers/orderController.js";
+
+const router = express.Router();
 
 router.post("/", createOrder);
 router.get("/", getAllOrders);

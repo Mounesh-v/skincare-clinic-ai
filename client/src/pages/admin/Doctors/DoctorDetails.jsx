@@ -1,425 +1,450 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Edit2, 
-  Trash2, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
-  Award,
   Star,
   Clock,
-  Languages,
+  Globe,
   DollarSign,
   UserCheck,
   UserX,
-  Briefcase
-} from 'lucide-react';
-import toast from 'react-hot-toast';
+  BriefcaseBusiness,
+  AlertCircle,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import axios from "axios";
+
+const API_BASE_URL = "http://localhost:5005/api"; // ← adjust port if needed
 
 const DoctorDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // Mock data - Replace with actual API call
-  const [doctor] = useState({
-    id: 'DOC-001',
-    name: 'Dr. Priya Sharma',
-    image: '/api/placeholder/200/200',
-    specialization: 'Dermatologist',
-    qualification: 'MBBS, MD (Dermatology)',
-    experience: '15 years',
-    rating: 4.9,
-    totalReviews: 1250,
-    consultations: 1250,
-    status: 'Active',
-    email: 'priya.sharma@clinic.com',
-    phone: '+91 98765 43210',
-    location: 'Ludhiana, Punjab',
-    availability: 'Mon-Sat (10:00 AM - 6:00 PM)',
-    languages: ['English', 'Hindi', 'Punjabi'],
-    consultationFee: 1500,
-    joinedDate: '2020-03-15',
-    lastActive: '2 hours ago',
-    bio: 'Dr. Priya Sharma is a highly experienced dermatologist with over 15 years of expertise in treating various skin conditions. She specializes in acne treatment, anti-aging procedures, and cosmetic dermatology. Her approach combines evidence-based medicine with personalized care for optimal results.',
-    education: [
-      {
-        degree: 'MBBS',
-        institution: 'AIIMS, New Delhi',
-        year: '2005'
-      },
-      {
-        degree: 'MD (Dermatology)',
-        institution: 'PGI, Chandigarh',
-        year: '2009'
-      },
-      {
-        degree: 'Fellowship in Cosmetic Dermatology',
-        institution: 'Harvard Medical School, USA',
-        year: '2012'
-      }
-    ],
-    specialties: [
-      'Acne & Acne Scars',
-      'Anti-Aging Treatments',
-      'Laser Therapy',
-      'Chemical Peels',
-      'Skin Rejuvenation',
-      'Hair Transplant',
-      'Pigmentation Treatment',
-      'Cosmetic Dermatology'
-    ],
-    achievements: [
-      'Best Dermatologist Award 2023',
-      'Excellence in Cosmetic Dermatology 2022',
-      'Published 15+ research papers',
-      'Speaker at International Dermatology Conference'
-    ],
-    recentConsultations: [
-      {
-        id: 'CON-789',
-        patient: 'Rahul Kumar',
-        concern: 'Acne Treatment',
-        date: '2024-02-06',
-        status: 'Completed'
-      },
-      {
-        id: 'CON-788',
-        patient: 'Anita Desai',
-        concern: 'Anti-Aging Consultation',
-        date: '2024-02-06',
-        status: 'Completed'
-      },
-      {
-        id: 'CON-787',
-        patient: 'Vikram Singh',
-        concern: 'Hair Loss Treatment',
-        date: '2024-02-05',
-        status: 'Completed'
-      }
-    ],
-    reviews: [
-      {
-        patient: 'Neha Patel',
-        rating: 5,
-        comment: 'Excellent doctor! Very professional and caring. My skin has improved significantly.',
-        date: '2024-02-05'
-      },
-      {
-        patient: 'Amit Sharma',
-        rating: 5,
-        comment: 'Best dermatologist I have consulted. Highly recommended!',
-        date: '2024-02-04'
-      },
-      {
-        patient: 'Pooja Singh',
-        rating: 4,
-        comment: 'Very knowledgeable and explains treatment options clearly.',
-        date: '2024-02-03'
-      }
-    ]
-  });
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this doctor?')) {
-      toast.success('Doctor deleted successfully');
-      navigate('/admin/doctors');
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data } = await axios.get(`${API_BASE_URL}/doctors/${id}`, {
+          timeout: 10000,
+        });
+
+        if (!data?.success || !data?.data) {
+          throw new Error("Invalid response format");
+        }
+
+        const doc = data.data;
+
+        setDoctor({
+          id: doc._id,
+          name: doc.name || "—",
+          image: doc.image || "/api/placeholder/240/240",
+          specialization: doc.specialization || "Not specified",
+          qualification: doc.qualification || "—",
+          experience: doc.experience ? `${doc.experience} years` : "—",
+          rating: Number(doc.ratings?.average?.toFixed(1)) || 0,
+          reviewCount: doc.reviews || 0,
+          status: doc.status || "Inactive",
+          address: doc.address || "—",
+          availability: doc.availability?.length
+            ? doc.availability.join(" • ")
+            : null,
+          languages: doc.languages || [],
+          fee: doc.consultationFee || 0,
+          joined: doc.createdAt
+            ? new Date(doc.createdAt).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            : "—",
+          about: doc.about?.trim() || null,
+          email: doc.email || null,
+          phone: doc.phone || null,
+        });
+      } catch (err) {
+        const message =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to load doctor profile";
+        setError(message);
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctor();
+  }, [id]);
+
+  const handleDelete = async () => {
+    if (!window.confirm("Delete this doctor profile permanently?")) return;
+
+    try {
+      await axios.delete(`${API_BASE_URL}/doctors/${id}`);
+      toast.success("Doctor profile deleted");
+      navigate("/admin/doctors", { replace: true });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Delete failed");
     }
   };
 
-  const handleToggleStatus = () => {
-    toast.success(`Doctor ${doctor.status === 'Active' ? 'deactivated' : 'activated'} successfully`);
+  const toggleStatus = async () => {
+    if (!doctor) return;
+
+    const newStatus = doctor.status === "Active" ? "Inactive" : "Active";
+
+    try {
+      setDoctor((prev) => ({ ...prev, status: newStatus }));
+      toast.success(`Doctor marked as ${newStatus.toLowerCase()}`);
+    } catch (err) {
+      toast.error("Status update failed");
+    }
   };
 
+  if (loading) {
+    return <DoctorDetailSkeleton />;
+  }
+
+  if (error || !doctor) {
+    return (
+      <ErrorState error={error} onRetry={() => window.location.reload()} />
+    );
+  }
+
+  const statusStyle =
+    doctor.status === "Active"
+      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+      : doctor.status === "On Leave"
+        ? "bg-amber-100 text-amber-800 border-amber-200"
+        : "bg-slate-100 text-slate-700 border-slate-200";
+
   return (
-    <div className="space-y-6">
-      {/* Back Button & Actions */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate('/admin/doctors')}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-medium">Back to Doctors</span>
-        </button>
-
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-slate-50/50 pb-12">
+      {/* Header Bar */}
+      <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <button
-            onClick={() => navigate(`/admin/doctors/${id}/edit`)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            onClick={() => navigate("/admin/doctors")}
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
           >
-            <Edit2 className="w-4 h-4" />
-            <span className="font-medium">Edit</span>
+            <ArrowLeft size={20} />
+            <span className="font-medium">Back to Doctors</span>
           </button>
 
-          <button
-            onClick={handleToggleStatus}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              doctor.status === 'Active'
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-green-500 hover:bg-green-600 text-white'
-            }`}
-          >
-            {doctor.status === 'Active' ? (
-              <>
-                <UserX className="w-4 h-4" />
-                <span className="font-medium">Deactivate</span>
-              </>
-            ) : (
-              <>
-                <UserCheck className="w-4 h-4" />
-                <span className="font-medium">Activate</span>
-              </>
-            )}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate(`/admin/doctors/${id}/edit`)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <Edit size={16} />
+              Edit Profile
+            </button>
 
-          <button
-            onClick={handleDelete}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span className="font-medium">Delete</span>
-          </button>
+            <button
+              onClick={toggleStatus}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors shadow-sm ${
+                doctor.status === "Active"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-emerald-600 hover:bg-emerald-700"
+              }`}
+            >
+              {doctor.status === "Active" ? (
+                <UserX size={16} />
+              ) : (
+                <UserCheck size={16} />
+              )}
+              {doctor.status === "Active" ? "Deactivate" : "Activate"}
+            </button>
+
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Profile */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Doctor Info Card */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <div className="flex items-start gap-6">
-              <img
-                src={doctor.image}
-                alt={doctor.name}
-                className="w-32 h-32 rounded-xl object-cover border-4 border-emerald-100"
-              />
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold text-slate-900 mb-1">{doctor.name}</h1>
-                    <p className="text-lg text-emerald-600 font-semibold mb-2">{doctor.specialization}</p>
-                    <p className="text-slate-600 mb-3">{doctor.qualification}</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Left + Center – Main Content */}
+          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+            {/* Hero Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-6 lg:p-8 flex flex-col sm:flex-row gap-6 lg:gap-8">
+                <div className="shrink-0">
+                  <img
+                    src={doctor.image}
+                    alt={doctor.name}
+                    className="w-32 h-32 lg:w-40 lg:h-40 rounded-xl object-cover border-4 border-white shadow-md"
+                    onError={(e) => (e.target.src = "/api/placeholder/240/240")}
+                  />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 truncate">
+                        {doctor.name}
+                      </h1>
+                      <p className="text-xl text-emerald-600 font-semibold mt-1">
+                        {doctor.specialization}
+                      </p>
+                      <p className="text-slate-600 mt-1">
+                        {doctor.qualification}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`inline-flex px-4 py-1.5 rounded-full text-sm font-medium border ${statusStyle}`}
+                    >
+                      {doctor.status}
+                    </span>
                   </div>
-                  <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${
-                    doctor.status === 'Active' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {doctor.status}
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                    <span className="font-semibold text-slate-900">{doctor.rating}</span>
-                    <span className="text-slate-500">({doctor.totalReviews} reviews)</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-slate-600">
-                    <Briefcase className="w-4 h-4" />
-                    <span>{doctor.experience}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  <div className="flex flex-wrap gap-5 mt-5 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <Star
+                        size={18}
+                        className="text-yellow-500 fill-yellow-500"
+                      />
+                      <span className="font-semibold text-slate-900">
+                        {doctor.rating}
+                      </span>
+                      <span className="text-slate-500">
+                        ({doctor.reviewCount}{" "}
+                        {doctor.reviewCount === 1 ? "review" : "reviews"})
+                      </span>
+                    </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Total Consultations</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{doctor.consultations}</p>
-                </div>
-                <div className="text-3xl">👨‍⚕️</div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Consultation Fee</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">₹{doctor.consultationFee}</p>
-                </div>
-                <DollarSign className="w-8 h-8 text-blue-500" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Avg Rating</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{doctor.rating} ⭐</p>
-                </div>
-                <Award className="w-8 h-8 text-yellow-500" />
-              </div>
-            </div>
-          </div>
-
-          {/* About */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-3">About</h2>
-            <p className="text-slate-700 leading-relaxed">{doctor.bio}</p>
-          </div>
-
-          {/* Education */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Education</h2>
-            <div className="space-y-3">
-              {doctor.education.map((edu, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                  <Award className="w-5 h-5 text-emerald-500 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-slate-900">{edu.degree}</p>
-                    <p className="text-sm text-slate-600">{edu.institution}</p>
-                    <p className="text-xs text-slate-500">{edu.year}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Specialties */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Specialties</h2>
-            <div className="flex flex-wrap gap-2">
-              {doctor.specialties.map((specialty, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium border border-emerald-200"
-                >
-                  {specialty}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Achievements */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Achievements & Awards</h2>
-            <ul className="space-y-2">
-              {doctor.achievements.map((achievement, index) => (
-                <li key={index} className="flex items-start gap-2 text-slate-700">
-                  <span className="text-yellow-500 mt-0.5">🏆</span>
-                  <span>{achievement}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Recent Reviews */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Reviews</h2>
-            <div className="space-y-4">
-              {doctor.reviews.map((review, index) => (
-                <div key={index} className="p-4 bg-slate-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-slate-900">{review.patient}</p>
-                    <div className="flex items-center gap-1">
-                      {[...Array(review.rating)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                      ))}
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <BriefcaseBusiness size={18} />
+                      <span>{doctor.experience}</span>
                     </div>
                   </div>
-                  <p className="text-slate-700 text-sm mb-2">{review.comment}</p>
-                  <p className="text-xs text-slate-500">{review.date}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Sidebar */}
-        <div className="space-y-6">
-          {/* Contact Info */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Contact Information</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-slate-700">
-                <Mail className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">{doctor.email}</span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-700">
-                <Phone className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">{doctor.phone}</span>
-              </div>
-              <div className="flex items-center gap-3 text-slate-700">
-                <MapPin className="w-5 h-5 text-slate-400" />
-                <span className="text-sm">{doctor.location}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Availability */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Availability</h2>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 text-slate-700">
-                <Clock className="w-5 h-5 text-slate-400 mt-0.5" />
-                <span className="text-sm">{doctor.availability}</span>
-              </div>
-              <div className="flex items-start gap-3 text-slate-700">
-                <Languages className="w-5 h-5 text-slate-400 mt-0.5" />
-                <div className="flex flex-wrap gap-1">
-                  {doctor.languages.map((lang, index) => (
-                    <span key={index} className="text-sm bg-slate-100 px-2 py-0.5 rounded">
-                      {lang}
-                    </span>
-                  ))}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Account Info */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Account Details</h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-slate-600">Doctor ID</p>
-                <p className="font-mono font-semibold text-slate-900">{doctor.id}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Joined Date</p>
-                <div className="flex items-center gap-2 text-slate-900">
-                  <Calendar className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm">{doctor.joinedDate}</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Last Active</p>
-                <p className="text-sm text-slate-900">{doctor.lastActive}</p>
-              </div>
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+              <StatCard
+                label="Consultation Fee"
+                value={`₹${doctor.fee.toLocaleString()}`}
+                icon={<DollarSign size={24} className="text-blue-600" />}
+                bg="from-blue-50 to-cyan-50"
+              />
+              <StatCard
+                label="Average Rating"
+                value={`${doctor.rating} ★`}
+                icon={
+                  <Star size={24} className="text-yellow-500 fill-yellow-500" />
+                }
+                bg="from-amber-50 to-orange-50"
+              />
+              <StatCard
+                label="Reviews"
+                value={doctor.reviewCount.toLocaleString()}
+                icon={<span className="text-2xl">💬</span>}
+                bg="from-emerald-50 to-teal-50"
+              />
             </div>
+
+            {/* About */}
+            {doctor.about && (
+              <section className="bg-white rounded-xl shadow-sm border p-6 lg:p-8">
+                <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                  Professional Summary
+                </h2>
+                <p className="text-slate-700 leading-relaxed whitespace-pre-line">
+                  {doctor.about}
+                </p>
+              </section>
+            )}
+
+            {/* Placeholder for future sections */}
+            <section className="bg-white rounded-xl shadow-sm border p-6 lg:p-8 text-center text-slate-500 py-12">
+              <p className="text-lg">
+                Education • Specialties • Awards • Reviews
+              </p>
+              <p className="mt-2">Additional profile sections coming soon</p>
+            </section>
           </div>
 
-          {/* Recent Consultations */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Recent Consultations</h2>
-            <div className="space-y-3">
-              {doctor.recentConsultations.map((consultation, index) => (
-                <div key={index} className="p-3 bg-slate-50 rounded-lg">
-                  <div className="flex items-start justify-between mb-1">
-                    <p className="font-medium text-slate-900 text-sm">{consultation.patient}</p>
-                    <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
-                      {consultation.status}
-                    </span>
+          {/* Right Sidebar */}
+          <aside className="space-y-6 lg:space-y-8">
+            {/* Contact & Availability */}
+            <div className="bg-white rounded-xl shadow-sm border divide-y divide-slate-100">
+              <div className="p-6 lg:p-7">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                  Contact Details
+                </h3>
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-center gap-3 text-slate-700">
+                    <Mail size={18} className="text-slate-400" />
+                    <span>{doctor.email || "Not provided"}</span>
                   </div>
-                  <p className="text-xs text-slate-600 mb-1">{consultation.concern}</p>
-                  <p className="text-xs text-slate-500">{consultation.date}</p>
+
+                  <div className="flex items-center gap-3 text-slate-700">
+                    <Phone size={18} className="text-slate-400" />
+                    <span>{doctor.phone || "Not provided"}</span>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-slate-700">
+                    <MapPin size={18} className="text-slate-400 mt-0.5" />
+                    <span>{doctor.address}</span>
+                  </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="p-6 lg:p-7">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                  Availability
+                </h3>
+                <div className="space-y-4">
+                  {doctor.availability ? (
+                    <div className="flex items-start gap-3 text-slate-700">
+                      <Clock size={18} className="text-slate-400 mt-0.5" />
+                      <span>{doctor.availability}</span>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-sm italic">
+                      Availability not specified
+                    </p>
+                  )}
+
+                  {doctor.languages.length > 0 && (
+                    <div className="flex items-start gap-3 text-slate-700">
+                      <Globe size={18} className="text-slate-400 mt-0.5" />
+                      <div className="flex flex-wrap gap-2">
+                        {doctor.languages.map((lang) => (
+                          <span
+                            key={lang}
+                            className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs rounded"
+                          >
+                            {lang}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Account Info */}
+            <div className="bg-white rounded-xl shadow-sm border p-6 lg:p-7">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                Account Information
+              </h3>
+              <dl className="space-y-3 text-sm">
+                <div>
+                  <dt className="text-slate-500">Doctor ID</dt>
+                  <dd className="font-mono font-medium text-slate-900 mt-0.5">
+                    {doctor.id.substring(0, 8)}...
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Joined</dt>
+                  <dd className="flex items-center gap-2 text-slate-900 mt-0.5">
+                    <Calendar size={16} className="text-slate-400" />
+                    {doctor.joined}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────
+   Reusable Components
+───────────────────────────────────────────────── */
+
+function StatCard({ label, value, icon, bg }) {
+  return (
+    <div
+      className={`bg-gradient-to-br ${bg} border border-slate-200/70 rounded-xl p-5 lg:p-6 shadow-sm`}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-slate-600">{label}</p>
+          <p className="text-2xl lg:text-3xl font-bold text-slate-900 mt-1.5">
+            {value}
+          </p>
+        </div>
+        <div className="opacity-90">{icon}</div>
+      </div>
+    </div>
+  );
+}
+
+function DoctorDetailSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
+      <div className="h-10 bg-slate-200 rounded w-48 mb-8" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-xl border h-48" />
+          <div className="grid grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-32 bg-slate-100 rounded-xl" />
+            ))}
           </div>
+          <div className="h-64 bg-slate-100 rounded-xl" />
+        </div>
+        <div className="space-y-6">
+          <div className="h-80 bg-slate-100 rounded-xl" />
+          <div className="h-48 bg-slate-100 rounded-xl" />
         </div>
       </div>
     </div>
   );
-};
+}
+
+function ErrorState({ error, onRetry }) {
+  return (
+    <div className="max-w-2xl mx-auto py-16 px-4 text-center">
+      <AlertCircle size={64} className="mx-auto text-red-500 mb-6" />
+      <h2 className="text-2xl font-bold text-slate-900 mb-3">
+        Something went wrong
+      </h2>
+      <p className="text-slate-600 mb-8">
+        {error || "We couldn't load this doctor's profile."}
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <button
+          onClick={onRetry}
+          className="px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors"
+        >
+          Try Again
+        </button>
+        <button
+          onClick={() => window.history.back()}
+          className="px-6 py-3 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          Go Back
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default DoctorDetail;

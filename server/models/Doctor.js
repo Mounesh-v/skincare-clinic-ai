@@ -2,68 +2,23 @@ import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, "Please provide doctor name"],
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
 
-    slug: {
-      type: String,
-      unique: true,
-      lowercase: true,
-    },
+    email: { type: String, trim: true, lowercase: true },
 
-    specialization: {
-      type: String,
-      required: [true, "Please provide specialization"],
-      trim: true,
-    },
+    phone: { type: String, trim: true },
 
-    qualification: {
-      type: String,
-      required: [true, "Please provide qualification"],
-      trim: true,
-    },
+    slug: { type: String, unique: true, lowercase: true },
 
-    experience: {
-      type: Number,
-      required: [true, "Please provide experience in years"],
-      min: 0,
-    },
+    specialization: { type: String, required: true, trim: true },
 
-    consultationFee: {
-      type: Number,
-      required: [true, "Please provide consultation fee"],
-      min: 0,
-    },
+    qualification: { type: String, required: true, trim: true },
 
-    address: {
-      type: String,
-      required: [true, "Please provide clinic address"],
-    },
+    experience: { type: Number, required: true, min: 0 },
 
-    location: {
-      lat: {
-        type: Number,
-        required: true,
-      },
-      lng: {
-        type: Number,
-        required: true,
-      },
-    },
+    consultationFee: { type: Number, required: true, min: 0 },
 
-    availability: [
-      {
-        type: String,
-        enum: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      },
-    ],
-
-    nextAvailable: {
-      type: Date,
-    },
+    address: { type: String, required: true },
 
     gender: {
       type: String,
@@ -71,74 +26,55 @@ const doctorSchema = new mongoose.Schema(
       required: true,
     },
 
-    languages: [
-      {
-        type: String,
-      },
-    ],
-
-    about: {
-      type: String,
-      required: [true, "Please provide doctor description"],
+    availability: {
+      type: [String],
+      enum: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      default: [],
     },
 
-    image: {
-      type: String,
-      required: [true, "Please provide doctor image"],
-    },
-    consultationType: [
-      {
-        type: String,
-        enum: ["In-clinic", "Video", "Home Visit"],
-      },
-    ],
+    languages: { type: [String], default: [] },
 
-    featured: {
-      type: Boolean,
-      default: false,
-    },
+    about: { type: String, required: true },
 
-    timeSlots: [
-      {
-        type: String,
-      },
-    ],
+    image: { type: String, required: true },
+
+    consultationType: {
+      type: [String],
+      enum: ["In-clinic", "Video", "Home Visit"],
+      default: ["In-clinic"],
+    },
 
     ratings: {
-      average: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 5,
-      },
-      count: {
-        type: Number,
-        default: 0,
-      },
+      average: { type: Number, default: 0, min: 0, max: 5 },
+      count: { type: Number, default: 0 },
     },
 
-    reviews: {
-      type: Number,
-      default: 0,
-    },
+    reviews: { type: Number, default: 0 },
 
     status: {
       type: String,
       enum: ["Active", "Inactive", "On Leave"],
       default: "Active",
     },
+    nextAvailable: {
+      type: Date,
+    },
+
+    timeSlots: {
+      type: [String],
+      default: [],
+    },
+
+    featured: { type: Boolean, default: false },
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
-// ✅ SLUG GENERATION
 doctorSchema.pre("save", function () {
   if (this.isModified("name")) {
     this.slug = this.name
@@ -148,21 +84,12 @@ doctorSchema.pre("save", function () {
   }
 });
 
-// ✅ AUTO STATUS CHECK (If no availability → On Leave)
-doctorSchema.pre("save", function () {
-  if (this.availability.length === 0) {
-    this.status = "On Leave";
-  }
-});
-
-// ✅ VIRTUAL FIELD: Is Available Today
 doctorSchema.virtual("isAvailable").get(function () {
+  if (!this.availability) return false;
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "short",
   });
   return this.availability.includes(today);
 });
 
-const Doctor = mongoose.model("Doctor", doctorSchema);
-
-export default Doctor;
+export default mongoose.model("Doctor", doctorSchema);
