@@ -1,0 +1,42 @@
+[33m2237872[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Doctors apis updated
+[33ma508123[m Product Connected with Frontend
+[33m1235fa3[m Product Connected with Frontend
+[33mb18713c[m 	new file:   ml/__init__.py
+[33m22fe0bf[m Product Section Backend
+[33m61af74d[m Authetication
+[33m7d495cd[m 	deleted:    ml/assets/yolov8n-face.pt 	modified:   ml/config.py 	modified:   ml/model_utils.py 	modified:   ml/models/model_metadata.json 	modified:   ml/models/skin_classifier.pt 	modified:   ml/predict.py 	modified:   ml/preprocessing.py 	modified:   ml/train.py 	modified:   ml_service/analyzer.py 	modified:   ml_service/main.py
+[33mae43ea9[m 	modified:   client/src/services/api.js 	new file:   main.py 	new file:   ml/assets/blaze_face_short_range.tflite 	new file:   ml/assets/face_detection_short_range.tflite 	new file:   ml/assets/yolov8n-face.pt 	new file:   ml/class_map.json 	new file:   ml/config.py 	new file:   ml/model_utils.py 	new file:   ml/models/model_metadata.json 	new file:   ml/models/skin_classifier.pt 	new file:   ml/predict.py 	new file:   ml/preprocessing.py 	new file:   ml/realtime.py 	new file:   ml/train.py 	deleted:    ml_service/.env.local 	modified:   ml_service/__init__.py 	new file:   ml_service/analyzer.py 	modified:   ml_service/auth.py 	deleted:    ml_service/data/products.json 	modified:   ml_service/main.py 	deleted:    ml_service/model/__init__.py 	deleted:    ml_service/model/predictor.py 	deleted:    ml_service/model/preprocessing.py 	deleted:    ml_service/model/skin_classifier.ts 	deleted:    ml_service/package-lock.json 	modified:   ml_service/recommendations.py 	deleted:    ml_service/train_skin_model.py 	new file:   mp_list.json 	new file:   mp_root.xml
+[33m739c401[m Merge branch 'main' of https://github.com/NEYAZUDDIN5050/skincare-clinic-ai
+[33m36bf3cd[m 	modified:   client/index.html
+[33m8d3f64b[m Assessment little changes
+[33mdd3e6ef[m 	modified:   client/src/main.jsx
+[33mb32d3ac[m Merge branch 'main' of https://github.com/NEYAZUDDIN5050/skincare-clinic-ai
+[33m134eb7c[m 	modified:   client/src/pages/auth/Login.jsx 	modified:   client/src/services/api.js 	modified:   client/vite.config.js 	modified:   ml_service/main.py 	new file:   ml_service/package-lock.json
+[33mcf7b815[m 	modified:   client/src/pages/auth/Login.jsx 	modified:   client/vite.config.js
+[33md7e9ed3[m 	modified:   client/src/pages/auth/Login.jsx 	modified:   ml_service/.env.local
+[33m92f90ad[m 	new file:   ml_service/.env.local 	modified:   ml_service/__init__.py 	modified:   ml_service/auth.py
+[33m51eb830[m 	modified:   client/src/App.jsx
+[33m75d3f5a[m Merge branch 'main' of https://github.com/NEYAZUDDIN5050/skincare-clinic-ai
+[33m4d179f9[m 	modified:   client/src/App.jsx 	new file:   client/src/pages/Contact.jsx 	modified:   client/src/pages/auth/Login.jsx 	modified:   client/src/services/api.js 	new file:   ml_service/auth.py 	modified:   ml_service/main.py 	new file:   package-lock.json
+[33m1748107[m result-page done
+[33m4520402[m Doctor-sections add with map functionality...
+[33m135951a[m admin panel frontend
+[33medff797[m 	modified:   client/src/pages/assessment/Analysisresults.jsx 	modified:   client/src/pages/assessment/Skinassessmentquiz.jsx 	modified:   client/src/pages/assessment/StartAssessment.jsx 	modified:   ml_service/main.py
+[33m3d9258b[m 	modified:   ml_service/model/preprocessing.py
+[33m9b9efec[m Merge branch 'main' of https://github.com/NEYAZUDDIN5050/skincare-clinic-ai
+[33m263caae[m 	modified:   ml_service/main.py 	modified:   ml_service/model/predictor.py 	new file:   ml_service/model/preprocessing.py 	modified:   ml_service/train_skin_model.py
+[33m46675ea[m result page
+[33mc4a5e60[m 	modified:   ml_service/train_skin_model.py
+[33m08c71a6[m Signup -logic page done....
+[33mbf6c9e1[m Resolved merge conflict - removed Python cache files
+[33mcdf577b[m Remove Python cache files and update .gitignore
+[33m0bc4a35[m modified the ui/ux of assessment, products,
+[33m091736a[m 	modified:   ml_service/__pycache__/main.cpython-314.pyc 	modified:   ml_service/main.py 	modified:   ml_service/model/__pycache__/predictor.cpython-314.pyc 	modified:   ml_service/model/predictor.py
+[33me13166b[m home, product section completed
+[33m5526fed[m 	modified:   client/src/App.jsx 	modified:   client/src/pages/assessment/Analysisresults.jsx 	modified:   client/src/pages/assessment/StartAssessment.jsx 	modified:   client/src/services/api.js 	new file:   ml_service/__init__.py 	new file:   ml_service/__pycache__/__init__.cpython-314.pyc 	new file:   ml_service/__pycache__/main.cpython-314.pyc 	new file:   ml_service/__pycache__/recommendations.cpython-314.pyc 	new file:   ml_service/__pycache__/train_skin_model.cpython-314.pyc 	new file:   ml_service/data/products.json 	new file:   ml_service/main.py 	new file:   ml_service/model/__init__.py 	new file:   ml_service/model/__pycache__/__init__.cpython-314.pyc 	new file:   ml_service/model/__pycache__/predictor.cpython-314.pyc 	new file:   ml_service/model/predictor.py 	new file:   ml_service/model/skin_classifier.ts 	new file:   ml_service/recommendations.py 	new file:   ml_service/train_skin_model.py
+[33mc8972cd[m product section done
+[33m352cb2a[m home page done....!
+[33m818ca95[m home-page-setup
+[33mc9bd4f5[m fix frontend
+[33m8304dd7[m admin, csstailwind, server run done
+[33m9cd4bae[m project setup
