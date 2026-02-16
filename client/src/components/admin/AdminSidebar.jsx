@@ -6,13 +6,14 @@ import {
   ClipboardList,
   Package,
   ShoppingCart,
-  TextQuote,      // instead of FilterText
+  TextQuote,
   BarChart3,
-  Settings,       // instead of Setting
-  LogOut,         // instead of Logout
+  Settings,
+  LogOut,
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Stethoscope,
 } from 'lucide-react';
 
 const AdminSidebar = ({ isOpen, setOpen }) => {
@@ -31,6 +32,11 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
       path: '/admin/users',
     },
     {
+      name: 'Doctors',
+      icon: Stethoscope,
+      path: '/admin/doctors',
+    },
+    {
       name: 'Assessments',
       icon: ClipboardList,
       path: '/admin/assessments',
@@ -47,7 +53,7 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
     },
     {
       name: 'Content',
-      icon: TextQuote, // use any suitable icon here
+      icon: TextQuote,
       path: '/admin/content',
     },
     {
