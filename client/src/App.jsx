@@ -17,6 +17,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import Contact from './pages/Contact';
 import Signup from './pages/auth/Signup';
 import Login from './pages/auth/Login.jsx';
+import AuthCallback from './pages/auth/AuthCallback.jsx';
 import FindDoctors from './pages/FindDoctors';
 
 // Admin Pages
@@ -139,34 +140,34 @@ function App() {
           {/* ADMIN ROUTES (No Header/Footer) */}
           {/* ============================================ */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          
+
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            
+
             {/* Users Management */}
             <Route path="users" element={<UserList />} />
             <Route path="users/:id" element={<UserDetail />} />
-            
+
             {/* Products Management */}
             <Route path="products" element={<ProductList />} />
             <Route path="products/create" element={<ProductCreate />} />
             <Route path="products/:id" element={<ProductView />} />
             <Route path="products/:id/edit" element={<ProductEdit />} />
-            
+
             {/* Orders Management */}
             <Route path="orders" element={<OrderList />} />
             <Route path="orders/:id" element={<OrderDetail />} />
-            
+
             {/* Assessments Management */}
             <Route path="assessments" element={<AssessmentList />} />
-            
+
             {/* Doctors Management */}
             <Route path="doctors" element={<DoctorList />} />
             <Route path="doctors/create" element={<DoctorCreate />} />
             <Route path="doctors/:id" element={<DoctorDetails />} />
             <Route path="doctors/:id/edit" element={<DoctorCreate />} />
-            
+
             {/* Placeholder Routes */}
             <Route path="content" element={<ComingSoon title="Content Management" />} />
             <Route path="analytics" element={<ComingSoon title="Analytics & Reports" />} />
@@ -209,16 +210,16 @@ function PublicAppRoutes({
       <Routes>
         {/* Home */}
         <Route path="/" element={<TrayaStyleHome />} />
-        
+
         {/* Contact */}
         <Route path="/contact" element={<Contact />} />
-        
+
         {/* Assessment Flow */}
         <Route
           path="/assessment"
           element={<AssessmentWrapper onComplete={onAssessmentComplete} />}
         />
-        
+
         {/* Results Page */}
         <Route
           path="/results"
@@ -230,21 +231,22 @@ function PublicAppRoutes({
             )
           }
         />
-        
+
         {/* Find Doctors */}
         <Route path="/find-doctors" element={<FindDoctors />} />
-        
+
         {/* Products */}
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/products/:productId" element={<ProductDetail />} />
-        
+
         {/* Checkout */}
         <Route path="/checkout" element={<CheckoutPage />} />
-        
+
         {/* Auth */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        
+        <Route path="/auth/callback" element={<AuthCallback />} />
+
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>

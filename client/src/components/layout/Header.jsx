@@ -306,15 +306,18 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                     Start Assessment
                   </button>
 
-                  <button
-                    onClick={() => {
-                      navigate("/login");
-                      setFullscreenMenuOpen(false);
-                    }}
-                    className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors"
-                  >
-                    Log In
-                  </button>
+                  {/* Only show Log In button if NOT logged in */}
+                  {!name && (
+                    <button
+                      onClick={() => {
+                        navigate("/login");
+                        setFullscreenMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors"
+                    >
+                      Log In
+                    </button>
+                  )}
                 </div>
               </div>
 

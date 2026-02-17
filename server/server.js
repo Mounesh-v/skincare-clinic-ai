@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import connectDB from "./config/database.js";
 import authUser from "./router/auth.js";
 import cors from "cors";
+import session from "express-session";
+import passport from "./config/passport-config.js";
 
 import productRoutes from "./router/productRoutes.js";
 import orderRoutes from "./router/orderRoutes.js";
@@ -20,6 +22,24 @@ app.use(
 //Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session middleware (required for passport)
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  })
+);
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 connectDB();
 
