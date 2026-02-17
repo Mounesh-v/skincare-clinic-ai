@@ -19,6 +19,8 @@ import api from "../../utils/api.js";
 // Import your background image
 import signupBg from "../../assets/signup-bg.jpg";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
+
 const Signup = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -86,6 +88,14 @@ const Signup = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSignup = () => {
+    window.location.href = `${API_URL}/api/auth/google`;
+  };
+
+  const handleFacebookSignup = () => {
+    window.location.href = `${API_URL}/api/auth/facebook`;
   };
 
   return (
@@ -429,6 +439,7 @@ const Signup = () => {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
+                  onClick={handleGoogleSignup}
                   className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
                   <svg
@@ -457,8 +468,10 @@ const Signup = () => {
                   </span>
                 </button>
 
+
                 <button
                   type="button"
+                  onClick={handleFacebookSignup}
                   className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
                   <svg

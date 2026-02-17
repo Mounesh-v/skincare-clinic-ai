@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
 import Button from "../../components/common/Button";
@@ -8,323 +8,21 @@ import api from "../../utils/api";
 
 // Import your background image
 import loginBg from "../../assets/Signup-bg.jpg";
-import { loginWithGoogle } from "../../services/api";
 
-const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
-const RAW_DEV_PORT =
-  import.meta.env.VITE_APP_PORT ?? import.meta.env.PORT ?? "5174";
-const DEFAULT_DEV_PORT = `${RAW_DEV_PORT}`.trim() || "5174";
-const LOCAL_DEV_ORIGINS = [
-  `http://localhost:${DEFAULT_DEV_PORT}`,
-  `http://127.0.0.1:${DEFAULT_DEV_PORT}`,
-];
-
-const resolveAllowedOrigins = () => {
-  const envOrigins = import.meta.env.VITE_ALLOWED_ORIGINS;
-  if (envOrigins) {
-    return envOrigins
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean);
-  }
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return Array.from(new Set([window.location.origin, ...LOCAL_DEV_ORIGINS]));
-  }
-  return LOCAL_DEV_ORIGINS;
-};
-
-const ALLOWED_ORIGINS = resolveAllowedOrigins();
-let googleScriptPromise = null;
-
-const ensureBase64Padding = (input = "") => {
-  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
-  if (!normalized) {
-    return "";
-  }
-  const remainder = normalized.length % 4;
-  const padding = remainder === 0 ? "" : "=".repeat(4 - remainder);
-  return normalized + padding;
-};
-
-const decodeGoogleJwt = (credential) => {
-  if (typeof window === "undefined" || !credential) {
-    return null;
-  }
-  try {
-    const [, payload] = credential.split(".");
-    const decoded = JSON.parse(window.atob(ensureBase64Padding(payload)));
-    return decoded;
-  } catch (error) {
-    console.warn("Failed to decode Google credential payload", error);
-    return null;
-  }
-};
-
-const describePromptIssue = (notification) => {
-  if (!notification) {
-    return "Google sign-in did not complete. Please try again.";
-  }
-  const reason =
-    notification.getNotDisplayedReason?.() ||
-    notification.getSkippedReason?.() ||
-    notification.getDismissedReason?.();
-  if (!reason || reason === "credential_returned") {
-    return "";
-  }
-  switch (reason) {
-    case "popup_closed_by_user":
-    case "user_cancelled":
-      return "You closed the Google sign-in popup before finishing.";
-    case "suppressed_by_user":
-      return "Google sign-in is temporarily suppressed in this browser session.";
-    case "ios_private_browsing":
-      return "Google sign-in is blocked in private browsing mode. Please use a standard window.";
-    case "not_loaded":
-      return "Google sign-in could not load. Please disable blockers and try again.";
-    default:
-      return `Google sign-in could not continue (${reason}). Please try again.`;
-  }
-};
-
-const loadGoogleIdentityScript = () => {
-  if (typeof window === "undefined") {
-    return Promise.reject(
-      new Error("Google Sign-In is only available in the browser."),
-    );
-  }
-  if (googleScriptPromise) {
-    return googleScriptPromise;
-  }
-  googleScriptPromise = new Promise((resolve, reject) => {
-    const resolveWithGoogle = () => {
-      if (window.google?.accounts?.id) {
-        resolve(window.google);
-        return true;
-      }
-      return false;
-    };
-
-    const existingScript = document.querySelector(
-      `script[src="${GOOGLE_SCRIPT_SRC}"]`,
-    );
-    if (existingScript) {
-      if (resolveWithGoogle()) {
-        return;
-      }
-      const handleReady = () => {
-        if (!resolveWithGoogle()) {
-          reject(
-            new Error("Google Identity Services is unavailable after loading."),
-          );
-        }
-      };
-      const handleError = () => {
-        googleScriptPromise = null;
-        reject(new Error("Failed to load Google Identity Services."));
-      };
-      existingScript.addEventListener("load", handleReady, { once: true });
-      existingScript.addEventListener("error", handleError, { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-gsi-script";
-    script.src = GOOGLE_SCRIPT_SRC;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (!resolveWithGoogle()) {
-        googleScriptPromise = null;
-        reject(new Error("Google Identity Services failed to initialise."));
-      }
-    };
-    script.onerror = () => {
-      googleScriptPromise = null;
-      reject(new Error("Failed to load Google Identity Services."));
-    };
-    document.head.appendChild(script);
-  });
-
-  return googleScriptPromise;
-};
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
 
 const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleError, setGoogleError] = useState("");
-  const googleInitializedRef = useRef(false);
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
-  const handleGoogleCredential = useCallback(
-    async (response) => {
-      const credential = response?.credential;
-      if (!credential) {
-        const message =
-          "Google did not return any login credentials. Please try again.";
-        setGoogleLoading(false);
-        setGoogleError(message);
-        toast.error(message);
-        return;
-      }
-      try {
-        const decodedProfile = decodeGoogleJwt(credential);
-        if (decodedProfile) {
-          const { name, email, picture } = decodedProfile;
-          console.info("Google profile decoded", { name, email, picture });
-        }
-        const authData = await loginWithGoogle(credential);
-        const firstName = authData?.user?.name?.split?.(" ")?.[0] || "there";
-        try {
-          localStorage.setItem("authToken", authData.token);
-          localStorage.setItem("authUser", JSON.stringify(authData.user));
-          window.dispatchEvent(new Event("auth:updated"));
-        } catch (storageError) {
-          console.error("Failed to persist Google auth session", storageError);
-        }
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("auth:updated"));
-        }
-        setGoogleError("");
-        toast.success(`Welcome back, ${firstName}!`);
-        navigate("/dashboard");
-      } catch (error) {
-        const message =
-          error?.message || "Google login failed. Please try again.";
-        setGoogleError(message);
-        toast.error(message);
-      } finally {
-        setGoogleLoading(false);
-      }
-    },
-    [navigate, setGoogleError],
-  );
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/api/auth/google`;
+  };
 
-  const validateOrigin = useCallback(() => {
-    if (typeof window === "undefined") {
-      return {
-        allowed: false,
-        message: "Google login is only available in the browser.",
-      };
-    }
-    const origin = window.location.origin;
-    if (!ALLOWED_ORIGINS.includes(origin)) {
-      return {
-        allowed: false,
-        message: `Google login is limited to ${ALLOWED_ORIGINS.join(" or ")} (current: ${origin}).`,
-      };
-    }
-    return { allowed: true, message: "" };
-  }, []);
-
-  const initialiseGoogleClient = useCallback(
-    (googleGlobal) => {
-      if (googleInitializedRef.current) {
-        return;
-      }
-      if (!googleClientId) {
-        return;
-      }
-      const originCheck = validateOrigin();
-      if (!originCheck.allowed) {
-        setGoogleError(originCheck.message);
-        toast.error(originCheck.message);
-        return;
-      }
-      const google = googleGlobal || window.google;
-      if (!google?.accounts?.id) {
-        return;
-      }
-      google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredential,
-        ux_mode: "popup",
-        auto_select: false,
-      });
-      googleInitializedRef.current = true;
-    },
-    [googleClientId, handleGoogleCredential, validateOrigin],
-  );
-
-  useEffect(() => {
-    if (!googleClientId) {
-      setGoogleError(
-        "Google login is not configured. Please set VITE_GOOGLE_CLIENT_ID.",
-      );
-      return undefined;
-    }
-
-    const originCheck = validateOrigin();
-    if (!originCheck.allowed) {
-      setGoogleError(originCheck.message);
-      toast.error(originCheck.message);
-      return undefined;
-    }
-
-    let cancelled = false;
-    loadGoogleIdentityScript()
-      .then((googleGlobal) => {
-        if (cancelled) {
-          return;
-        }
-        initialiseGoogleClient(googleGlobal);
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        console.error("Google Identity Services failed to load", error);
-        setGoogleError(error.message);
-        toast.error(error.message);
-      });
-
-    return () => {
-      cancelled = true;
-      if (typeof window !== "undefined" && window.google?.accounts?.id) {
-        window.google.accounts.id.cancel();
-        window.google.accounts.id.disableAutoSelect();
-      }
-      googleInitializedRef.current = false;
-      setGoogleLoading(false);
-    };
-  }, [googleClientId, initialiseGoogleClient, validateOrigin]);
-
-  const handleGoogleClick = useCallback(() => {
-    if (googleLoading) {
-      return;
-    }
-    if (!googleClientId) {
-      const message = "Google login is not configured yet.";
-      setGoogleError(message);
-      toast.error(message);
-      return;
-    }
-    const originCheck = validateOrigin();
-    if (!originCheck.allowed) {
-      setGoogleError(originCheck.message);
-      toast.error(originCheck.message);
-      return;
-    }
-    const google = window.google;
-    if (!google?.accounts?.id || !googleInitializedRef.current) {
-      const message =
-        "Google Sign-In is still loading. Please try again in a moment.";
-      setGoogleError(message);
-      toast.error(message);
-      return;
-    }
-    setGoogleError("");
-    setGoogleLoading(true);
-    google.accounts.id.prompt((notification) => {
-      const issueMessage = describePromptIssue(notification);
-      if (issueMessage) {
-        setGoogleLoading(false);
-        setGoogleError(issueMessage);
-        toast.error(issueMessage);
-      }
-    });
-  }, [googleClientId, googleLoading, validateOrigin]);
+  const handleFacebookLogin = () => {
+    window.location.href = `${API_URL}/api/auth/facebook`;
+  };
 
   const [formData, setFormData] = useState({
     email: "",
@@ -532,9 +230,7 @@ const Login = () => {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={handleGoogleClick}
-                  disabled={googleLoading}
-                  aria-busy={googleLoading}
+                  onClick={handleGoogleLogin}
                   className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
                   <svg
@@ -565,6 +261,7 @@ const Login = () => {
 
                 <button
                   type="button"
+                  onClick={handleFacebookLogin}
                   className="group flex items-center justify-center gap-2.5 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 shadow-sm transition-all hover:border-slate-300 hover:shadow-md"
                 >
                   <svg
@@ -579,11 +276,6 @@ const Login = () => {
                   </span>
                 </button>
               </div>
-              {googleError && (
-                <p className="col-span-2 pt-2 text-center text-sm font-semibold text-rose-600">
-                  {googleError}
-                </p>
-              )}
             </form>
 
             {/* Signup Link */}

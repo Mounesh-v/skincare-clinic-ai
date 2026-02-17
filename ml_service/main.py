@@ -17,7 +17,7 @@ from typing import Any, Dict
 from urllib.parse import ParseResult, unquote, urlparse
 
 from .analyzer import SkinAnalyzerService
-from .auth import verify_google_token
+
 
 LOGGER = logging.getLogger("ml_service")
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s")
@@ -115,17 +115,7 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
                 self._json_error(str(exc), status=HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
-        if parsed.path == "/api/auth/google":
-            credential = body.get("credential")
-            if not credential:
-                self._json_error("credential is required", status=HTTPStatus.BAD_REQUEST)
-                return
-            try:
-                auth_payload = verify_google_token(credential)
-                self._json_response(auth_payload)
-            except ValueError as exc:
-                self._json_error(str(exc), status=HTTPStatus.BAD_REQUEST)
-            return
+
 
         self._json_error("Not Found", status=HTTPStatus.NOT_FOUND)
 

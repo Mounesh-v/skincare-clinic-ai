@@ -9,20 +9,31 @@ const RegisterUsers = new mongoose.Schema({
   email: {
     type: String,
     required: true,
+    unique: true,
   },
   password: {
     type: String,
-    required: true,
+    required: function () { return this.provider === 'local'; }
   },
-  confirmPassword: {
+  provider: {
     type: String,
     required: true,
+    enum: ['local', 'google', 'facebook'],
+    default: 'local'
   },
-   agreeToTerms: {
+  providerId: {
+    type: String,
+  },
+  picture: {
+    type: String,
+  },
+  agreeToTerms: {
     type: Boolean,
     required: true,
     default: false
   },
 }, { timestamps: true });
+
+RegisterUsers.index({ provider: 1, providerId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model("RegisterUsers", RegisterUsers);
