@@ -18,6 +18,10 @@ import Contact from './pages/Contact';
 import Signup from './pages/auth/Signup';
 import Login from './pages/auth/Login.jsx';
 import FindDoctors from './pages/FindDoctors';
+import OurScience from './pages/OurScience';
+import Ingredients from './pages/Ingredients';
+import ClinicalStudies from './pages/ClinicalStudies';
+// import DoctorNetwork from './pages/Doctornetwork';
 
 // Admin Pages
 import AdminLogin from './pages/auth/AdminLogin';
@@ -171,6 +175,7 @@ function App() {
             <Route path="content" element={<ComingSoon title="Content Management" />} />
             <Route path="analytics" element={<ComingSoon title="Analytics & Reports" />} />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
+           
           </Route>
 
           {/* ============================================ */}
@@ -209,6 +214,10 @@ function PublicAppRoutes({
       <Routes>
         {/* Home */}
         <Route path="/" element={<TrayaStyleHome />} />
+         <Route path="/science" element={<OurScience />} />
+            <Route path="/ingredients" element={<Ingredients />} />
+            <Route path="/ClinicalStudies" element={<ClinicalStudies />} />
+            {/* <Route path="/FindDoctors" element={<D />} /> */}
         
         {/* Contact */}
         <Route path="/contact" element={<Contact />} />
