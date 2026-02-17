@@ -91,8 +91,8 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
     howWeDoIt: [
       { name: "Our Science", path: "/science", icon: FileText },
       { name: "Ingredients", path: "/ingredients", icon: ShoppingBag },
-      { name: "Clinical Studies", path: "/studies", icon: FileText },
-      { name: "Doctor Network", path: "/doctors", icon: User },
+      { name: "Clinical Studies", path: "/ClinicalStudies", icon: FileText },
+      { name: "Doctor Network", path: "/find-doctors", icon: User },
     ],
     whoWeAre: [
       { name: "About Us", path: "/about", icon: User },
