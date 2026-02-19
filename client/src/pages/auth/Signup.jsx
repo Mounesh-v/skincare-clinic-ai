@@ -19,7 +19,7 @@ import api from "../../utils/api.js";
 // Import your background image
 import signupBg from "../../assets/signup-bg.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -91,11 +91,11 @@ const Signup = () => {
   };
 
   const handleGoogleSignup = () => {
-    window.location.href = `${API_URL}/api/auth/google`;
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   const handleFacebookSignup = () => {
-    window.location.href = `${API_URL}/api/auth/facebook`;
+    window.location.href = `${API_URL}/auth/facebook`;
   };
 
   return (
