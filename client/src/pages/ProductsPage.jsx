@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -8,23 +8,23 @@ import {
   TrendingUp,
   Award,
   Package,
+  Loader2,
 } from "lucide-react";
 import ProductCard from "../components/products/ProductCard";
 import Button from "../components/common/Button";
-import {
-  products,
-  PRODUCT_CATEGORIES,
-  SKIN_TYPES_FILTER,
-} from "../data/products";
+import productService from "../services/productService";
 import toast from "react-hot-toast";
 
 /**
- * Products Page
+ * Products Page - Connected to Backend
  * Browse all skincare products with filters
  */
 const ProductsPage = () => {
   const navigate = useNavigate();
 
+  // State
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedSkinType, setSelectedSkinType] = useState("all");
@@ -32,45 +32,89 @@ const ProductsPage = () => {
   const [sortBy, setSortBy] = useState("featured");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Filter products
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.shortDescription.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" || product.category === selectedCategory;
-    const matchesSkinType =
-      selectedSkinType === "all" ||
-      product.skinTypes.includes(selectedSkinType) ||
-      product.skinTypes.includes(SKIN_TYPES_FILTER.ALL);
-    const matchesPrice =
-      product.price >= priceRange[0] && product.price <= priceRange[1];
+  // Categories
+  const PRODUCT_CATEGORIES = {
+    CLEANSER: "cleanser",
+    MOISTURIZER: "moisturizer",
+    SERUM: "serum",
+    SUNSCREEN: "sunscreen",
+    FACE_MASK: "face_mask",
+    TONER: "toner",
+    EYE_CREAM: "eye_cream",
+    TREATMENT: "treatment",
+  };
 
-    return matchesSearch && matchesCategory && matchesSkinType && matchesPrice;
-  });
+  const SKIN_TYPES_FILTER = {
+    ALL: "all",
+    OILY: "oily",
+    DRY: "dry",
+    COMBINATION: "combination",
+    SENSITIVE: "sensitive",
+    NORMAL: "normal",
+  };
 
-  // Sort products
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case "price-low":
-        return a.price - b.price;
-      case "price-high":
-        return b.price - a.price;
-      case "rating":
-        return b.rating - a.rating;
-      case "newest":
-        return b.id.localeCompare(a.id);
-      default:
-        return 0;
+  // Fetch products on component mount and when filters change
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory, selectedSkinType, priceRange, sortBy, searchTerm]);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const filters = {
+        category: selectedCategory,
+        skinType: selectedSkinType,
+        minPrice: priceRange[0],
+        maxPrice: priceRange[1],
+        sortBy: sortBy,
+        search: searchTerm,
+      };
+
+      const data = await productService.getAll(filters);
+      
+      // CRITICAL FIX: Handle different response formats
+      let productsArray = [];
+      
+      if (Array.isArray(data)) {
+        // Response is directly an array
+        productsArray = data;
+      } else if (data && Array.isArray(data.products)) {
+        // Response has products property
+        productsArray = data.products;
+      } else if (data && Array.isArray(data.data)) {
+        // Response has data property
+        productsArray = data.data;
+      } else {
+        console.error('Unexpected response format:', data);
+        productsArray = [];
+      }
+
+      setProducts(productsArray);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      toast.error("Failed to load products");
+      setProducts([]); // Set empty array on error
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
   const handleAddToCart = (product) => {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const existingItem = cart.find(item => (item.id || item._id) === (product.id || product._id));
+    
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      cart.push({ ...product, quantity: 1, id: product.id || product._id });
+    }
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
     toast.success(`${product.name} added to cart!`);
   };
 
   const handleBuyNow = (product) => {
-    navigate(`/products/${product.id}`);
+    navigate(`/products/${product.id || product._id}`);
   };
 
   const clearFilters = () => {
@@ -216,22 +260,7 @@ const ProductsPage = () => {
                           : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      <span className="flex items-center justify-between">
-                        All Products
-                        {selectedCategory === "all" && (
-                          <svg
-                            className="h-4 w-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </span>
+                      All Products
                     </button>
                     {Object.values(PRODUCT_CATEGORIES).map((category) => (
                       <button
@@ -243,22 +272,7 @@ const ProductsPage = () => {
                             : "bg-slate-50 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
-                        <span className="flex items-center justify-between">
-                          {category.replace("_", " ")}
-                          {selectedCategory === category && (
-                            <svg
-                              className="h-4 w-4"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          )}
-                        </span>
+                        {category.replace("_", " ")}
                       </button>
                     ))}
                   </div>
@@ -302,9 +316,6 @@ const ProductsPage = () => {
                         setPriceRange([0, parseInt(e.target.value)])
                       }
                       className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200"
-                      style={{
-                        background: `linear-gradient(to right, #10b981 0%, #10b981 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 100%)`,
-                      }}
                     />
                     <div className="mt-3 flex items-center justify-between">
                       <span className="rounded-lg bg-white px-3 py-1 text-sm font-bold text-slate-900">
@@ -332,10 +343,6 @@ const ProductsPage = () => {
                   <p className="text-sm text-slate-600">
                     Showing{" "}
                     <span className="font-bold text-slate-900">
-                      {sortedProducts.length}
-                    </span>{" "}
-                    of{" "}
-                    <span className="font-bold text-slate-900">
                       {products.length}
                     </span>{" "}
                     products
@@ -359,63 +366,56 @@ const ProductsPage = () => {
                 </button>
 
                 {/* Sort Dropdown */}
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="appearance-none rounded-xl border-2 border-slate-200 bg-white py-2 pl-4 pr-10 font-semibold text-slate-700 shadow-sm outline-none transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                  >
-                    <option value="featured">Featured</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                    <option value="rating">Highest Rated</option>
-                    <option value="newest">Newest First</option>
-                  </select>
-                  <svg
-                    className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </div>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none rounded-xl border-2 border-slate-200 bg-white py-2 pl-4 pr-10 font-semibold text-slate-700 shadow-sm outline-none transition-all focus:border-emerald-500"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="newest">Newest First</option>
+                </select>
               </div>
             </div>
 
-            {/* Products Grid */}
-            {sortedProducts.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {sortedProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onAddToCart={handleAddToCart}
-                    onBuyNow={handleBuyNow}
-                  />
-                ))}
+            {/* Loading State */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-12 w-12 animate-spin text-emerald-600" />
               </div>
             ) : (
-              <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white py-20 text-center">
-                <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200">
-                  <Search className="h-12 w-12 text-slate-400" />
-                </div>
-                <h3 className="mb-2 text-2xl font-bold text-slate-900">
-                  No products found
-                </h3>
-                <p className="mb-6 text-slate-600">
-                  Try adjusting your filters or search term to find what you're
-                  looking for
-                </p>
-                <Button onClick={clearFilters} className="mx-auto">
-                  Clear All Filters
-                </Button>
-              </div>
+              <>
+                {/* Products Grid */}
+                {Array.isArray(products) && products.length > 0 ? (
+                  <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {products.map((product) => (
+                      <ProductCard
+                        key={product.id || product._id}
+                        product={product}
+                        onAddToCart={handleAddToCart}
+                        onBuyNow={handleBuyNow}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white py-20 text-center">
+                    <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200">
+                      <Search className="h-12 w-12 text-slate-400" />
+                    </div>
+                    <h3 className="mb-2 text-2xl font-bold text-slate-900">
+                      No products found
+                    </h3>
+                    <p className="mb-6 text-slate-600">
+                      Try adjusting your filters or search term
+                    </p>
+                    <Button onClick={clearFilters} className="mx-auto">
+                      Clear All Filters
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

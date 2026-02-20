@@ -74,6 +74,7 @@ const productSchema = new mongoose.Schema(
     skinTypes: [
       {
         type: String,
+        // ✅ FIX 1: Consistent PascalCase — changed "ALL" → "All"
         enum: ["Normal", "Dry", "Oily", "Combination", "Sensitive", "All"],
       },
     ],
@@ -141,7 +142,10 @@ const productSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+    // ✅ FIX 2: Enable virtuals in JSON/Object output
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 // SLUG GENERATE
@@ -163,11 +167,20 @@ productSchema.pre("save", function () {
   }
 });
 
+// ✅ FIX 3: Normalize skinTypes casing before save (prevents future case mismatch bugs)
+productSchema.pre("save", function () {
+  if (this.skinTypes && this.skinTypes.length > 0) {
+    this.skinTypes = this.skinTypes.map(
+      (type) => type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
+    );
+  }
+});
+
 // VIRTUAL DISCOUNT
 productSchema.virtual("discountPercentage").get(function () {
   if (this.originalPrice && this.price) {
     return Math.round(
-      ((this.originalPrice - this.price) / this.originalPrice) * 100,
+      ((this.originalPrice - this.price) / this.originalPrice) * 100
     );
   }
   return 0;

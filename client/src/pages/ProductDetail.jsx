@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ShoppingCart, Heart, Star, Shield, Truck, 
   RefreshCw, Check, Plus, Minus, ChevronLeft,
-  Info, Droplet, Sparkles, Package
+  Info, Droplet, Sparkles, Package, Loader2
 } from 'lucide-react';
 import Button from '../components/common/Button';
-import { products } from '../data/products';
+import productService from '../services/productService';
+import toast from 'react-hot-toast';
 
 const ProductDetail = () => {
   const { productId } = useParams();
@@ -21,19 +22,33 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call - Replace with actual API
-    const foundProduct = products.find(p => p.id === productId);
-    if (foundProduct) {
-      setProduct(foundProduct);
-      setSelectedSize(foundProduct.sizes?.[0] || '');
-      setLoading(false);
-    } else {
+    fetchProduct();
+  }, [productId]);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      const data = await productService.getById(productId);
+      const foundProduct = data.product || data;
+      
+      if (foundProduct) {
+        setProduct(foundProduct);
+        setSelectedSize(foundProduct.sizes?.[0] || '');
+      } else {
+        toast.error('Product not found');
+        navigate('/products');
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      toast.error('Failed to load product');
       navigate('/products');
+    } finally {
+      setLoading(false);
     }
-  }, [productId, navigate]);
+  };
 
   const handleQuantityChange = (type) => {
-    if (type === 'increase' && quantity < product.stockCount) {
+    if (type === 'increase' && quantity < (product?.stockCount || 999)) {
       setQuantity(quantity + 1);
     } else if (type === 'decrease' && quantity > 1) {
       setQuantity(quantity - 1);
@@ -41,9 +56,25 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = () => {
-    // Implement cart logic
-    console.log('Added to cart:', { product, selectedSize, quantity });
-    // toast.success('Added to cart!');
+    if (!product) return;
+
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const productId = product.id || product._id;
+    const existingItem = cart.find(item => (item.id || item._id) === productId);
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      cart.push({ 
+        ...product, 
+        quantity,
+        selectedSize,
+        id: productId
+      });
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cart));
+    toast.success('Added to cart!');
   };
 
   const handleBuyNow = () => {
@@ -51,13 +82,35 @@ const ProductDetail = () => {
     navigate('/checkout');
   };
 
-  if (loading || !product) {
+  const handleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites');
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <Loader2 className="h-12 w-12 animate-spin text-primary-600" />
       </div>
     );
   }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Product Not Found</h2>
+          <Button onClick={() => navigate('/products')}>Back to Products</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Get images array
+  const images = product.images || [product.image] || [];
+  const discount = product.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -82,17 +135,17 @@ const ProductDetail = () => {
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
               <div className="relative aspect-square overflow-hidden rounded-lg">
                 <img
-                  src={product.images[selectedImage]}
+                  src={images[selectedImage] || images[0] || '/api/placeholder/400/400'}
                   alt={product.name}
                   className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                 />
-                {product.discount > 0 && (
+                {discount > 0 && (
                   <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                    {product.discount}% OFF
+                    {discount}% OFF
                   </div>
                 )}
                 <button
-                  onClick={() => setIsFavorite(!isFavorite)}
+                  onClick={handleFavorite}
                   className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:scale-110 transition-transform"
                 >
                   <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
@@ -101,27 +154,29 @@ const ProductDetail = () => {
             </div>
 
             {/* Thumbnail Images */}
-            <div className="grid grid-cols-4 gap-3">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`
-                    aspect-square rounded-lg overflow-hidden border-2 transition-all
-                    ${selectedImage === index 
-                      ? 'border-primary-600 shadow-md' 
-                      : 'border-slate-200 hover:border-slate-300'
-                    }
-                  `}
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} view ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            {images.length > 1 && (
+              <div className="grid grid-cols-4 gap-3">
+                {images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`
+                      aspect-square rounded-lg overflow-hidden border-2 transition-all
+                      ${selectedImage === index 
+                        ? 'border-primary-600 shadow-md' 
+                        : 'border-slate-200 hover:border-slate-300'
+                      }
+                    `}
+                  >
+                    <img
+                      src={image || '/api/placeholder/100/100'}
+                      alt={`${product.name} view ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -129,7 +184,7 @@ const ProductDetail = () => {
             {/* Title & Rating */}
             <div>
               <div className="flex items-center gap-2 mb-2">
-                {product.tags?.includes('bestseller') && (
+                {product.featured && (
                   <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
                     BESTSELLER
                   </span>
@@ -152,22 +207,22 @@ const ProductDetail = () => {
                     <Star
                       key={i}
                       className={`h-5 w-5 ${
-                        i < Math.floor(product.rating)
+                        i < Math.floor(product.rating || 0)
                           ? 'fill-amber-400 text-amber-400'
                           : 'text-slate-300'
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-slate-900 font-semibold">{product.rating}</span>
-                <span className="text-slate-500">({product.reviews.toLocaleString()} reviews)</span>
+                <span className="text-slate-900 font-semibold">{product.rating || 0}</span>
+                <span className="text-slate-500">({(product.reviews || 0).toLocaleString()} reviews)</span>
               </div>
             </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-3 py-4 border-y border-slate-200">
               <span className="text-4xl font-bold text-primary-600">
-                ₹{product.price.toLocaleString('en-IN')}
+                ₹{(product.price || 0).toLocaleString('en-IN')}
               </span>
               {product.originalPrice > product.price && (
                 <>
@@ -226,14 +281,14 @@ const ProductDetail = () => {
                   </span>
                   <button
                     onClick={() => handleQuantityChange('increase')}
-                    disabled={quantity >= product.stockCount}
+                    disabled={quantity >= (product.stockCount || 999)}
                     className="p-3 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 <span className="text-sm text-slate-600">
-                  {product.stockCount} items available
+                  {product.stockCount || 'Many'} items available
                 </span>
               </div>
             </div>
@@ -322,7 +377,9 @@ const ProductDetail = () => {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 mb-4">About this product</h3>
-                  <p className="text-slate-700 leading-relaxed">{product.fullDescription}</p>
+                  <p className="text-slate-700 leading-relaxed">
+                    {product.fullDescription || product.description || product.shortDescription}
+                  </p>
                 </div>
                 
                 {product.benefits && product.benefits.length > 0 && (
@@ -395,16 +452,16 @@ const ProductDetail = () => {
                           <Star
                             key={i}
                             className={`h-5 w-5 ${
-                              i < Math.floor(product.rating)
+                              i < Math.floor(product.rating || 0)
                                 ? 'fill-amber-400 text-amber-400'
                                 : 'text-slate-300'
                             }`}
                           />
                         ))}
                       </div>
-                      <span className="text-lg font-semibold">{product.rating} out of 5</span>
+                      <span className="text-lg font-semibold">{product.rating || 0} out of 5</span>
                       <span className="text-slate-500">
-                        ({product.reviews.toLocaleString()} reviews)
+                        ({(product.reviews || 0).toLocaleString()} reviews)
                       </span>
                     </div>
                   </div>

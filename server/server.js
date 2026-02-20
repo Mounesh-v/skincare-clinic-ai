@@ -12,6 +12,11 @@ import doctorRoutes from "./router/doctorRoutes.js";
 dotenv.config();
 const app = express();
 
+
+// ✅ ADD THESE TWO LINES RIGHT HERE (BEFORE ROUTES!)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
