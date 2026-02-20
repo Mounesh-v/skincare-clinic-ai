@@ -71,10 +71,11 @@ const ProductsPage = () => {
       };
 
       const data = await productService.getAll(filters);
-      
+      console.log("products Data is ", data);
+
       // CRITICAL FIX: Handle different response formats
       let productsArray = [];
-      
+
       if (Array.isArray(data)) {
         // Response is directly an array
         productsArray = data;
@@ -85,7 +86,7 @@ const ProductsPage = () => {
         // Response has data property
         productsArray = data.data;
       } else {
-        console.error('Unexpected response format:', data);
+        console.error("Unexpected response format:", data);
         productsArray = [];
       }
 
@@ -100,16 +101,18 @@ const ProductsPage = () => {
   };
 
   const handleAddToCart = (product) => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItem = cart.find(item => (item.id || item._id) === (product.id || product._id));
-    
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const existingItem = cart.find(
+      (item) => (item.id || item._id) === (product.id || product._id),
+    );
+
     if (existingItem) {
       existingItem.quantity += 1;
     } else {
       cart.push({ ...product, quantity: 1, id: product.id || product._id });
     }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
+
+    localStorage.setItem("cart", JSON.stringify(cart));
     toast.success(`${product.name} added to cart!`);
   };
 
