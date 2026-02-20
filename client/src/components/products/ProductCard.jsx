@@ -15,7 +15,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
     e.stopPropagation();
     setIsFavorite(!isFavorite);
     if (onToggleFavorite) {
-      onToggleFavorite(product.id);
+      onToggleFavorite(product._id);
     }
   };
 
@@ -35,7 +35,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
   };
 
   const handleCardClick = () => {
-    navigate(`/products/${product.id}`);
+    navigate(`/products/${product._id}`);
   };
 
   // Calculate discount percentage
@@ -54,7 +54,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
       <div className="relative aspect-square overflow-hidden bg-slate-50">
         {/* Product Image */}
         <img
-          src={product.images?.[0] || '/placeholder-product.jpg'}
+          src={product.images?.[0]?.url || '/placeholder-product.jpg'}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -95,7 +95,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/products/${product.id}`);
+              navigate(`/products/${product._id}`);
             }}
             className="px-6 py-3 bg-white text-slate-900 rounded-lg font-semibold flex items-center gap-2 hover:bg-slate-100 transition-colors shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
           >
@@ -105,13 +105,13 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
         </div>
 
         {/* Stock Status Badge - Bottom Left */}
-        {!product.inStock ? (
+        {product.stock === 0 ? (
           <div className="absolute bottom-3 left-3 px-3 py-1 bg-slate-900 text-white text-xs font-semibold rounded-full">
             Out of Stock
           </div>
-        ) : product.stockCount < 20 && (
+        ) : product.stock > 0 && product.stock < 20 && (
           <div className="absolute bottom-3 left-3 px-3 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full animate-pulse">
-            Only {product.stockCount} left
+            Only {product.stock} left
           </div>
         )}
       </div>
@@ -123,11 +123,11 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           <span className="text-xs font-medium text-primary-600 uppercase tracking-wide">
             {product.category}
           </span>
-          {product.rating && (
+         {product.ratings?.average > 0 && (
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span className="text-sm font-semibold text-slate-900">{product.rating}</span>
-              <span className="text-xs text-slate-500">({product.reviews})</span>
+              <span className="text-sm font-semibold text-slate-900">{product.ratings.average}</span>
+              <span className="text-xs text-slate-500">({product.ratings.count})</span>
             </div>
           )}
         </div>
