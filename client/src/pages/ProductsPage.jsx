@@ -71,7 +71,6 @@ const ProductsPage = () => {
       };
 
       const data = await productService.getAll(filters);
-      console.log("products Data is ", data);
 
       // CRITICAL FIX: Handle different response formats
       let productsArray = [];
