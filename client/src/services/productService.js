@@ -29,7 +29,7 @@ const productService = {
         params.append('sortBy', filters.sortBy);
       }
 
-      const response = await api.get(`/products?${params.toString()}`);
+      const response = await api.get(`/products/all-products?${params.toString()}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
