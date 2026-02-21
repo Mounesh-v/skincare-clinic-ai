@@ -7,7 +7,7 @@ const AdminLayout = () => {
   const [isOpen, setIsOpen] = useState(true);
 
   // Check if admin is authenticated
-  const isAuthenticated = localStorage.getItem("adminToken");
+  const isAuthenticated = localStorage.getItem("authToken");
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
