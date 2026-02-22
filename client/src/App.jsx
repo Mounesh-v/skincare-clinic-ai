@@ -22,6 +22,8 @@ import FindDoctors from './pages/FindDoctors';
 import OurScience from './pages/OurScience';
 import Ingredients from './pages/Ingredients';
 import ClinicalStudies from './pages/ClinicalStudies';
+import About from './pages/about'
+import Story from './pages/story.jsx'
 // import DoctorNetwork from './pages/Doctornetwork';
 
 // Admin Pages
@@ -176,6 +178,7 @@ function App() {
             <Route path="content" element={<ComingSoon title="Content Management" />} />
             <Route path="analytics" element={<ComingSoon title="Analytics & Reports" />} />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
+         
 
           </Route>
 
@@ -220,6 +223,8 @@ function PublicAppRoutes({
         <Route path="/science" element={<OurScience />} />
         <Route path="/ingredients" element={<Ingredients />} />
         <Route path="/ClinicalStudies" element={<ClinicalStudies />} />
+          <Route path="/about" element={<About />} />
+           <Route path="/story" element={<Story />} />
 
         {/* Contact */}
         <Route path="/contact" element={<Contact />} />
