@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Sparkles, Shield } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Mail, Lock, Eye, EyeOff, Sparkles, Shield } from "lucide-react";
+import toast from "react-hot-toast";
+import api from "../../utils/api";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
     rememberMe: false,
   });
 
@@ -17,7 +18,7 @@ const AdminLogin = () => {
     const { name, value, type, checked } = e.target;
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
@@ -25,33 +26,37 @@ const AdminLogin = () => {
     e.preventDefault();
 
     if (!formData.email || !formData.password) {
-      toast.error('Please fill in all fields');
+      toast.error("Please fill in all fields");
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // Simulate API call - Replace with actual API
-    setTimeout(() => {
-      // Demo credentials
-      if (formData.email === 'admin@skincare.ai' && formData.password === 'Admin@123') {
-        const adminUser = {
-          id: '1',
-          name: 'Admin User',
-          email: formData.email,
-          role: 'super_admin',
-        };
+      const res = await api.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      });
 
-        localStorage.setItem('adminToken', 'demo_admin_token_12345');
-        localStorage.setItem('adminUser', JSON.stringify(adminUser));
-
-        toast.success('Login successful! Welcome back 👋');
-        navigate('/admin/dashboard');
-      } else {
-        toast.error('Invalid credentials');
+      // allow only admin
+      if (res.data.user.role !== "admin") {
+        toast.error("Admin access only");
+        return;
       }
+
+      localStorage.setItem("authToken", res.data.token);
+      localStorage.setItem("authUser", JSON.stringify(res.data.user));
+
+      window.dispatchEvent(new Event("auth:updated"));
+
+      toast.success("Admin login successful 👑");
+
+      navigate("/admin/dashboard");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -86,7 +91,9 @@ const AdminLogin = () => {
 
           {/* Demo Credentials Info */}
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <p className="text-sm font-semibold text-blue-900 mb-2">Demo Credentials:</p>
+            <p className="text-sm font-semibold text-blue-900 mb-2">
+              Demo Credentials:
+            </p>
             <p className="text-xs text-blue-700">Email: admin@skincare.ai</p>
             <p className="text-xs text-blue-700">Password: Admin@123</p>
           </div>
@@ -120,7 +127,7 @@ const AdminLogin = () => {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
@@ -133,7 +140,11 @@ const AdminLogin = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -161,7 +172,7 @@ const AdminLogin = () => {
               disabled={loading}
               className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
@@ -170,7 +181,8 @@ const AdminLogin = () => {
             <div className="flex items-center gap-3">
               <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0" />
               <p className="text-xs text-slate-600">
-                This is a secure admin area. All actions are logged and monitored.
+                This is a secure admin area. All actions are logged and
+                monitored.
               </p>
             </div>
           </div>
@@ -185,7 +197,7 @@ const AdminLogin = () => {
             className="absolute inset-0"
             style={{
               backgroundImage: `radial-gradient(circle, white 1px, transparent 1px)`,
-              backgroundSize: '30px 30px',
+              backgroundSize: "30px 30px",
             }}
           ></div>
         </div>
