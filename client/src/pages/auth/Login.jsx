@@ -9,7 +9,7 @@ import api from "../../utils/api";
 // Import your background image
 import loginBg from "../../assets/Signup-bg.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -55,12 +55,17 @@ const Login = () => {
       });
 
       // Save token
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("authToken", res.data.token);
+      localStorage.setItem("authUser", JSON.stringify(res.data.user));
+      window.dispatchEvent(new Event("auth:updated"));
 
       toast.success(res.data.message || "Welcome back! 👋");
 
-      navigate("/");
+      if (res.data.user.role === "admin") {
+        navigate("/admin/dashboard"); // 👑 Admin
+      } else {
+        navigate("/"); // 👤 Normal User
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
     } finally {
