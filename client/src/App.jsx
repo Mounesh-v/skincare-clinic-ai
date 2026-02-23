@@ -29,26 +29,12 @@ import FindDoctors from './pages/FindDoctors';
 import OurScience from './pages/OurScience';
 import Ingredients from './pages/Ingredients';
 import ClinicalStudies from './pages/ClinicalStudies';
-import About from './pages/about'
-import Story from './pages/story.jsx'
-import TrayaStyleHome from "./pages/home";
-import StartAssessment from "./pages/assessment/StartAssessment.jsx";
-import AnalysisResults from "./pages/assessment/Analysisresults.jsx";
-import ProductsPage from "./pages/ProductsPage";
-import ProductDetail from "./pages/ProductDetail";
-import CheckoutPage from "./pages/CheckoutPage";
-import Contact from "./pages/Contact";
-import Signup from "./pages/auth/Signup";
-import Login from "./pages/auth/Login.jsx";
-import AuthCallback from "./pages/auth/AuthCallback.jsx";
-import FindDoctors from "./pages/FindDoctors";
-import OurScience from "./pages/OurScience";
-import Ingredients from "./pages/Ingredients";
-import ClinicalStudies from "./pages/ClinicalStudies";
-// import DoctorNetwork from './pages/Doctornetwork';
+import About from './pages/about';
+import Story from './pages/story.jsx';
 
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
+import AdminRoute from "./pages/auth/AdminRoute";
 import Dashboard from "./pages/admin/Dashboard";
 
 // Admin - Users
@@ -72,7 +58,6 @@ import AssessmentList from "./pages/admin/Assessments/AssessmentList";
 import DoctorList from "./pages/admin/Doctors/DoctorList";
 import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
-import AdminRoute from "./pages/auth/AdminRoute";
 
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
@@ -167,7 +152,7 @@ function App() {
           {/* ============================================ */}
           {/* ADMIN ROUTES (No Header/Footer) */}
           {/* ============================================ */}
-          {/* <Route path="/admin/login" element={<AdminLogin />} /> */}
+          <Route path="/admin/login" element={<AdminLogin />} />
 
           <Route
             path="/admin"
@@ -213,8 +198,6 @@ function App() {
               element={<ComingSoon title="Analytics & Reports" />}
             />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
-         
-
           </Route>
 
           {/* ============================================ */}
@@ -258,8 +241,8 @@ function PublicAppRoutes({
         <Route path="/science" element={<OurScience />} />
         <Route path="/ingredients" element={<Ingredients />} />
         <Route path="/ClinicalStudies" element={<ClinicalStudies />} />
-          <Route path="/about" element={<About />} />
-           <Route path="/story" element={<Story />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/story" element={<Story />} />
 
         {/* Contact */}
         <Route path="/contact" element={<Contact />} />
