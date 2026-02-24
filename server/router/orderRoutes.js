@@ -6,13 +6,14 @@ import {
   updateOrderStatus,
   deleteOrder,
 } from "../controllers/orderController.js";
+import verifyToken, { verifyAdmin } from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-router.post("/", createOrder);
-router.get("/", getAllOrders);
-router.get("/:id", getOrderById);
-router.put("/:id", updateOrderStatus);
-router.delete("/:id", deleteOrder);
+router.post("/", verifyToken, createOrder);          // any logged-in user
+router.get("/", verifyAdmin, getAllOrders);           // admin only
+router.get("/:id", verifyToken, getOrderById);       // owner or admin
+router.put("/:id", verifyAdmin, updateOrderStatus);  // admin only
+router.delete("/:id", verifyAdmin, deleteOrder);     // admin only
 
 export default router;

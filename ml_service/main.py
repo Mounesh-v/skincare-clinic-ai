@@ -107,6 +107,7 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
                 result = analyzer.analyze_request(body)
                 self._json_response(result)
             except ValueError as exc:
+                LOGGER.error("Validation error: %s", exc)
                 self._json_error(str(exc), status=HTTPStatus.BAD_REQUEST)
             except FileNotFoundError as exc:
                 self._json_error(str(exc), status=HTTPStatus.INTERNAL_SERVER_ERROR)

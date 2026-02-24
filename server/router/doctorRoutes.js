@@ -8,19 +8,19 @@ import {
   toggleFeatured,
   updateDoctorRating,
 } from "../controllers/doctorController.js";
+import { verifyAdmin } from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-router.route("/")
-  .post(createDoctor)
-  .get(getDoctors);
+// Public reads
+router.get("/", getDoctors);
+router.get("/:id", getDoctor);
 
-router.route("/:id")
-  .get(getDoctor)
-  .put(updateDoctor)
-  .delete(deleteDoctor);
-
-router.patch("/:id/featured", toggleFeatured);
-router.patch("/:id/rating", updateDoctorRating);
+// Admin-only mutations
+router.post("/", verifyAdmin, createDoctor);
+router.put("/:id", verifyAdmin, updateDoctor);
+router.delete("/:id", verifyAdmin, deleteDoctor);
+router.patch("/:id/featured", verifyAdmin, toggleFeatured);
+router.patch("/:id/rating", verifyAdmin, updateDoctorRating);
 
 export default router;
