@@ -12,12 +12,25 @@ router.post("/login", loginUser);
 // Google OAuth routes
 router.get(
     "/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
+    (req, res, next) => {
+        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: "Google OAuth is not configured on this server. Please check your .env file."
+            });
+        }
+        passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+    }
 );
 
 router.get(
     "/google/callback",
-    passport.authenticate("google", { failureRedirect: "/login" }),
+    (req, res, next) => {
+        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+            return res.status(500).json({ success: false, message: "Google OAuth not configured" });
+        }
+        passport.authenticate("google", { failureRedirect: "/login" })(req, res, next);
+    },
     (req, res) => {
         // Generate JWT token
         const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
@@ -33,12 +46,25 @@ router.get(
 // Facebook OAuth routes
 router.get(
     "/facebook",
-    passport.authenticate("facebook", { scope: ["email"] })
+    (req, res, next) => {
+        if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: "Facebook OAuth is not configured on this server. Please check your .env file."
+            });
+        }
+        passport.authenticate("facebook", { scope: ["email"] })(req, res, next);
+    }
 );
 
 router.get(
     "/facebook/callback",
-    passport.authenticate("facebook", { failureRedirect: "/login" }),
+    (req, res, next) => {
+        if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+            return res.status(500).json({ success: false, message: "Facebook OAuth not configured" });
+        }
+        passport.authenticate("facebook", { failureRedirect: "/login" })(req, res, next);
+    },
     (req, res) => {
         // Generate JWT token
         const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {

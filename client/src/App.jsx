@@ -8,6 +8,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import ErrorBoundary from "./components/common/ErrorBoundary";
+
 
 // Layouts
 import Header from "./components/layout/Header";
@@ -29,12 +31,11 @@ import FindDoctors from './pages/FindDoctors';
 import OurScience from './pages/OurScience';
 import Ingredients from './pages/Ingredients';
 import ClinicalStudies from './pages/ClinicalStudies';
-import About from './pages/about';
-import Story from './pages/story.jsx';
+import About from './pages/about'
+import Story from './pages/story.jsx'
 
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
-import AdminRoute from "./pages/auth/AdminRoute";
 import Dashboard from "./pages/admin/Dashboard";
 
 // Admin - Users
@@ -58,6 +59,7 @@ import AssessmentList from "./pages/admin/Assessments/AssessmentList";
 import DoctorList from "./pages/admin/Doctors/DoctorList";
 import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
+import AdminRoute from "./pages/auth/AdminRoute";
 
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
@@ -152,8 +154,6 @@ function App() {
           {/* ============================================ */}
           {/* ADMIN ROUTES (No Header/Footer) */}
           {/* ============================================ */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-
           <Route
             path="/admin"
             element={
@@ -198,6 +198,8 @@ function App() {
               element={<ComingSoon title="Analytics & Reports" />}
             />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
+
+
           </Route>
 
           {/* ============================================ */}
@@ -250,7 +252,11 @@ function PublicAppRoutes({
         {/* Assessment Flow */}
         <Route
           path="/assessment"
-          element={<AssessmentWrapper onComplete={onAssessmentComplete} />}
+          element={
+            <ErrorBoundary>
+              <AssessmentWrapper onComplete={onAssessmentComplete} />
+            </ErrorBoundary>
+          }
         />
 
         {/* Results Page */}
@@ -258,12 +264,15 @@ function PublicAppRoutes({
           path="/results"
           element={
             assessmentData ? (
-              <AnalysisResults assessmentData={assessmentData} />
+              <ErrorBoundary>
+                <AnalysisResults assessmentData={assessmentData} />
+              </ErrorBoundary>
             ) : (
               <Navigate to="/assessment" replace />
             )
           }
         />
+
 
         {/* Find Doctors */}
         <Route path="/find-doctors" element={<FindDoctors />} />
