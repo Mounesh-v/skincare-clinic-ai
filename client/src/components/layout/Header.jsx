@@ -84,8 +84,8 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
   const menuSections = {
     whatWeDo: [
       { name: "Skin Assessment", path: "/assessment", icon: Heart },
-      { name: "AI Diagnosis", path: "/diagnosis", icon: FileText },
-      { name: "Treatment Plans", path: "/treatments", icon: Calendar },
+      // { name: "AI Diagnosis", path: "/diagnosis", icon: FileText },
+      // { name: "Treatment Plans", path: "/treatments", icon: Calendar },
       { name: "Product Recommendations", path: "/products", icon: ShoppingBag },
     ],
     howWeDoIt: [
@@ -97,8 +97,8 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
     whoWeAre: [
       { name: "About Us", path: "/about", icon: User },
       { name: "Our Story", path: "/story", icon: Heart },
-      { name: "Blog", path: "/blog", icon: FileText },
-      { name: "Careers", path: "/careers", icon: ShoppingBag },
+      // { name: "Blog", path: "/blog", icon: FileText },
+      // { name: "Careers", path: "/careers", icon: ShoppingBag },
     ],
   };
 
@@ -147,6 +147,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
               >
                 Contact
               </Link>
+              
             </div>
 
             {/* Right Side - Auth or Profile */}

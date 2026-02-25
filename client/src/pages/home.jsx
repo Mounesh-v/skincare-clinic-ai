@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useRef,useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +17,8 @@ import heroImage from '../assets/heroImage.jpg';
 import beforeImage from '../assets/beforeimage.jpg';
 import afterImage from '../assets/afterImage.jpg';
 import bgPattern from '../assets/hero2.jpg';
+import beforeImage2 from '../assets/beforeImage2.jpg';
+import afterImage2 from '../assets/afterImage2.jpg';
   // At the top of your file
 import ctaBg from '../assets/hero3.jpg';
 
@@ -357,34 +358,67 @@ const TrayaStyleHome = () => {
 </Card>
 
             {/* Before/After Card 2 */}
-            <Card className="overflow-hidden">
-              <div className="grid grid-cols-2 gap-px bg-slate-300">
-                <div className="aspect-square bg-slate-100 flex items-center justify-center">
-                  <div className="text-center p-6">
-                    <p className="text-4xl mb-2">😟</p>
-                    <p className="text-sm font-semibold text-slate-600">BEFORE</p>
-                  </div>
-                </div>
-                <div className="aspect-square bg-slate-100 flex items-center justify-center">
-                  <div className="text-center p-6">
-                    <p className="text-4xl mb-2">✨</p>
-                    <p className="text-sm font-semibold text-green-600">AFTER 90 DAYS</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-slate-700 mb-3 italic">
-                  "The holistic approach really works. Not just topical creams, but diet and lifestyle changes too. My skin has never looked better!"
-                </p>
-                <p className="font-semibold text-slate-900">Rahul K., Delhi</p>
-                <p className="text-sm text-slate-600">Pigmentation Treatment • 90 Days</p>
-              </div>
-            </Card>
+           <Card className="overflow-hidden">
+  <div className="grid grid-cols-2 gap-px bg-slate-300">
+    {/* BEFORE Image */}
+    <div className="aspect-square bg-slate-100 relative overflow-hidden group">
+      <img 
+        src={beforeImage2}
+        alt="Before treatment"
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        onError={(e) => {
+          // Fallback to emoji if image fails
+          e.target.style.display = 'none';
+          e.target.nextSibling.style.display = 'flex';
+        }}
+      />
+      {/* Fallback emoji (hidden by default) */}
+      <div className="absolute inset-0 items-center justify-center text-center p-6" style={{display: 'none'}}>
+        <p className="text-4xl mb-2">😔</p>
+      </div>
+      {/* Label overlay */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+        <p className="text-sm font-semibold text-white text-center">BEFORE</p>
+      </div>
+    </div>
+
+    {/* AFTER Image */}
+    <div className="aspect-square bg-slate-100 relative overflow-hidden group">
+      <img 
+        src={afterImage2}
+        alt="After 60 days treatment"
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        onError={(e) => {
+          // Fallback to emoji if image fails
+          e.target.style.display = 'none';
+          e.target.nextSibling.style.display = 'flex';
+        }}
+      />
+      {/* Fallback emoji (hidden by default) */}
+      <div className="absolute inset-0 items-center justify-center text-center p-6" style={{display: 'none'}}>
+        <p className="text-4xl mb-2">😊</p>
+      </div>
+      {/* Label overlay */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-600/80 to-transparent p-4">
+        <p className="text-sm font-semibold text-white text-center">AFTER 60 DAYS</p>
+      </div>
+    </div>
+  </div>
+
+  <div className="p-6">
+    <div className="flex items-center gap-2 mb-3">
+      {[...Array(5)].map((_, i) => (
+        <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+      ))}
+    </div>
+    <p className="text-slate-700 mb-3 italic">
+   
+"I struggled with pimple problems for years. This personalized approach finally worked! My skin is clearer and I feel confident again."
+    </p>
+    <p className="font-semibold text-slate-900">Laara, UK</p>
+    <p className="text-sm text-slate-600">Pimple Treatment • 60 Days</p>
+  </div>
+</Card>
 
     </div>
   </div>

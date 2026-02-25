@@ -8,6 +8,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import ErrorBoundary from "./components/common/ErrorBoundary";
+
 
 // Layouts
 import Header from "./components/layout/Header";
@@ -15,21 +17,23 @@ import Footer from "./components/layout/Footer";
 import AdminLayout from "./components/admin/AdminLayout";
 
 // Public Pages
-import TrayaStyleHome from "./pages/home";
-import StartAssessment from "./pages/assessment/StartAssessment.jsx";
-import AnalysisResults from "./pages/assessment/Analysisresults.jsx";
-import ProductsPage from "./pages/ProductsPage";
-import ProductDetail from "./pages/ProductDetail";
-import CheckoutPage from "./pages/CheckoutPage";
-import Contact from "./pages/Contact";
-import Signup from "./pages/auth/Signup";
-import Login from "./pages/auth/Login.jsx";
-import AuthCallback from "./pages/auth/AuthCallback.jsx";
-import FindDoctors from "./pages/FindDoctors";
-import OurScience from "./pages/OurScience";
-import Ingredients from "./pages/Ingredients";
-import ClinicalStudies from "./pages/ClinicalStudies";
-// import DoctorNetwork from './pages/Doctornetwork';
+import TrayaStyleHome from './pages/home';
+import StartAssessment from './pages/assessment/StartAssessment.jsx';
+import AnalysisResults from './pages/assessment/Analysisresults.jsx';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetail from './pages/ProductDetail';
+import CheckoutPage from './pages/CheckoutPage';
+import Contact from './pages/Contact';
+import Signup from './pages/auth/Signup';
+import Login from './pages/auth/Login.jsx';
+import AuthCallback from './pages/auth/AuthCallback.jsx';
+import FindDoctors from './pages/FindDoctors';
+import OurScience from './pages/OurScience';
+import Ingredients from './pages/Ingredients';
+import ClinicalStudies from './pages/ClinicalStudies';
+import About from './pages/about'
+import Story from './pages/story.jsx'
+import UserProfile from './pages/UserProfile.jsx'
 
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
@@ -57,6 +61,16 @@ import DoctorList from "./pages/admin/Doctors/DoctorList";
 import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
+
+/**
+ * GuestRoute — redirects authenticated users away from auth pages (/login, /signup)
+ */
+function GuestRoute({ isAuthenticated, children }) {
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
 
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
@@ -151,8 +165,6 @@ function App() {
           {/* ============================================ */}
           {/* ADMIN ROUTES (No Header/Footer) */}
           {/* ============================================ */}
-          {/* <Route path="/admin/login" element={<AdminLogin />} /> */}
-
           <Route
             path="/admin"
             element={
@@ -197,6 +209,8 @@ function App() {
               element={<ComingSoon title="Analytics & Reports" />}
             />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
+
+
           </Route>
 
           {/* ============================================ */}
@@ -240,6 +254,9 @@ function PublicAppRoutes({
         <Route path="/science" element={<OurScience />} />
         <Route path="/ingredients" element={<Ingredients />} />
         <Route path="/ClinicalStudies" element={<ClinicalStudies />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/story" element={<Story />} />
+        <Route path="/profile" element={<UserProfile />} />
 
         {/* Contact */}
         <Route path="/contact" element={<Contact />} />
@@ -247,7 +264,11 @@ function PublicAppRoutes({
         {/* Assessment Flow */}
         <Route
           path="/assessment"
-          element={<AssessmentWrapper onComplete={onAssessmentComplete} />}
+          element={
+            <ErrorBoundary>
+              <AssessmentWrapper onComplete={onAssessmentComplete} />
+            </ErrorBoundary>
+          }
         />
 
         {/* Results Page */}
@@ -255,12 +276,15 @@ function PublicAppRoutes({
           path="/results"
           element={
             assessmentData ? (
-              <AnalysisResults assessmentData={assessmentData} />
+              <ErrorBoundary>
+                <AnalysisResults assessmentData={assessmentData} />
+              </ErrorBoundary>
             ) : (
               <Navigate to="/assessment" replace />
             )
           }
         />
+
 
         {/* Find Doctors */}
         <Route path="/find-doctors" element={<FindDoctors />} />
@@ -273,8 +297,22 @@ function PublicAppRoutes({
         <Route path="/checkout" element={<CheckoutPage />} />
 
         {/* Auth */}
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/signup"
+          element={
+            <GuestRoute isAuthenticated={isAuthenticated}>
+              <Signup />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute isAuthenticated={isAuthenticated}>
+              <Login />
+            </GuestRoute>
+          }
+        />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* 404 */}

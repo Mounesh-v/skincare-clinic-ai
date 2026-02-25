@@ -17,7 +17,7 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import preprocess_image_bytes
-from ml.skin_type_inference import infer_skin_type
+from ml.skin_type_vit import infer_skin_type_vit
 
 from .recommendations import build_personalized_plan
 
@@ -42,6 +42,18 @@ class SkinAnalyzerService:
         self._device = torch.device(CONFIG.default_device)
         self._model: torch.nn.Module | None = None
         self._lock = threading.Lock()
+        # Warm up models in background
+        threading.Thread(target=self._warmup, daemon=True).start()
+
+    def _warmup(self) -> None:
+        try:
+            LOGGER.info("Warming up models...")
+            self._ensure_model()
+            # Dummy call to ViT to trigger load
+            infer_skin_type_vit(np.zeros((224, 224, 3), dtype=np.uint8))
+            LOGGER.info("Models warmed up.")
+        except Exception as exc:
+            LOGGER.error("Warmup failed: %s", exc)
 
     def _ensure_model(self) -> torch.nn.Module:
         if self._model is not None:
@@ -163,8 +175,8 @@ class SkinAnalyzerService:
             raise ValueError(str(exc))
         prediction = self._run_prediction(processed)
         
-        # Infer skin type from condition probabilities
-        skin_type_result = infer_skin_type(prediction.probabilities)
+        # Infer skin type from the preprocessed image using ViT
+        skin_type_result = infer_skin_type_vit(processed)
         
         plan = build_personalized_plan(prediction.label_key, answers)
         severity_label, months_to_results = self._severity(prediction.probability)

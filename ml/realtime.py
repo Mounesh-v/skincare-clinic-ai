@@ -13,6 +13,7 @@ import torch
 from .config import CONFIG
 from .model_utils import inference_model, load_class_map, to_tensor
 from .preprocessing import DetectionResult, detect_face_bbox, preprocess_array
+from .skin_type_vit import infer_skin_type_vit
 
 
 COLORS = {
@@ -76,20 +77,9 @@ def run_loop(weights: Path, class_map: Path, camera_index: int, min_score: float
                 with torch.no_grad():
                     logits = model(tensor)
                     probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
-                # Map condition scores to skin type
-                idx_values = list(idx_to_label.values())
-                acne = probs[idx_values.index('acne')] if 'acne' in idx_values else 0.0
-                pores = probs[idx_values.index('pores')] if 'pores' in idx_values else 0.0
-                wrinkles = probs[idx_values.index('wrinkles')] if 'wrinkles' in idx_values else 0.0
-                scores = probs
-                if acne > 0.5 and pores > 0.6:
-                    skin_type = "Oily"
-                elif wrinkles > 0.5:
-                    skin_type = "Dry"
-                elif all(0.3 < s < 0.6 for s in scores):
-                    skin_type = "Normal"
-                else:
-                    skin_type = "Combination"
+                # Infer skin type using ViT model
+                skin_result = infer_skin_type_vit(processed)
+                skin_type = skin_result["skin_type"]
                 best_idx = int(np.argmax(probs))
                 label_key = idx_to_label[best_idx]
                 friendly = display_labels.get(label_key, label_key.title())

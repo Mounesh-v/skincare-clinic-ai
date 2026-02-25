@@ -11,25 +11,27 @@ const AuthCallback = () => {
         const provider = searchParams.get('provider');
 
         if (token) {
-            // Store the token
-            localStorage.setItem('token', token);
-
-            // Fetch user data
-            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5005'}/api/auth/me`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            // Fetch user profile with the OAuth token
+            fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             })
                 .then(res => res.json())
                 .then(data => {
                     if (data.user) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
+                        // ✅ Use the same keys as manual login ('authToken' / 'authUser')
+                        localStorage.setItem('authToken', token);
+                        localStorage.setItem('authUser', JSON.stringify(data.user));
 
-                        // Trigger header to update immediately
+                        // Notify all components (Header, App.jsx) to refresh auth state
                         window.dispatchEvent(new Event('auth:updated'));
 
                         const providerName = provider === 'google' ? 'Google' : 'Facebook';
-                        toast.success(`Welcome back via ${providerName}! 👋`);
+                        const userName = data.user?.name || '';
+                        toast.success(
+                            userName
+                                ? `Welcome${data.user._id ? ' back' : ''}, ${userName}! Signed in via ${providerName} 👋`
+                                : `Signed in via ${providerName}! 👋`
+                        );
                         navigate('/');
                     } else {
                         throw new Error('Failed to fetch user data');
@@ -57,3 +59,4 @@ const AuthCallback = () => {
 };
 
 export default AuthCallback;
+
