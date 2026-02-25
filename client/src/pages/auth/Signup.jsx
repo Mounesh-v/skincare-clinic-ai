@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Mail,
@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import Button from "../../components/common/Button";
 import toast from "react-hot-toast";
-import axios from "axios";
 import api from "../../utils/api.js";
 
 // Import your background image
@@ -26,6 +25,13 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Redirect already-logged-in users away from signup
+  useEffect(() => {
+    if (localStorage.getItem("authToken")) {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -77,9 +83,12 @@ const Signup = () => {
         agreeToTerms: formData.agreeToTerms,
       });
 
-      toast.success(res.data.message || "Account created successfully 🎉");
+      // Store name so login page can greet the user
+      sessionStorage.setItem("justRegistered", formData.name);
 
-      // optional auto login redirect
+      toast.success(`Welcome, ${formData.name}! Account created successfully 🎉`);
+
+      // Redirect to login after short delay
       setTimeout(() => {
         navigate("/login");
       }, 1500);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield } from "lucide-react";
 import Button from "../../components/common/Button";
@@ -15,6 +15,21 @@ const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [justRegisteredName, setJustRegisteredName] = useState("");
+
+  // Redirect already-logged-in users away from login
+  useEffect(() => {
+    if (localStorage.getItem("authToken")) {
+      navigate("/", { replace: true });
+      return;
+    }
+    // Check if user just registered — show a welcome banner
+    const name = sessionStorage.getItem("justRegistered");
+    if (name) {
+      setJustRegisteredName(name);
+      sessionStorage.removeItem("justRegistered");
+    }
+  }, [navigate]);
 
   const handleGoogleLogin = () => {
     window.location.href = `${API_URL}/auth/google`;
@@ -59,7 +74,8 @@ const Login = () => {
       localStorage.setItem("authUser", JSON.stringify(res.data.user));
       window.dispatchEvent(new Event("auth:updated"));
 
-      toast.success(res.data.message || "Welcome back! 👋");
+      const userName = res.data.user?.name || "";
+      toast.success(userName ? `Welcome back, ${userName}! 👋` : "Welcome back! 👋");
 
       if (res.data.user.role === "admin") {
         navigate("/admin/dashboard"); // 👑 Admin
@@ -100,6 +116,21 @@ const Login = () => {
               </p>
             </div>
 
+            {/* Just-registered banner */}
+            {justRegisteredName && (
+              <div className="mb-6 flex items-start gap-3 rounded-xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 px-4 py-3 shadow-sm">
+                <span className="mt-0.5 text-xl">🎉</span>
+                <div>
+                  <p className="text-sm font-bold text-emerald-800">
+                    Account created successfully!
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    Welcome, <span className="font-semibold">{justRegisteredName}</span>! Please log in to continue.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Form Header */}
             <div className="mb-8">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2">
@@ -109,10 +140,12 @@ const Login = () => {
                 </span>
               </div>
               <h2 className="mb-3 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent lg:text-4xl">
-                Welcome Back! 👋
+                {justRegisteredName ? `Hi, ${justRegisteredName}! 👋` : "Welcome Back! 👋"}
               </h2>
               <p className="text-base text-slate-600">
-                Continue your journey to healthier, glowing skin
+                {justRegisteredName
+                  ? "Your account is ready. Sign in to start your skin journey."
+                  : "Continue your journey to healthier, glowing skin"}
               </p>
             </div>
 
