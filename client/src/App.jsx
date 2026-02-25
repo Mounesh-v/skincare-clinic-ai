@@ -33,6 +33,7 @@ import Ingredients from './pages/Ingredients';
 import ClinicalStudies from './pages/ClinicalStudies';
 import About from './pages/about'
 import Story from './pages/story.jsx'
+import UserProfile from './pages/UserProfile.jsx'
 
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
@@ -255,6 +256,7 @@ function PublicAppRoutes({
         <Route path="/ClinicalStudies" element={<ClinicalStudies />} />
         <Route path="/about" element={<About />} />
         <Route path="/story" element={<Story />} />
+        <Route path="/profile" element={<UserProfile />} />
 
         {/* Contact */}
         <Route path="/contact" element={<Contact />} />
