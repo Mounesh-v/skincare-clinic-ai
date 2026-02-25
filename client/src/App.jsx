@@ -61,6 +61,16 @@ import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
 
+/**
+ * GuestRoute — redirects authenticated users away from auth pages (/login, /signup)
+ */
+function GuestRoute({ isAuthenticated, children }) {
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 function App() {
   const [assessmentData, setAssessmentData] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -285,8 +295,22 @@ function PublicAppRoutes({
         <Route path="/checkout" element={<CheckoutPage />} />
 
         {/* Auth */}
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/signup"
+          element={
+            <GuestRoute isAuthenticated={isAuthenticated}>
+              <Signup />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute isAuthenticated={isAuthenticated}>
+              <Login />
+            </GuestRoute>
+          }
+        />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* 404 */}
