@@ -23,7 +23,10 @@ const ProductView = () => {
     try {
       setLoading(true);
       const res = await api.get(`/products/${id}`);
-      console.log("fetched Producted ", res);
+
+      console.log("fetched Product", res.data);
+
+      setProduct(res.data.product);
     } catch (err) {
       toast.error("Failed to load product");
     } finally {

@@ -14,6 +14,7 @@ import ProductCard from "../components/products/ProductCard";
 import Button from "../components/common/Button";
 import productService from "../services/productService";
 import toast from "react-hot-toast";
+import AdBanner from "./AdBanner";
 
 /**
  * Products Page - Connected to Backend
@@ -181,6 +182,8 @@ const ProductsPage = () => {
           </div>
         </div>
       </div>
+
+      <AdBanner/>
 
       <div className="container-custom py-8 sm:py-12">
         <div className="grid gap-8 lg:grid-cols-4">

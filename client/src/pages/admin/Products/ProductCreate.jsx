@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, X, Save } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../../../utils/api.js";
+import api from "../../../services/api.js";
+
 
 const ProductCreate = () => {
   const navigate = useNavigate();
@@ -93,10 +94,11 @@ const ProductCreate = () => {
           ? formData.benefits.split("\n").filter(Boolean)
           : [],
 
-        images: base64Images, // 🔥 IMPORTANT FIX
+        images: base64Images, //  IMPORTANT FIX
       };
 
       const res = await api.post("/products", payload);
+      console.log(res)
 
       toast.success("Product created successfully");
       navigate("/admin/products");
