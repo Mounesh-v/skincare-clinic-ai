@@ -10,6 +10,7 @@ import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import HowItWorks from '../components/layout/HowItWorks';
 import WhyTakeTest from '../components/layout/WhyTaketest';
+import ProductShowcase from '../components/layout/ProductShowcase.jsx';
 
 
 
@@ -424,6 +425,9 @@ const TrayaStyleHome = () => {
   </div>
 </section>
 
+
+
+<ProductShowcase />
 
 
 
