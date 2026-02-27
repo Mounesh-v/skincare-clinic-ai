@@ -34,6 +34,8 @@ const RegisterUsers = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-RegisterUsers.index({ provider: 1, providerId: 1 }, { unique: true, sparse: true });
+// Sparse index on providerId only: excludes local users who have no providerId
+// (compound sparse index would include local users since 'provider' is always set)
+RegisterUsers.index({ providerId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model("RegisterUsers", RegisterUsers);

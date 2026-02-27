@@ -28,6 +28,7 @@ _MODEL_DIR = Path(__file__).resolve().parent / "models" / "vit_skin_type"
 _lock = threading.Lock()
 _extractor = None
 _model = None
+_load_event = threading.Event()  # set once model is fully loaded
 
 # Map from HuggingFace label → canonical skin type key (lowercase, matches scores dict)
 # dima806/skin_types_image_detection uses: dry, normal, oily
@@ -58,12 +59,29 @@ def _ensure_model():
     """Load model and extractor from local disk (once, thread-safe)."""
     global _extractor, _model
 
+    # Fast path — model already loaded, no lock needed
     if _model is not None:
         return _extractor, _model
 
+    # Wait for the loading thread to finish (avoids deadlock)
+    _load_event.wait(timeout=120)
+    if _model is None:
+        raise RuntimeError("ViT model failed to load within timeout")
+    return _extractor, _model
+
+
+def preload_vit_model() -> None:
+    """Load model once at startup (call from a background thread)."""
+    global _extractor, _model
+
+    if _model is not None:
+        _load_event.set()
+        return
+
     with _lock:
         if _model is not None:
-            return _extractor, _model
+            _load_event.set()
+            return
 
         if not _MODEL_DIR.exists():
             raise FileNotFoundError(
@@ -72,7 +90,7 @@ def _ensure_model():
 
         try:
             from transformers import AutoImageProcessor, AutoModelForImageClassification
-            import torch  # noqa: F401 — imported here so the error is clear
+            import torch  # noqa: F401
         except ImportError as exc:
             raise ImportError(
                 "Required packages missing. Run: pip install transformers torch Pillow"
@@ -84,8 +102,7 @@ def _ensure_model():
         _m = AutoModelForImageClassification.from_pretrained(str(_MODEL_DIR))
         _m.eval()
         _model = _m
-
-    return _extractor, _model
+        _load_event.set()  # unblock any waiting inference calls
 
 
 def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:

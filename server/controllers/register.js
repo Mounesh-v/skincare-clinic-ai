@@ -58,9 +58,17 @@ export const createUser = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Signup error:', error);
+    if (error.code === 11000) {
+      // Duplicate key - email already exists
+      return res.status(400).json({
+        success: false,
+        message: "An account with this email already exists",
+      });
+    }
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: error.message || "Internal server error",
     });
   }
 };

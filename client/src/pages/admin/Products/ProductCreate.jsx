@@ -97,7 +97,7 @@ const ProductCreate = () => {
         images: base64Images, //  IMPORTANT FIX
       };
 
-      const res = await api.post("/products", payload);
+      const res = await api.post("/api/products", payload);
       console.log(res)
 
       toast.success("Product created successfully");

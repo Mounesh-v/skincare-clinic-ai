@@ -17,7 +17,7 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import preprocess_image_bytes
-from ml.skin_type_vit import infer_skin_type_vit
+from ml.skin_type_vit import infer_skin_type_vit, preload_vit_model
 
 from .recommendations import build_personalized_plan
 
@@ -42,6 +42,8 @@ class SkinAnalyzerService:
         self._device = torch.device(CONFIG.default_device)
         self._model: torch.nn.Module | None = None
         self._lock = threading.Lock()
+        # Semaphore: only 1 ViT inference at a time to prevent OOM
+        self._vit_sem = threading.Semaphore(1)
         # Warm up models in background
         threading.Thread(target=self._warmup, daemon=True).start()
 
@@ -49,8 +51,8 @@ class SkinAnalyzerService:
         try:
             LOGGER.info("Warming up models...")
             self._ensure_model()
-            # Dummy call to ViT to trigger load
-            infer_skin_type_vit(np.zeros((224, 224, 3), dtype=np.uint8))
+            # Pre-load ViT weights into memory (no dummy inference needed)
+            preload_vit_model()
             LOGGER.info("Models warmed up.")
         except Exception as exc:
             LOGGER.error("Warmup failed: %s", exc)
@@ -176,7 +178,11 @@ class SkinAnalyzerService:
         prediction = self._run_prediction(processed)
         
         # Infer skin type from the preprocessed image using ViT
-        skin_type_result = infer_skin_type_vit(processed)
+        # Semaphore ensures only one ViT inference runs at a time (CPU memory safety)
+        with self._vit_sem:
+            LOGGER.info("Running ViT skin type inference...")
+            skin_type_result = infer_skin_type_vit(processed)
+            LOGGER.info("ViT done: %s", skin_type_result.get("skin_type"))
         
         plan = build_personalized_plan(prediction.label_key, answers)
         severity_label, months_to_results = self._severity(prediction.probability)

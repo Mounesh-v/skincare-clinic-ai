@@ -22,7 +22,7 @@ const ProductView = () => {
   const fetchProduct = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/products/${id}`);
+      const res = await api.get(`/api/products/${id}`);
 
       console.log("fetched Product", res.data);
 
@@ -172,9 +172,8 @@ const ProductView = () => {
               <div className="flex justify-between py-2 border-b">
                 <span className="text-slate-500">Status</span>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    statusColors[product.status]
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[product.status]
+                    }`}
                 >
                   {product.status}
                 </span>

@@ -18,7 +18,7 @@ import api from "../../utils/api.js";
 // Import your background image
 import signupBg from "../../assets/signup-bg.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -75,7 +75,7 @@ const Signup = () => {
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/register", {
+      const res = await api.post("/api/auth/register", {
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -100,11 +100,11 @@ const Signup = () => {
   };
 
   const handleGoogleSignup = () => {
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = `${API_URL}/api/auth/google`;
   };
 
   const handleFacebookSignup = () => {
-    window.location.href = `${API_URL}/auth/facebook`;
+    window.location.href = `${API_URL}/api/auth/facebook`;
   };
 
   return (

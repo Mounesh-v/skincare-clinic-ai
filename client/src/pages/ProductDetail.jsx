@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ShoppingCart, Heart, Star, Shield, Truck, 
+import {
+  ShoppingCart, Heart, Star, Shield, Truck,
   RefreshCw, Check, Plus, Minus, ChevronLeft,
   Info, Droplet, Sparkles, Package, Loader2
 } from 'lucide-react';
@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
-  
+
   const [product, setProduct] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
@@ -30,7 +30,7 @@ const ProductDetail = () => {
       setLoading(true);
       const data = await productService.getById(productId);
       const foundProduct = data.product || data;
-      
+
       if (foundProduct) {
         setProduct(foundProduct);
         setSelectedSize(foundProduct.sizes?.[0] || '');
@@ -65,8 +65,8 @@ const ProductDetail = () => {
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
-      cart.push({ 
-        ...product, 
+      cart.push({
+        ...product,
         quantity,
         selectedSize,
         id: productId
@@ -135,7 +135,7 @@ const ProductDetail = () => {
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
               <div className="relative aspect-square overflow-hidden rounded-lg">
                 <img
-                  src={images[selectedImage] || images[0] || '/api/placeholder/400/400'}
+                  src={images[selectedImage] || images[0] || 'https://placehold.co/400x400/f0fdf4/16a34a?text=Product+Image'}
                   alt={product.name}
                   className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                 />
@@ -162,14 +162,14 @@ const ProductDetail = () => {
                     onClick={() => setSelectedImage(index)}
                     className={`
                       aspect-square rounded-lg overflow-hidden border-2 transition-all
-                      ${selectedImage === index 
-                        ? 'border-primary-600 shadow-md' 
+                      ${selectedImage === index
+                        ? 'border-primary-600 shadow-md'
                         : 'border-slate-200 hover:border-slate-300'
                       }
                     `}
                   >
                     <img
-                      src={image || '/api/placeholder/100/100'}
+                      src={image || 'https://placehold.co/100x100/f0fdf4/16a34a?text=Img'}
                       alt={`${product.name} view ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -199,18 +199,17 @@ const ProductDetail = () => {
                 {product.name}
               </h1>
               <p className="text-slate-600 mb-4">{product.shortDescription}</p>
-              
+
               {/* Rating */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${
-                        i < Math.floor(product.rating || 0)
+                      className={`h-5 w-5 ${i < Math.floor(product.rating || 0)
                           ? 'fill-amber-400 text-amber-400'
                           : 'text-slate-300'
-                      }`}
+                        }`}
                     />
                   ))}
                 </div>
@@ -381,7 +380,7 @@ const ProductDetail = () => {
                     {product.fullDescription || product.description || product.shortDescription}
                   </p>
                 </div>
-                
+
                 {product.benefits && product.benefits.length > 0 && (
                   <div>
                     <h4 className="text-lg font-bold text-slate-900 mb-3">Key Benefits</h4>
@@ -451,11 +450,10 @@ const ProductDetail = () => {
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`h-5 w-5 ${
-                              i < Math.floor(product.rating || 0)
+                            className={`h-5 w-5 ${i < Math.floor(product.rating || 0)
                                 ? 'fill-amber-400 text-amber-400'
                                 : 'text-slate-300'
-                            }`}
+                              }`}
                           />
                         ))}
                       </div>

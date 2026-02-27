@@ -9,7 +9,7 @@ import api from "../../utils/api";
 // Import your background image
 import loginBg from "../../assets/Signup-bg.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -32,11 +32,11 @@ const Login = () => {
   }, [navigate]);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = `${API_URL}/api/auth/google`;
   };
 
   const handleFacebookLogin = () => {
-    window.location.href = `${API_URL}/auth/facebook`;
+    window.location.href = `${API_URL}/api/auth/facebook`;
   };
 
   const [formData, setFormData] = useState({
@@ -64,7 +64,7 @@ const Login = () => {
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/login", {
+      const res = await api.post("/api/auth/login", {
         email: formData.email,
         password: formData.password,
       });

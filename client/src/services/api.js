@@ -21,7 +21,7 @@ apiClient.interceptors.request.use((config) => {
 
 const mlClient = axios.create({
   baseURL: ML_BASE,
-  timeout: 30000, // ML analysis might take longer
+  timeout: 90000, // ViT model inference on CPU can take 30-60s
 });
 
 const handleResponse = (response) => response;
@@ -31,7 +31,7 @@ const handleError = (error) => {
     error.message = detail;
   }
   if (error.code === "ECONNABORTED") {
-    error.message = "Server is taking too long to respond. Please try again.";
+    error.message = "Skin analysis is taking longer than expected. Please try again in a moment.";
   }
   if (error.message === "Network Error") {
     error.message = "Unable to reach the service. Is it running?";

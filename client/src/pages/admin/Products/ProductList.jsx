@@ -24,7 +24,7 @@ const ProductList = () => {
     try {
       setLoading(true);
 
-      const res = await api.get("/products/all-products");
+      const res = await api.get("/api/products/all-products");
 
       setProducts(res.data.products);
     } catch (err) {
@@ -47,7 +47,7 @@ const ProductList = () => {
     if (!confirmDelete) return;
 
     try {
-      await api.delete(`/products/${productId}`);
+      await api.delete(`/api/products/${productId}`);
 
       setProducts((prev) =>
         prev.filter((product) => product._id !== productId),
@@ -145,9 +145,8 @@ const ProductList = () => {
 
         return (
           <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              statusColors[value]
-            }`}
+            className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[value]
+              }`}
           >
             {value}
           </span>
@@ -160,11 +159,10 @@ const ProductList = () => {
       accessor: "featured",
       render: (value) => (
         <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${
-            value
+          className={`px-3 py-1 rounded-full text-xs font-medium ${value
               ? "bg-purple-100 text-purple-700"
               : "bg-slate-100 text-slate-600"
-          }`}
+            }`}
         >
           {value ? "Yes" : "No"}
         </span>

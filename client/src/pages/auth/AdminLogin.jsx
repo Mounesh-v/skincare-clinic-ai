@@ -33,7 +33,7 @@ const AdminLogin = () => {
     try {
       setLoading(true);
 
-      const res = await api.post("/auth/login", {
+      const res = await api.post("/api/auth/login", {
         email: formData.email,
         password: formData.password,
       });
@@ -95,7 +95,7 @@ const AdminLogin = () => {
               Demo Credentials:
             </p>
             <p className="text-xs text-blue-700">Email: admin@skincare.ai</p>
-            <p className="text-xs text-blue-700">Password: Admin@123</p>
+            <p className="text-xs text-blue-700">Password: admin123456</p>
           </div>
 
           {/* Login Form */}

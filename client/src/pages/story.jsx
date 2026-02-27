@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  Sparkles, 
-  Heart, 
-  Users, 
+import {
+  Sparkles,
+  Heart,
+  Users,
   Award,
   TrendingUp,
   Target,
@@ -17,42 +17,42 @@ const Story = () => {
       year: '2010',
       title: 'The Beginning',
       description: 'Founded by Dr. Priya Sharma with a vision to make professional skincare accessible to everyone.',
-      image: '/api/placeholder/600/400',
+      image: 'https://placehold.co/600x400/e8f5e9/2e7d32?text=Our+Beginning',
       highlight: 'Started in a small clinic in Ludhiana',
     },
     {
       year: '2012',
       title: 'First Milestone',
       description: 'Reached 1,000 happy customers and expanded our dermatology team to 5 certified doctors.',
-      image: '/api/placeholder/600/400',
+      image: 'https://placehold.co/600x400/e8f5e9/2e7d32?text=First+Milestone',
       highlight: 'Opened 2 new clinics',
     },
     {
       year: '2015',
       title: 'Going Digital',
       description: 'Launched our first online consultation platform, making skincare advice accessible from anywhere.',
-      image: '/api/placeholder/600/400',
+      image: 'https://placehold.co/600x400/e8f5e9/2e7d32?text=Going+Digital',
       highlight: 'Served 10,000+ customers online',
     },
     {
       year: '2018',
       title: 'Product Line Launch',
       description: 'Introduced our own line of dermatologist-approved skincare products formulated with natural ingredients.',
-      image: '/api/placeholder/600/400',
+      image: 'https://placehold.co/600x400/e8f5e9/2e7d32?text=Product+Launch',
       highlight: '50+ products developed',
     },
     {
       year: '2020',
       title: 'AI Innovation',
       description: 'Integrated AI-powered skin assessment technology, revolutionizing personalized skincare recommendations.',
-      image: '/api/placeholder/600/400',
+      image: 'https://placehold.co/600x400/e8f5e9/2e7d32?text=AI+Innovation',
       highlight: '98% accuracy in skin analysis',
     },
     {
       year: '2024',
       title: 'Leading the Industry',
       description: 'Became one of India\'s most trusted digital skincare platforms with 50,000+ active users and 500+ partnered doctors.',
-      image: '/api/placeholder/600/400',
+      image: 'https://placehold.co/600x400/e8f5e9/2e7d32?text=Industry+Leader',
       highlight: 'Expanding to 50+ cities',
     },
   ];
@@ -95,7 +95,7 @@ const Story = () => {
               From Vision to Reality
             </h1>
             <p className="text-xl text-emerald-50 leading-relaxed">
-              The journey of how a small dermatology clinic became India's trusted 
+              The journey of how a small dermatology clinic became India's trusted
               digital skincare platform
             </p>
           </div>
@@ -108,12 +108,12 @@ const Story = () => {
           <div className="prose prose-lg max-w-none">
             <p className="text-xl text-slate-700 leading-relaxed mb-6">
               It all started in 2010 with a simple observation: <span className="font-semibold text-emerald-600">
-              quality skincare advice was accessible only to those who could afford expensive consultations.</span> 
+                quality skincare advice was accessible only to those who could afford expensive consultations.</span>
               Dr. Priya Sharma, a young dermatologist fresh out of medical school, wanted to change that.
             </p>
             <p className="text-lg text-slate-600 leading-relaxed">
-              What began as a modest clinic in Ludhiana, Punjab, has transformed into a 
-              revolutionary platform that combines cutting-edge AI technology with expert 
+              What began as a modest clinic in Ludhiana, Punjab, has transformed into a
+              revolutionary platform that combines cutting-edge AI technology with expert
               dermatological care, serving over 50,000 customers across India.
             </p>
           </div>
@@ -134,15 +134,14 @@ const Story = () => {
 
           <div className="max-w-5xl mx-auto">
             {timeline.map((item, index) => (
-              <div 
+              <div
                 key={index}
-                className={`relative flex flex-col md:flex-row gap-8 mb-16 ${
-                  index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'
-                }`}
+                className={`relative flex flex-col md:flex-row gap-8 mb-16 ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'
+                  }`}
               >
                 {/* Timeline dot and line */}
                 <div className="hidden md:block absolute left-1/2 top-8 w-0.5 h-full bg-emerald-200 -translate-x-1/2"></div>
-                
+
                 {/* Year badge */}
                 <div className="md:w-1/2 flex justify-center md:justify-end pr-8">
                   <div className="relative">
@@ -159,7 +158,7 @@ const Story = () => {
                 <div className="md:w-1/2 pl-8">
                   <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all">
                     <div className="mb-4">
-                      <img 
+                      <img
                         src={item.image}
                         alt={item.title}
                         className="w-full h-48 object-cover rounded-lg"
@@ -194,8 +193,8 @@ const Story = () => {
           <div className="max-w-4xl mx-auto bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-8 md:p-12">
             <div className="flex flex-col md:flex-row gap-8 items-center">
               <div className="flex-shrink-0">
-                <img 
-                  src="/api/placeholder/200/200"
+                <img
+                  src="https://placehold.co/200x200/e8f5e9/2e7d32?text=Dr.+Priya"
                   alt="Dr. Priya Sharma"
                   className="w-48 h-48 rounded-2xl object-cover shadow-lg"
                 />
@@ -210,9 +209,9 @@ const Story = () => {
                   </p>
                 </div>
                 <blockquote className="text-lg text-slate-700 italic border-l-4 border-emerald-500 pl-4">
-                  "When I started this journey, I had one simple goal: make quality skincare 
-                  accessible to everyone. Today, seeing thousands of people gain confidence 
-                  through healthy skin makes every challenge worth it. We're not just treating 
+                  "When I started this journey, I had one simple goal: make quality skincare
+                  accessible to everyone. Today, seeing thousands of people gain confidence
+                  through healthy skin makes every challenge worth it. We're not just treating
                   skin – we're changing lives."
                 </blockquote>
               </div>
@@ -237,7 +236,7 @@ const Story = () => {
             {values.map((value, index) => {
               const Icon = value.icon;
               return (
-                <div 
+                <div
                   key={index}
                   className="text-center p-6 bg-slate-50 rounded-xl hover:shadow-lg transition-all"
                 >
@@ -297,19 +296,19 @@ const Story = () => {
             The Journey Continues
           </h2>
           <p className="text-xl text-slate-600 leading-relaxed mb-8">
-            While we're proud of how far we've come, we're even more excited about where 
-            we're going. Our vision is to make professional skincare accessible to every 
-            Indian household, combining technology, expertise, and compassion to transform 
+            While we're proud of how far we've come, we're even more excited about where
+            we're going. Our vision is to make professional skincare accessible to every
+            Indian household, combining technology, expertise, and compassion to transform
             millions of lives.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
+            <button
               onClick={() => window.location.href = '/about'}
               className="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg font-semibold hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg"
             >
               Learn More About Us
             </button>
-            <button 
+            <button
               onClick={() => window.location.href = '/assessment'}
               className="px-8 py-3 border-2 border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-all"
             >

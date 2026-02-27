@@ -36,7 +36,7 @@ const DoctorNetwork = () => {
       rating: 4.9,
       reviews: 1250,
       location: 'Ludhiana, Punjab',
-      image: '/api/placeholder/150/150',
+      image: 'https://placehold.co/150x150/e8f5e9/2e7d32?text=Dr.+Priya',
       expertise: ['Acne Treatment', 'Anti-Aging', 'Cosmetic Dermatology'],
     },
     {
@@ -46,7 +46,7 @@ const DoctorNetwork = () => {
       rating: 4.8,
       reviews: 980,
       location: 'Chandigarh',
-      image: '/api/placeholder/150/150',
+      image: 'https://placehold.co/150x150/e0f2fe/0369a1?text=Dr.+Rajesh',
       expertise: ['Laser Treatment', 'Chemical Peels', 'Skin Rejuvenation'],
     },
     {
@@ -56,7 +56,7 @@ const DoctorNetwork = () => {
       rating: 4.7,
       reviews: 756,
       location: 'Delhi',
-      image: '/api/placeholder/150/150',
+      image: 'https://placehold.co/150x150/fce7f3/9d174d?text=Dr.+Anita',
       expertise: ['Hair Loss', 'Scalp Treatment', 'Hair Transplant'],
     },
   ];
@@ -88,8 +88,8 @@ const DoctorNetwork = () => {
             Expert Care, Personalized for You
           </h2>
           <p className="text-lg text-slate-600 max-w-3xl mx-auto">
-            Our network comprises experienced dermatologists and skincare specialists who are dedicated 
-            to helping you achieve healthy, glowing skin. Get personalized treatment plans and expert 
+            Our network comprises experienced dermatologists and skincare specialists who are dedicated
+            to helping you achieve healthy, glowing skin. Get personalized treatment plans and expert
             guidance tailored to your unique skin needs.
           </p>
         </div>
@@ -257,7 +257,7 @@ const DoctorNetwork = () => {
                 ))}
               </div>
               <p className="text-slate-700 mb-4">
-                "Dr. Sharma helped me get rid of my stubborn acne. Her treatment plan was 
+                "Dr. Sharma helped me get rid of my stubborn acne. Her treatment plan was
                 personalized and really effective!"
               </p>
               <p className="font-semibold text-slate-900">- Neha P.</p>
@@ -269,7 +269,7 @@ const DoctorNetwork = () => {
                 ))}
               </div>
               <p className="text-slate-700 mb-4">
-                "The virtual consultation was so convenient. Dr. Kumar explained everything 
+                "The virtual consultation was so convenient. Dr. Kumar explained everything
                 clearly and I saw results in weeks!"
               </p>
               <p className="font-semibold text-slate-900">- Rahul S.</p>
@@ -281,7 +281,7 @@ const DoctorNetwork = () => {
                 ))}
               </div>
               <p className="text-slate-700 mb-4">
-                "Professional, caring, and knowledgeable. The best skincare experience I've 
+                "Professional, caring, and knowledgeable. The best skincare experience I've
                 had. Highly recommend!"
               </p>
               <p className="font-semibold text-slate-900">- Priya M.</p>

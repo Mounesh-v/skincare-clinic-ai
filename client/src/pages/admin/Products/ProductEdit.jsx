@@ -40,7 +40,7 @@ const ProductEdit = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get(`/products/${id}`);
+        const res = await api.get(`/api/products/${id}`);
         const p = res.data.product;
 
         setFormData({
@@ -97,7 +97,7 @@ const ProductEdit = () => {
     if (!confirmDelete) return;
 
     try {
-      await api.delete(`/products/${id}/image/${index}`);
+      await api.delete(`/api/products/${id}/image/${index}`);
 
       // remove from UI
       setImages((prev) => prev.filter((_, i) => i !== index));
@@ -136,7 +136,7 @@ const ProductEdit = () => {
         images: [...images.map((i) => i.url), ...base64New],
       };
 
-      await api.put(`/products/${id}`, payload);
+      await api.put(`/api/products/${id}`, payload);
 
       toast.success("Product updated");
       navigate("/admin/products");
