@@ -1,137 +1,36 @@
 import Product from "../models/Product.js";
+import logger from "../config/logger.js";
 
-// CREATE PRODUCT WITH EXTENSIVE DEBUGGING
+// CREATE PRODUCT
 export const createProduct = async (req, res) => {
   try {
-    console.log("\n========================================");
-    console.log("🔷 CREATE PRODUCT REQUEST RECEIVED");
-    console.log("========================================");
-    
     const body = req.body;
-    
-    // Log the raw body
-    console.log("\n📦 RAW BODY:");
-    console.log(JSON.stringify(body, null, 2));
-    
-    // Log body keys
-    console.log("\n🔑 BODY KEYS:", Object.keys(body));
-    
-    // Log body types
-    console.log("\n📊 BODY TYPES:");
-    Object.keys(body).forEach(key => {
-      console.log(`  ${key}: ${typeof body[key]} = ${Array.isArray(body[key]) ? 'Array' : typeof body[key]}`);
-    });
 
-    // Step 1: Validate required fields
-    console.log("\n✅ STEP 1: Validating required fields...");
-    
     if (!body.name || body.name.trim() === '') {
-      console.log("❌ VALIDATION FAILED: name is missing or empty");
-      return res.status(400).json({
-        success: false,
-        message: "Product name is required",
-        field: "name"
-      });
+      return res.status(400).json({ success: false, message: "Product name is required", field: "name" });
     }
-    console.log("✓ name:", body.name);
-
-    if (!body.price || body.price === '' || body.price === 0) {
-      console.log("❌ VALIDATION FAILED: price is missing or invalid");
-      return res.status(400).json({
-        success: false,
-        message: "Product price is required and must be greater than 0",
-        field: "price"
-      });
+    if (!body.price || body.price === '' || Number(body.price) <= 0) {
+      return res.status(400).json({ success: false, message: "Product price must be greater than 0", field: "price" });
     }
-    console.log("✓ price:", body.price);
 
-    // Step 2: Parse and clean arrays
-    console.log("\n✅ STEP 2: Processing arrays...");
-    
-    let ingredients = [];
-    if (body.ingredients) {
-      console.log("Raw ingredients:", body.ingredients);
-      if (typeof body.ingredients === 'string') {
-        try {
-          ingredients = JSON.parse(body.ingredients);
-        } catch (e) {
-          ingredients = body.ingredients.split(',').map(i => i.trim()).filter(Boolean);
-        }
-      } else if (Array.isArray(body.ingredients)) {
-        ingredients = body.ingredients.filter(Boolean);
-      }
-    }
-    console.log("✓ Parsed ingredients:", ingredients);
+    const parseArray = (val) => {
+      if (!val) return [];
+      if (Array.isArray(val)) return val.filter(Boolean);
+      try { return JSON.parse(val); } catch { return val.split(',').map(s => s.trim()).filter(Boolean); }
+    };
 
-    let benefits = [];
-    if (body.benefits) {
-      console.log("Raw benefits:", body.benefits);
-      if (typeof body.benefits === 'string') {
-        try {
-          benefits = JSON.parse(body.benefits);
-        } catch (e) {
-          benefits = body.benefits.split(',').map(b => b.trim()).filter(Boolean);
-        }
-      } else if (Array.isArray(body.benefits)) {
-        benefits = body.benefits.filter(Boolean);
-      }
-    }
-    console.log("✓ Parsed benefits:", benefits);
+    const ingredients = parseArray(body.ingredients);
+    const benefits = parseArray(body.benefits);
+    const skinTypes = parseArray(body.skinTypes);
 
-    let skinTypes = [];
-    if (body.skinTypes) {
-      console.log("Raw skinTypes:", body.skinTypes);
-      if (typeof body.skinTypes === 'string') {
-        try {
-          skinTypes = JSON.parse(body.skinTypes);
-        } catch (e) {
-          skinTypes = body.skinTypes.split(',').map(s => s.trim()).filter(Boolean);
-        }
-      } else if (Array.isArray(body.skinTypes)) {
-        skinTypes = body.skinTypes.filter(Boolean);
-      }
-    }
-    console.log("✓ Parsed skinTypes:", skinTypes);
+    const images = (() => {
+      if (!body.images) return [];
+      const arr = Array.isArray(body.images) ? body.images : (() => {
+        try { return JSON.parse(body.images); } catch { return [body.images]; }
+      })();
+      return arr.map(img => typeof img === 'string' ? { url: img, publicId: "base64" } : img).filter(Boolean);
+    })();
 
-    // Step 3: Process images
-    console.log("\n✅ STEP 3: Processing images...");
-    let images = [];
-    
-    if (body.images) {
-      console.log("Raw images type:", typeof body.images);
-      console.log("Is array?", Array.isArray(body.images));
-      
-      if (Array.isArray(body.images)) {
-        console.log("Images array length:", body.images.length);
-        images = body.images.map((img, index) => {
-          console.log(`Processing image ${index}:`, typeof img);
-          if (typeof img === 'string') {
-            return { url: img, publicId: "base64" };
-          } else if (img && img.url) {
-            return img;
-          }
-          return null;
-        }).filter(Boolean);
-      } else if (typeof body.images === 'string') {
-        try {
-          const parsed = JSON.parse(body.images);
-          if (Array.isArray(parsed)) {
-            images = parsed.map(img => ({
-              url: img,
-              publicId: "base64"
-            }));
-          }
-        } catch (e) {
-          console.log("Failed to parse images string:", e.message);
-          images = [{ url: body.images, publicId: "base64" }];
-        }
-      }
-    }
-    console.log("✓ Processed images count:", images.length);
-
-    // Step 4: Build product data
-    console.log("\n✅ STEP 4: Building product data...");
-    
     const productData = {
       name: body.name.trim(),
       price: Number(body.price),
@@ -140,78 +39,39 @@ export const createProduct = async (req, res) => {
       shortDescription: body.shortDescription || '',
       description: body.description || body.fullDescription || '',
       fullDescription: body.fullDescription || body.description || '',
-      ingredients: ingredients,
-      benefits: benefits,
+      ingredients,
+      benefits,
       skinTypes: skinTypes.length > 0 ? skinTypes : ['All'],
       howToUse: body.howToUse || '',
-      images: images,
+      images,
       image: images.length > 0 ? images[0].url : '',
-      // inStock: body.inStock !== undefined ? Boolean(body.inStock) : true,
-      // stockCount: body.stockCount ? Number(body.stockCount) : 0,
       stock: body.stock ? Number(body.stock) : 0,
       featured: body.featured !== undefined ? Boolean(body.featured) : false,
       rating: body.rating ? Number(body.rating) : 0,
       reviews: body.reviews ? Number(body.reviews) : 0,
     };
 
-    console.log("\n📋 FINAL PRODUCT DATA:");
-    console.log(JSON.stringify(productData, null, 2));
-
-    // Step 5: Save to database
-    console.log("\n✅ STEP 5: Saving to database...");
-    
     const product = await Product.create(productData);
-    
-    console.log("\n🎉 SUCCESS! Product created with ID:", product._id);
-    console.log("========================================\n");
+    logger.info('Product created: %s', product._id);
 
-    res.status(201).json({
-      success: true,
-      product,
-      message: "Product created successfully"
-    });
+    res.status(201).json({ success: true, product, message: "Product created successfully" });
 
   } catch (error) {
-    console.log("\n========================================");
-    console.log("❌ ERROR OCCURRED");
-    console.log("========================================");
-    console.log("Error name:", error.name);
-    console.log("Error message:", error.message);
-    console.log("\nFull error:");
-    console.log(error);
-    
-    // MongoDB validation error
+    logger.error('createProduct error: %s', error.message);
     if (error.name === 'ValidationError') {
-      console.log("\n🔍 VALIDATION ERRORS:");
-      const errors = Object.keys(error.errors).map(key => ({
-        field: key,
-        message: error.errors[key].message
-      }));
-      console.log(errors);
-      
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: errors
-      });
+      const errors = Object.keys(error.errors).map(key => ({ field: key, message: error.errors[key].message }));
+      return res.status(400).json({ success: false, message: "Validation failed", errors });
     }
-
-    console.log("========================================\n");
-    
-    res.status(400).json({
-      success: false,
-      message: error.message,
-      error: error.name,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
+
 
 // GET ALL PRODUCTS (keep your existing code or use this)
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
-    
+
     res.status(200).json({
       success: true,
       count: products.length,
@@ -255,7 +115,7 @@ export const getProductById = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const body = req.body;
-    
+
     const updateData = {
       ...body,
       price: body.price ? Number(body.price) : undefined,
@@ -341,7 +201,7 @@ export const deleteProductImage = async (req, res) => {
     }
 
     product.images.splice(index, 1);
-    
+
     if (product.images.length > 0) {
       product.image = product.images[0].url;
     } else {

@@ -18,9 +18,53 @@ from urllib.parse import ParseResult, unquote, urlparse
 
 from .analyzer import SkinAnalyzerService
 
-
 LOGGER = logging.getLogger("ml_service")
-logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s")
+
+# Respect NODE_ENV: suppress INFO noise in production
+_IS_PRODUCTION = os.getenv("NODE_ENV", "development").lower() == "production"
+_LOG_LEVEL = logging.WARNING if _IS_PRODUCTION else logging.INFO
+logging.basicConfig(level=_LOG_LEVEL, format="[%(asctime)s] %(levelname)s - %(message)s")
+
+if _IS_PRODUCTION:
+    LOGGER.warning("ML service running in PRODUCTION mode (log level=WARNING)")
+else:
+    LOGGER.info("ML service running in DEVELOPMENT mode (log level=INFO)")
+
+# 10 MB limit for uploaded images (base64-encoded)
+_MAX_BODY_BYTES = 10 * 1024 * 1024
+
+# ---------------------------------------------------------------------------
+# CORS allowlist  —  reads ML_ALLOWED_ORIGINS from env, e.g.
+#   ML_ALLOWED_ORIGINS=http://localhost:5005,http://localhost:5174
+# ---------------------------------------------------------------------------
+_DEFAULT_ORIGINS = "http://localhost:5005,http://localhost:5174,http://127.0.0.1:5005,http://127.0.0.1:5174"
+_ALLOWED_ORIGINS: frozenset[str] = frozenset(
+    o.strip() for o in os.getenv("ML_ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",") if o.strip()
+)
+
+# ---------------------------------------------------------------------------
+# Per-IP token-bucket rate limiter for /api/analyze
+# Limit: 10 requests per 60-second window per IP address
+# ---------------------------------------------------------------------------
+_RATE_LIMIT_WINDOW = 60.0          # seconds
+_RATE_LIMIT_MAX = 10               # max requests per window
+_rate_lock = threading.Lock()
+_rate_buckets: dict[str, list[float]] = {}  # ip -> list of request timestamps
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Return True if the request is allowed, False if rate limit exceeded."""
+    now = time.monotonic()
+    with _rate_lock:
+        timestamps = _rate_buckets.get(ip, [])
+        # Drop timestamps older than the window
+        timestamps = [t for t in timestamps if now - t < _RATE_LIMIT_WINDOW]
+        if len(timestamps) >= _RATE_LIMIT_MAX:
+            _rate_buckets[ip] = timestamps
+            return False
+        timestamps.append(now)
+        _rate_buckets[ip] = timestamps
+        return True
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -40,11 +84,14 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
         LOGGER.info("%s - %s", self.address_string(), format % args)
 
     def _set_cors_headers(self) -> None:
-        origin = self.headers.get("Origin") or "*"
-        self.send_header("Access-Control-Allow-Origin", origin)
-        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type,Authorization")
-        self.send_header("Access-Control-Allow-Credentials", "true")
+        origin = self.headers.get("Origin") or ""
+        # Only echo back origins from the allowlist
+        if origin in _ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type,Authorization")
+            self.send_header("Access-Control-Allow-Credentials", "true")
+        # Unknown origins: no CORS headers — browser's same-origin policy will block them
 
     def _json_response(self, payload: Dict[str, Any], status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -59,8 +106,12 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
         self._json_response({"detail": message}, status=status)
 
     def _read_json(self) -> Dict[str, Any]:
-        length = int(self.headers.get("Content-Length", "0"))
-        raw = self.rfile.read(length) if length else b"{}"
+        content_length = int(self.headers.get("Content-Length", "0"))
+        if content_length > _MAX_BODY_BYTES:
+            raise ValueError(f"Request body too large ({content_length} bytes). Limit is {_MAX_BODY_BYTES} bytes.")
+        raw = self.rfile.read(content_length) if content_length else b"{}"
+        if len(raw) > _MAX_BODY_BYTES:
+            raise ValueError("Request body exceeded size limit.")
         data = json.loads(raw.decode("utf-8"))
         if not isinstance(data, dict):
             raise ValueError("JSON body must be an object")
@@ -102,6 +153,15 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/analyze":
+            # Rate limit check before any heavy work
+            client_ip = self.client_address[0]
+            if not _check_rate_limit(client_ip):
+                LOGGER.warning("Rate limit exceeded for IP %s on /api/analyze", client_ip)
+                self._json_error(
+                    "Rate limit exceeded. Maximum 10 requests per minute. Please try again shortly.",
+                    status=HTTPStatus.TOO_MANY_REQUESTS,
+                )
+                return
             try:
                 analyzer = self._get_analyzer()
                 result = analyzer.analyze_request(body)
@@ -109,11 +169,19 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 LOGGER.error("Validation error: %s", exc)
                 self._json_error(str(exc), status=HTTPStatus.BAD_REQUEST)
-            except FileNotFoundError as exc:
-                self._json_error(str(exc), status=HTTPStatus.INTERNAL_SERVER_ERROR)
-            except Exception as exc:  # pragma: no cover - guardrail
+            except FileNotFoundError:
+                # Do NOT expose internal file paths in production
+                LOGGER.exception("Model weights not found")
+                self._json_error(
+                    "ML model unavailable. Please contact support.",
+                    status=HTTPStatus.INTERNAL_SERVER_ERROR,
+                )
+            except Exception:  # pragma: no cover - guardrail
                 LOGGER.exception("Failed to analyze payload")
-                self._json_error(str(exc), status=HTTPStatus.INTERNAL_SERVER_ERROR)
+                self._json_error(
+                    "Internal server error during analysis.",
+                    status=HTTPStatus.INTERNAL_SERVER_ERROR,
+                )
             return
 
 

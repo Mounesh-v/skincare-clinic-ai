@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import threading
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Tuple
 
@@ -23,6 +24,20 @@ from .recommendations import build_personalized_plan
 
 LOGGER = logging.getLogger(__name__)
 _DATA_URL_PATTERN = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<payload>.+)$")
+
+# MIME allowlist for uploaded images
+_ALLOWED_MIMES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"})
+
+# Known image magic bytes (file signatures)
+_MAGIC_SIGNATURES: list[tuple[bytes, str]] = [
+    (b"\xff\xd8\xff",      "image/jpeg"),
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"RIFF",              "image/webp"),  # RIFF....WEBP
+    (b"GIF8",              "image/gif"),
+    (b"BM",               "image/bmp"),
+]
+# Maximum decoded (raw bytes) image size: 8 MB
+_MAX_DECODED_BYTES = 8 * 1024 * 1024
 
 
 @dataclass
@@ -78,11 +93,41 @@ class SkinAnalyzerService:
         if not image_data:
             raise ValueError("image_data is required")
         match = _DATA_URL_PATTERN.match(image_data)
-        payload = match.group("payload") if match else image_data
+        mime_type: str | None = None
+        if match:
+            mime_type = match.group("mime").lower().split(";")[0].strip()
+            if mime_type not in _ALLOWED_MIMES:
+                raise ValueError(
+                    f"Unsupported image type '{mime_type}'. "
+                    f"Accepted: {', '.join(sorted(_ALLOWED_MIMES))}."
+                )
+            payload = match.group("payload")
+        else:
+            payload = image_data
         try:
-            return base64.b64decode(payload)
-        except Exception as exc:  # pragma: no cover - defensive
+            raw = base64.b64decode(payload)
+        except Exception as exc:
             raise ValueError("Unable to decode image data payload") from exc
+
+        # Decoded size cap
+        if len(raw) > _MAX_DECODED_BYTES:
+            raise ValueError(
+                f"Decoded image exceeds {_MAX_DECODED_BYTES // (1024*1024)} MB limit."
+            )
+
+        # Magic-byte verification — reject files that don't match a known image signature
+        matched_sig = any(raw[:len(sig)] == sig for sig, _ in _MAGIC_SIGNATURES)
+        # Special-case WebP: RIFF....WEBP
+        if not matched_sig:
+            raise ValueError(
+                "Image signature not recognised. Upload a valid JPEG, PNG, WebP, GIF, or BMP file."
+            )
+        # Extra WebP check: bytes 8-12 must be b'WEBP'
+        if raw[:4] == b"RIFF" and raw[8:12] != b"WEBP":
+            raise ValueError(
+                "File has a RIFF header but is not a valid WebP image."
+            )
+        return raw
 
     @staticmethod
     def _feature_insights(image: np.ndarray) -> list[dict[str, Any]]:
@@ -128,6 +173,15 @@ class SkinAnalyzerService:
             probability,
             [(entry["label"], round(entry["probability"], 3)) for entry in top_predictions],
         )
+        # Entropy log — detect constant-confidence bias
+        entropy = -float(sum(p * np.log2(p) for p in probs if p > 1e-9))
+        if entropy < 0.01:
+            LOGGER.warning(
+                "BIAS ALERT: Near-zero entropy (%.4f) for prediction %s — model may be overfit or input degenerate.",
+                entropy, label_name,
+            )
+        else:
+            LOGGER.info("Prediction entropy: %.4f bits", entropy)
         return PredictionPayload(
             label_key=label_key,
             label_name=label_name,
@@ -158,6 +212,7 @@ class SkinAnalyzerService:
         return "High", 6
 
     def analyze_request(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
+        _t0 = time.perf_counter()
         if not isinstance(payload, Mapping):
             raise ValueError("Request body must be a JSON object")
         image_data = payload.get("image_data")
@@ -175,6 +230,13 @@ class SkinAnalyzerService:
             )
         except ValueError as exc:
             raise ValueError(str(exc))
+
+        # Hard face-score guard — catches slipthrough from 50%-threshold retry
+        if face_score < 0.35:
+            raise ValueError(
+                f"Face confidence too low ({face_score:.2f}). "
+                "Please retake the photo with your face centred, well-lit, and filling the frame."
+            )
         prediction = self._run_prediction(processed)
         
         # Infer skin type from the preprocessed image using ViT
@@ -234,6 +296,14 @@ class SkinAnalyzerService:
             "success_probability": success_probability,
             "created_at": dt.datetime.utcnow().isoformat(timespec="seconds") + "Z",
         }
+        elapsed_ms = round((time.perf_counter() - _t0) * 1000)
+        LOGGER.info(
+            "analyze_request complete | skin_type=%s confidence=%.2f face_score=%.2f elapsed_ms=%d",
+            skin_type_result["skin_type"],
+            skin_type_result["confidence"],
+            face_score,
+            elapsed_ms,
+        )
         return response
 
     @staticmethod

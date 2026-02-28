@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, User, Mail, Phone, MapPin, Package, 
-  Truck, CheckCircle, Clock, CreditCard, Download 
+import {
+  ArrowLeft, User, Mail, Phone, MapPin, Package,
+  Truck, CheckCircle, Clock, CreditCard, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-
-const API_URL = "http://localhost:5005/api/orders";
+import api from '../../../utils/api.js';
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -22,7 +20,7 @@ const OrderDetail = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const { data } = await axios.get(`${API_URL}/${id}`);
+        const { data } = await api.get(`/api/orders/${id}`);
         setOrder(data.order);
       } catch (error) {
         toast.error("Failed to fetch order");
@@ -39,7 +37,7 @@ const OrderDetail = () => {
   ============================== */
   const updateStatus = async (newStatus) => {
     try {
-      await axios.put(`${API_URL}/${id}`, {
+      await api.put(`/api/orders/${id}`, {
         orderStatus: newStatus,
       });
 
@@ -191,86 +189,86 @@ const OrderDetail = () => {
         {/* Sidebar */}
         <div className="space-y-6">
 
-  {/* Customer Info */}
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <h2 className="text-lg font-semibold text-slate-900 mb-4">
-      Customer Details
-    </h2>
+          {/* Customer Info */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Customer Details
+            </h2>
 
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <User className="w-5 h-5 text-slate-400" />
-        <p className="text-sm font-medium text-slate-900">
-          {order.user?.name || "N/A"}
-        </p>
-      </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-slate-400" />
+                <p className="text-sm font-medium text-slate-900">
+                  {order.user?.name || "N/A"}
+                </p>
+              </div>
 
-      <div className="flex items-center gap-3">
-        <Mail className="w-5 h-5 text-slate-400" />
-        <p className="text-sm font-medium text-slate-900">
-          {order.user?.email || "N/A"}
-        </p>
-      </div>
+              <div className="flex items-center gap-3">
+                <Mail className="w-5 h-5 text-slate-400" />
+                <p className="text-sm font-medium text-slate-900">
+                  {order.user?.email || "N/A"}
+                </p>
+              </div>
 
-      <div className="flex items-center gap-3">
-        <Phone className="w-5 h-5 text-slate-400" />
-        <p className="text-sm font-medium text-slate-900">
-          {order.user?.phone || "N/A"}
-        </p>
-      </div>
-    </div>
-  </div>
+              <div className="flex items-center gap-3">
+                <Phone className="w-5 h-5 text-slate-400" />
+                <p className="text-sm font-medium text-slate-900">
+                  {order.user?.phone || "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
 
-  {/* Payment Info */}
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <h2 className="text-lg font-semibold text-slate-900 mb-4">
-      Payment Information
-    </h2>
+          {/* Payment Info */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Payment Information
+            </h2>
 
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-600">Payment Status</span>
-        <span className="font-medium text-slate-900">
-          {order.paymentStatus}
-        </span>
-      </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Payment Status</span>
+                <span className="font-medium text-slate-900">
+                  {order.paymentStatus}
+                </span>
+              </div>
 
-      <div className="flex items-center gap-3">
-        <CreditCard className="w-5 h-5 text-slate-400" />
-        <div>
-          <p className="text-xs text-slate-500">Payment Method</p>
-          <p className="text-sm font-medium text-slate-900">
-            {order.paymentMethod}
-          </p>
+              <div className="flex items-center gap-3">
+                <CreditCard className="w-5 h-5 text-slate-400" />
+                <div>
+                  <p className="text-xs text-slate-500">Payment Method</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {order.paymentMethod}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Meta */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Order Info
+            </h2>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Status</span>
+                <span>{order.orderStatus}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Created</span>
+                <span>{new Date(order.createdAt).toLocaleString()}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Updated</span>
+                <span>{new Date(order.updatedAt).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  {/* Order Meta */}
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <h2 className="text-lg font-semibold text-slate-900 mb-4">
-      Order Info
-    </h2>
-
-    <div className="space-y-2 text-sm">
-      <div className="flex justify-between">
-        <span>Status</span>
-        <span>{order.orderStatus}</span>
-      </div>
-
-      <div className="flex justify-between">
-        <span>Created</span>
-        <span>{new Date(order.createdAt).toLocaleString()}</span>
-      </div>
-
-      <div className="flex justify-between">
-        <span>Updated</span>
-        <span>{new Date(order.updatedAt).toLocaleString()}</span>
-      </div>
-    </div>
-  </div>
-</div>
 
       </div>
     </div>

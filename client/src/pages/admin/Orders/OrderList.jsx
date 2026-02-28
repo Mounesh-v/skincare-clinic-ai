@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye } from "lucide-react";
 import DataTable from "../../../components/admin/DataTable";
 import toast from "react-hot-toast";
-import axios from "axios";
+import api from "../../../utils/api.js";
 
 const OrderList = () => {
   const navigate = useNavigate();
@@ -11,12 +11,10 @@ const OrderList = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "http://localhost:5005/api/orders";
-
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
+      const { data } = await api.get("/api/orders");
 
       const formattedOrders = data.orders.map((order) => ({
         id: order._id,
@@ -46,7 +44,7 @@ const OrderList = () => {
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await axios.put(`${API_URL}/${orderId}`, {
+      await api.put(`/api/orders/${orderId}`, {
         orderStatus: newStatus,
       });
 
