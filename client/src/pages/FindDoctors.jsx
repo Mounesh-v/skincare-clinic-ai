@@ -20,8 +20,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import axios from "axios";
-const API_BASE_URL = "http://localhost:5005/api";
+import api from "../utils/api.js";
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -60,7 +59,7 @@ const FindDoctors = () => {
       try {
         setLoading(true);
 
-        const res = await axios.get(`${API_BASE_URL}/doctors`);
+        const res = await api.get("/api/doctors");
         const doctors = res.data.data.map((doc) => ({
           id: doc._id,
           name: doc.name,
@@ -207,21 +206,19 @@ const FindDoctors = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-3 rounded-lg transition-colors ${
-                  viewMode === "grid"
+                className={`p-3 rounded-lg transition-colors ${viewMode === "grid"
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 <Grid className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setViewMode("map")}
-                className={`p-3 rounded-lg transition-colors ${
-                  viewMode === "map"
+                className={`p-3 rounded-lg transition-colors ${viewMode === "map"
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 <MapIcon className="w-5 h-5" />
               </button>
@@ -336,11 +333,10 @@ const FilterSidebar = ({ filters, setFilters }) => {
               <button
                 key={gender}
                 onClick={() => setFilters({ ...filters, gender })}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filters.gender === gender
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filters.gender === gender
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 {gender === "all" ? "Any" : gender}
               </button>
@@ -502,9 +498,9 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
           <span className="text-sm font-semibold text-emerald-600">
             {doctor.nextAvailable
               ? new Date(doctor.nextAvailable).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
+                month: "short",
+                day: "numeric",
+              })
               : "Not specified"}
           </span>
         </div>
@@ -716,11 +712,10 @@ const DoctorModal = ({ doctor, onClose }) => {
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                 <span
                   key={day}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    doctor.availability.includes(day)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${doctor.availability.includes(day)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 text-slate-400"
-                  }`}
+                    }`}
                 >
                   {day}
                 </span>
@@ -738,11 +733,10 @@ const DoctorModal = ({ doctor, onClose }) => {
                 <button
                   key={time}
                   onClick={() => setSelectedTime(time)}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    selectedTime === time
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${selectedTime === time
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
+                    }`}
                 >
                   {time}
                 </button>

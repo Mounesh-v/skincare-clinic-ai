@@ -2,9 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Upload, X, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
-import axios from "axios";
-
-const API_BASE_URL = "http://localhost:5005/api";
+import api from "../../../utils/api.js";
 
 const DoctorCreate = () => {
   const navigate = useNavigate();
@@ -46,7 +44,7 @@ const DoctorCreate = () => {
     if (isEditMode) {
       const fetchDoctor = async () => {
         try {
-          const res = await axios.get(`${API_BASE_URL}/doctors/${id}`);
+          const res = await api.get(`/api/doctors/${id}`);
           const doc = res.data.data;
 
           setFormData({
@@ -192,10 +190,10 @@ const DoctorCreate = () => {
       let res;
 
       if (isEditMode) {
-        res = await axios.put(`${API_BASE_URL}/doctors/${id}`, payload);
+        res = await api.put(`/api/doctors/${id}`, payload);
         toast.success("Doctor updated successfully!");
       } else {
-        res = await axios.post(`${API_BASE_URL}/doctors`, payload);
+        res = await api.post("/api/doctors", payload);
         toast.success("Doctor created successfully!");
       }
 
@@ -203,13 +201,12 @@ const DoctorCreate = () => {
     } catch (error) {
       const msg = error.response?.data?.message || "Something went wrong";
       toast.error(msg);
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  
+
 
   return (
     <div className="space-y-6">
@@ -415,11 +412,10 @@ const DoctorCreate = () => {
                   key={lang}
                   type="button"
                   onClick={() => toggleArrayItem("languages", lang)}
-                  className={`px-3 py-1.5 rounded text-sm ${
-                    formData.languages.includes(lang)
+                  className={`px-3 py-1.5 rounded text-sm ${formData.languages.includes(lang)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 hover:bg-slate-200"
-                  }`}
+                    }`}
                 >
                   {lang}
                 </button>
@@ -435,11 +431,10 @@ const DoctorCreate = () => {
                   key={day}
                   type="button"
                   onClick={() => toggleArrayItem("availability", day)}
-                  className={`px-3 py-1.5 rounded text-sm ${
-                    formData.availability.includes(day)
+                  className={`px-3 py-1.5 rounded text-sm ${formData.availability.includes(day)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 hover:bg-slate-200"
-                  }`}
+                    }`}
                 >
                   {day}
                 </button>
@@ -485,11 +480,10 @@ const DoctorCreate = () => {
                   key={type}
                   type="button"
                   onClick={() => toggleArrayItem("consultationType", type)}
-                  className={`px-3 py-1.5 rounded text-sm ${
-                    formData.consultationType.includes(type)
+                  className={`px-3 py-1.5 rounded text-sm ${formData.consultationType.includes(type)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 hover:bg-slate-200"
-                  }`}
+                    }`}
                 >
                   {type}
                 </button>

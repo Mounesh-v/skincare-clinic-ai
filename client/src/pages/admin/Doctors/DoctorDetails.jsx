@@ -18,9 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import axios from "axios";
-
-const API_BASE_URL = "http://localhost:5005/api"; // ← adjust port if needed
+import api from "../../../utils/api.js";
 
 const DoctorDetail = () => {
   const navigate = useNavigate();
@@ -36,9 +34,7 @@ const DoctorDetail = () => {
         setLoading(true);
         setError(null);
 
-        const { data } = await axios.get(`${API_BASE_URL}/doctors/${id}`, {
-          timeout: 10000,
-        });
+        const { data } = await api.get(`/api/doctors/${id}`, { timeout: 10000 });
 
         if (!data?.success || !data?.data) {
           throw new Error("Invalid response format");
@@ -64,10 +60,10 @@ const DoctorDetail = () => {
           fee: doc.consultationFee || 0,
           joined: doc.createdAt
             ? new Date(doc.createdAt).toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
             : "—",
           about: doc.about?.trim() || null,
           email: doc.email || null,
@@ -92,7 +88,7 @@ const DoctorDetail = () => {
     if (!window.confirm("Delete this doctor profile permanently?")) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/doctors/${id}`);
+      await api.delete(`/api/doctors/${id}`);
       toast.success("Doctor profile deleted");
       navigate("/admin/doctors", { replace: true });
     } catch (err) {
@@ -154,11 +150,10 @@ const DoctorDetail = () => {
 
             <button
               onClick={toggleStatus}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors shadow-sm ${
-                doctor.status === "Active"
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors shadow-sm ${doctor.status === "Active"
                   ? "bg-red-600 hover:bg-red-700"
                   : "bg-emerald-600 hover:bg-emerald-700"
-              }`}
+                }`}
             >
               {doctor.status === "Active" ? (
                 <UserX size={16} />

@@ -12,9 +12,7 @@ import {
 } from "lucide-react";
 import DataTable from "../../../components/admin/DataTable";
 import toast from "react-hot-toast";
-import axios from "axios";
-
-const API_BASE_URL = "http://localhost:5005/api";
+import api from "../../../utils/api.js";
 
 const DoctorList = () => {
   const navigate = useNavigate();
@@ -28,24 +26,22 @@ const DoctorList = () => {
       try {
         setLoading(true);
         setError(null);
-        const res = await axios.get(`${API_BASE_URL}/doctors`);
+        const res = await api.get("/api/doctors");
         const formmatedDoctors = res.data.data.map((doc) => ({
           id: doc._id,
-          slug: doc.slug, // useful for public profile links if needed
+          slug: doc.slug,
           name: doc.name,
-          image: doc.image, // base64 or cloud URL
+          image: doc.image,
           specialization: doc.specialization,
           qualification: doc.qualification,
           experience: `${doc.experience} years`,
           rating: doc.ratings?.average?.toFixed(1) || 0,
-          consultations: doc.reviews || 0, // using reviews count as proxy
+          consultations: doc.reviews || 0,
           status: doc.status,
           languages: doc.languages || [],
         }));
         setDoctors(formmatedDoctors);
-        console.log(formmatedDoctors);
-      } catch (error) {
-        console.error("Failed to fetch doctors:", err);
+      } catch (err) {
         const message = err.response?.data?.message || "Could not load doctors";
         setError(message);
         toast.error(message);
@@ -61,13 +57,12 @@ const DoctorList = () => {
       return;
     }
     try {
-      await axios.delete(`${API_BASE_URL}/doctors/${id}`);
+      await api.delete(`/api/doctors/${id}`);
       setDoctors((prev) => prev.filter((doc) => doc.id !== id));
       toast.success("Doctor deleted successfully");
     } catch (err) {
       const msg = err.response?.data?.message || "Failed to delete doctor";
       toast.error(msg);
-      console.error(err);
     }
   };
 
@@ -250,9 +245,9 @@ const DoctorList = () => {
           <p className="text-2xl font-bold text-yellow-600 mt-1">
             {doctors.length > 0
               ? (
-                  doctors.reduce((sum, d) => sum + Number(d.rating), 0) /
-                  doctors.length
-                ).toFixed(1)
+                doctors.reduce((sum, d) => sum + Number(d.rating), 0) /
+                doctors.length
+              ).toFixed(1)
               : "—"}{" "}
             ⭐
           </p>

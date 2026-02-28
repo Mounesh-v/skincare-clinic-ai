@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, X, Save } from "lucide-react";
 import toast from "react-hot-toast";
-import api from "../../../services/api.js";
+import api from "../../../utils/api.js";
 
 
 const ProductCreate = () => {
@@ -98,7 +98,6 @@ const ProductCreate = () => {
       };
 
       const res = await api.post("/api/products", payload);
-      console.log(res)
 
       toast.success("Product created successfully");
       navigate("/admin/products");

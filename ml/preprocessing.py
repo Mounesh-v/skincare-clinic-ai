@@ -85,6 +85,18 @@ def _select_best_detection(
     y1 = min(img_h, int(np.ceil(bbox.origin_y + bbox.height)))
     if x1 <= x0 or y1 <= y0:
         return None
+    # Reject detections where the face occupies less than 2% of the image area
+    # — catches cases where the face is too small/far away to yield reliable predictions
+    img_h, img_w, _ = image_shape
+    face_area = (x1 - x0) * (y1 - y0)
+    image_area = max(1, img_w * img_h)
+    area_ratio = face_area / image_area
+    if area_ratio < 0.02:
+        LOGGER.warning(
+            "Detected face is too small (area_ratio=%.4f < 0.02). Rejecting.",
+            area_ratio,
+        )
+        return None
     return DetectionResult(rect=(x0, y0, x1, y1), score=best_score)
 
 

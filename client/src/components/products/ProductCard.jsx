@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   ShoppingCart, Heart, Star, Eye, TrendingUp,
-  Truck, Shield, ArrowRight 
+  Truck, Shield, ArrowRight
 } from 'lucide-react';
 import Button from '../common/Button';
 
@@ -25,7 +25,6 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
       onAddToCart(product);
     }
     // You can add toast notification here
-    console.log('Added to cart:', product.name);
   };
 
   const handleBuyNow = (e) => {
@@ -39,7 +38,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
   };
 
   // Calculate discount percentage
-  const discountPercentage = product.originalPrice 
+  const discountPercentage = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
@@ -83,10 +82,9 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           onClick={handleFavoriteClick}
           className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
         >
-          <Heart 
-            className={`h-5 w-5 transition-colors ${
-              isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'
-            }`} 
+          <Heart
+            className={`h-5 w-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'
+              }`}
           />
         </button>
 
@@ -123,7 +121,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           <span className="text-xs font-medium text-primary-600 uppercase tracking-wide">
             {product.category}
           </span>
-         {product.ratings?.average > 0 && (
+          {product.ratings?.average > 0 && (
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
               <span className="text-sm font-semibold text-slate-900">{product.ratings.average}</span>
