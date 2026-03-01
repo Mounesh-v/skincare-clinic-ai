@@ -31,7 +31,7 @@ const ProductsPage = () => {
   const [selectedSkinType, setSelectedSkinType] = useState("all");
   const [priceRange, setPriceRange] = useState([0, 5000]);
   const [sortBy, setSortBy] = useState("featured");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Categories
   const PRODUCT_CATEGORIES = {
@@ -188,7 +188,7 @@ const ProductsPage = () => {
       <div className="container-custom py-8 sm:py-12">
         <div className="grid gap-8 lg:grid-cols-4">
           {/* Filters Sidebar */}
-          <div className={`${showFilters ? "block" : "hidden"} lg:block`}>
+          <div className={`${showFilters ? "block" : "hidden"}`}>
             <div className="sticky top-4 overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-lg">
               {/* Filter Header */}
               <div className="border-b-2 border-slate-100 bg-gradient-to-r from-slate-50 to-white p-6">
@@ -210,7 +210,7 @@ const ProductsPage = () => {
                   </div>
                   <button
                     onClick={() => setShowFilters(false)}
-                    className="rounded-lg p-2 hover:bg-slate-100 lg:hidden"
+                    className="rounded-lg p-2 hover:bg-slate-100"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -337,7 +337,7 @@ const ProductsPage = () => {
           </div>
 
           {/* Products Grid */}
-          <div className="lg:col-span-3">
+          <div className={showFilters ? "lg:col-span-3" : "lg:col-span-4"}>
             {/* Toolbar */}
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ const ProductsPage = () => {
                 {/* Mobile Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="relative flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 shadow-sm transition-all hover:border-emerald-500 hover:shadow-md lg:hidden"
+                  className="relative flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 shadow-sm transition-all hover:border-emerald-500 hover:shadow-md"
                 >
                   <SlidersHorizontal className="h-5 w-5" />
                   <span>Filters</span>

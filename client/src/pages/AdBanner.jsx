@@ -1,4 +1,7 @@
+import { useNavigate } from 'react-router-dom';
+
 export default function AdBanner() {
+  const navigate = useNavigate();
   return (
     <section
       className="
@@ -34,7 +37,7 @@ export default function AdBanner() {
         </p>
 
         <div className="mt-8 flex gap-4">
-          <button className="rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-lg hover:bg-emerald-700 transition">
+          <button onClick={() => navigate('/assessment')} className="rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-lg hover:bg-emerald-700 transition">
             Start Skin Analysis
           </button>
 

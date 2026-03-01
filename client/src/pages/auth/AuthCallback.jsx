@@ -1,12 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const AuthCallback = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const hasProcessed = useRef(false);
 
     useEffect(() => {
+        if (hasProcessed.current) return;
+        hasProcessed.current = true;
+
         const token = searchParams.get('token');
         const provider = searchParams.get('provider');
 
