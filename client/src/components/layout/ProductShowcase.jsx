@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import productService from ".././../services/productService";
 
 const ProductShowcase = () => {
   const navigate = useNavigate();
@@ -26,168 +27,14 @@ const ProductShowcase = () => {
   const [slideDirection, setSlideDirection] = useState("right");
   const intervalRef = useRef(null);
   const sectionRefs = useRef({});
-
-  // ─── DATA ────────────────────────────────────────────────────────────────────
-
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Vitamin C Glow Serum",
-      tagline: "Radiance in Every Drop",
-      description:
-        "15% L-ascorbic acid with hyaluronic acid for instant brightness and long-lasting glow.",
-      price: 2499,
-      originalPrice: 3499,
-      discount: "30% OFF",
-      image: "/api/placeholder/500/500",
-      badge: "BESTSELLER",
-      badgeColor: "from-amber-400 to-orange-500",
-      rating: 4.9,
-      reviews: 2341,
-      benefits: ["Brightens skin", "Reduces dark spots", "Anti-aging"],
-      bgGradient: "from-amber-50 via-orange-50 to-yellow-50",
-    },
-    {
-      id: 2,
-      name: "Hydra-Boost Night Cream",
-      tagline: "Deep Moisture Therapy",
-      description:
-        "Rich ceramide formula for overnight skin repair and barrier restoration.",
-      price: 3299,
-      originalPrice: 4499,
-      discount: "25% OFF",
-      image: "/api/placeholder/500/500",
-      badge: "NEW",
-      badgeColor: "from-violet-500 to-purple-600",
-      rating: 4.8,
-      reviews: 1876,
-      benefits: ["Intense hydration", "Repairs skin barrier", "Plumps skin"],
-      bgGradient: "from-violet-50 via-purple-50 to-indigo-50",
-    },
-    {
-      id: 3,
-      name: "Peptide Eye Renewal",
-      tagline: "Youthful Eyes, Instantly",
-      description:
-        "Advanced peptide complex precisely targeting fine lines and under-eye fatigue.",
-      price: 1899,
-      originalPrice: 2499,
-      discount: "20% OFF",
-      image: "/api/placeholder/500/500",
-      badge: "TRENDING",
-      badgeColor: "from-rose-500 to-pink-600",
-      rating: 4.7,
-      reviews: 1432,
-      benefits: [
-        "Reduces puffiness",
-        "Smooths wrinkles",
-        "Brightens dark circles",
-      ],
-      bgGradient: "from-rose-50 via-pink-50 to-fuchsia-50",
-    },
-  ];
-
-  const bestSellers = [
-    {
-      id: 4,
-      name: "Pure Glow Cleanser",
-      price: 899,
-      originalPrice: 1199,
-      image: "/api/placeholder/300/300",
-      rating: 4.6,
-      reviews: 3210,
-      tag: "Top Seller",
-      category: "Cleansers",
-    },
-    {
-      id: 5,
-      name: "Balance Toner",
-      price: 1299,
-      originalPrice: 1699,
-      image: "/api/placeholder/300/300",
-      rating: 4.8,
-      reviews: 2890,
-      tag: "Most Loved",
-      category: "Treatments",
-    },
-    {
-      id: 6,
-      name: "Sun Shield SPF 50",
-      price: 1599,
-      originalPrice: 1999,
-      image: "/api/placeholder/300/300",
-      rating: 4.9,
-      reviews: 4521,
-      tag: "Essential",
-      category: "Treatments",
-    },
-    {
-      id: 7,
-      name: "Detox Clay Mask",
-      price: 1199,
-      originalPrice: 1599,
-      image: "/api/placeholder/300/300",
-      rating: 4.7,
-      reviews: 2156,
-      tag: "Cult Favorite",
-      category: "Treatments",
-    },
-    {
-      id: 8,
-      name: "Retinol Night Serum",
-      price: 2199,
-      originalPrice: 2999,
-      image: "/api/placeholder/300/300",
-      rating: 4.9,
-      reviews: 1876,
-      tag: "Pro Choice",
-      category: "Serums",
-    },
-    {
-      id: 9,
-      name: "Niacinamide Essence",
-      price: 1799,
-      originalPrice: 2299,
-      image: "/api/placeholder/300/300",
-      rating: 4.8,
-      reviews: 2543,
-      tag: "Fast Acting",
-      category: "Serums",
-    },
-    {
-      id: 10,
-      name: "Rose Hip Moisturiser",
-      price: 1499,
-      originalPrice: 1999,
-      image: "/api/placeholder/300/300",
-      rating: 4.7,
-      reviews: 1987,
-      tag: "Fan Favourite",
-      category: "Moisturizers",
-    },
-    {
-      id: 11,
-      name: "Ceramide Repair Cream",
-      price: 1699,
-      originalPrice: 2299,
-      image: "/api/placeholder/300/300",
-      rating: 4.8,
-      reviews: 2134,
-      tag: "Skin Saviour",
-      category: "Moisturizers",
-    },
-    {
-      id: 12,
-      name: "AHA Glow Cleanser",
-      price: 999,
-      originalPrice: 1399,
-      image: "/api/placeholder/300/300",
-      rating: 4.6,
-      reviews: 1765,
-      tag: "Glow Getter",
-      category: "Cleansers",
-    },
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSkinType, setSelectedSkinType] = useState("all");
+  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [sortBy, setSortBy] = useState("featured");
+  const [showFilters, setShowFilters] = useState(true);
 
   const categories = [
     // { name: 'All',           icon: Package, count: 50 },
@@ -199,10 +46,10 @@ const ProductShowcase = () => {
 
   // ─── DERIVED DATA ─────────────────────────────────────────────────────────────
 
-  const filteredProducts =
-    activeCategory === "All"
-      ? bestSellers
-      : bestSellers.filter((p) => p.category === activeCategory);
+  // const products =
+  //   activeCategory === "All"
+  //     ? bestSellers
+  //     : bestSellers.filter((p) => p.category === activeCategory);
 
   // ─── SLIDE HELPERS ────────────────────────────────────────────────────────────
 
@@ -216,31 +63,6 @@ const ProductShowcase = () => {
     },
     [isSliding],
   );
-
-  const nextSlide = useCallback(() => {
-    goToSlide((currentSlide + 1) % featuredProducts.length, "right");
-  }, [currentSlide, featuredProducts.length, goToSlide]);
-
-  const prevSlide = useCallback(() => {
-    goToSlide(
-      (currentSlide - 1 + featuredProducts.length) % featuredProducts.length,
-      "left",
-    );
-  }, [currentSlide, featuredProducts.length, goToSlide]);
-
-  // ─── AUTO-PLAY ────────────────────────────────────────────────────────────────
-
-  const resetInterval = useCallback(() => {
-    clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(nextSlide, 6000);
-  }, [nextSlide]);
-
-  useEffect(() => {
-    resetInterval();
-    return () => clearInterval(intervalRef.current);
-  }, [resetInterval]);
-
-  // ─── SCROLL-REVEAL ────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -282,6 +104,79 @@ const ProductShowcase = () => {
     Math.round(((orig - curr) / orig) * 100);
 
   // ─── RENDER ───────────────────────────────────────────────────────────────────
+
+  const fetchProducts = async () => {
+    setLoading(true);
+
+    try {
+      const filters = {
+        category: selectedCategory,
+        skinType: selectedSkinType,
+        minPrice: priceRange[0],
+        maxPrice: priceRange[1],
+        sortBy,
+        search: searchTerm,
+      };
+
+      const data = await productService.getAll(filters);
+
+      console.log("data", data);
+
+      // Handle any backend response format safely
+      let productsArray = [];
+
+      if (Array.isArray(data)) {
+        productsArray = data;
+      } else if (Array.isArray(data.products)) {
+        productsArray = data.products;
+      } else if (Array.isArray(data.data)) {
+        productsArray = data.data;
+      }
+
+      setProducts(productsArray);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory, selectedSkinType, priceRange, sortBy, searchTerm]);
+
+  const nextSlide = useCallback(() => {
+    if (!products.length) return;
+
+    setCurrentSlide((prev) => (prev + 1) % products.length);
+    setSlideDirection("right");
+  }, [products.length]);
+
+  const prevSlide = useCallback(() => {
+    if (!products.length) return;
+
+    setCurrentSlide((prev) => (prev - 1 + products.length) % products.length);
+    setSlideDirection("left");
+  }, [products.length]);
+
+  useEffect(() => {
+    if (!products.length) return;
+
+    intervalRef.current = setInterval(() => {
+      nextSlide();
+    }, 5000); // change speed here (5s)
+
+    return () => clearInterval(intervalRef.current);
+  }, [nextSlide, products.length]);
+
+  const stopAutoScroll = () => {
+    clearInterval(intervalRef.current);
+  };
+
+  const startAutoScroll = () => {
+    intervalRef.current = setInterval(nextSlide, 5000);
+  };
 
   return (
     <div className="relative bg-gradient-to-b from-white via-slate-50/60 to-white overflow-hidden py-24">
@@ -326,9 +221,13 @@ const ProductShowcase = () => {
           </div>
 
           {/* Slider */}
-          <div className="relative max-w-6xl mx-auto">
+          <div
+            className="relative max-w-6xl mx-auto"
+            onMouseEnter={stopAutoScroll}
+            onMouseLeave={startAutoScroll}
+          >
             <div className="relative min-h-[480px] sm:min-h-[560px]">
-              {featuredProducts.map((product, index) => {
+              {products.map((product, index) => {
                 const isActive = index === currentSlide;
                 return (
                   <div
@@ -363,7 +262,7 @@ const ProductShowcase = () => {
                           </div>
 
                           <img
-                            src={product.image}
+                            src={product.images[0].url}
                             alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                           />
@@ -433,7 +332,7 @@ const ProductShowcase = () => {
                               {product.rating}
                             </span>
                             <span className="text-slate-500 text-sm">
-                              ({product.reviews.toLocaleString()} reviews)
+                              ({product.reviews} reviews)
                             </span>
                           </div>
 
@@ -441,10 +340,10 @@ const ProductShowcase = () => {
                           <div className="flex items-end justify-between gap-4 flex-wrap">
                             <div>
                               <p className="text-sm text-slate-400 line-through">
-                                ₹{product.originalPrice.toLocaleString()}
+                                ₹{product.originalPrice}
                               </p>
                               <p className="text-4xl font-extrabold text-slate-900">
-                                ₹{product.price.toLocaleString()}
+                                ₹{product.price}
                               </p>
                             </div>
                             <button
@@ -470,8 +369,9 @@ const ProductShowcase = () => {
                 <button
                   key={dir}
                   onClick={() => {
-                    dir === "prev" ? prevSlide() : nextSlide();
-                    resetInterval();
+                    prevSlide();
+                    stopAutoScroll();
+                    startAutoScroll();
                   }}
                   className={`absolute ${
                     dir === "prev" ? "left-3 sm:left-5" : "right-3 sm:right-5"
@@ -489,12 +389,13 @@ const ProductShowcase = () => {
 
             {/* Dots */}
             <div className="flex justify-center gap-3 mt-8">
-              {featuredProducts.map((_, i) => (
+              {products.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => {
-                    goToSlide(i, i > currentSlide ? "right" : "left");
-                    resetInterval();
+                    nextSlide();
+                    stopAutoScroll();
+                    startAutoScroll();
                   }}
                   aria-label={`Go to slide ${i + 1}`}
                   className={`transition-all duration-400 rounded-full ${
@@ -592,7 +493,7 @@ const ProductShowcase = () => {
 
           {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map((product, index) => (
+            {products.map((product, index) => (
               <div
                 key={product.id}
                 onMouseEnter={() => setHoveredProduct(product.id)}
@@ -608,7 +509,7 @@ const ProductShowcase = () => {
                 {/* Image */}
                 <div className="relative h-64 sm:h-72 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
                   <img
-                    src={product.image}
+                    src={product.images[0].url}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                   />
@@ -670,7 +571,7 @@ const ProductShowcase = () => {
                       {product.rating}
                     </span>
                     <span className="text-xs text-slate-500">
-                      ({product.reviews.toLocaleString()})
+                      ({product.reviews})
                     </span>
                   </div>
 
@@ -678,10 +579,10 @@ const ProductShowcase = () => {
                   <div className="flex items-center justify-between pt-1">
                     <div>
                       <p className="text-xs text-slate-400 line-through">
-                        ₹{product.originalPrice.toLocaleString()}
+                        ₹{product.originalPrice}
                       </p>
                       <p className="text-xl font-extrabold text-slate-900">
-                        ₹{product.price.toLocaleString()}
+                        ₹{product.price}
                       </p>
                     </div>
 

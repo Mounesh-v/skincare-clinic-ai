@@ -11,7 +11,7 @@ if (typeof window !== 'undefined' && window.location.hostname === '127.0.0.1') {
 }
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+  <>
     <App />
-  </StrictMode>,
+  </>,
 )
