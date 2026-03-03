@@ -53,7 +53,7 @@ export const getHealthStatus = async () => {
 };
 
 export const loginWithGoogle = async (credential) => {
-  const { data } = await apiClient.post("/api/auth/google", { credential });
+  const { data } = await apiClient.post("/auth/google", { credential });
   return data;
 };
 
