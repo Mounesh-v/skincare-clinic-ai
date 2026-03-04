@@ -59,7 +59,7 @@ const HowItWorks = () => {
       title: 'Smart Assessment', 
       desc: 'Answer personalized questions in just 3 minutes', 
       Icon: Microscope,
-      gradient: 'from-emerald-400 via-teal-400 to-cyan-500',
+      gradient: 'from-emerald-400 via-teal-900 to-cyan-500',
       iconBg: 'bg-gradient-to-br from-emerald-400/20 to-teal-500/20',
       iconColor: 'text-emerald-500',
       glowColor: 'shadow-emerald-500/50',
@@ -72,11 +72,11 @@ const HowItWorks = () => {
       title: 'AI-Powered Analysis', 
       desc: 'Get instant results using advanced algorithms', 
       Icon: Sparkles,
-      gradient: 'from-violet-400 via-purple-400 to-fuchsia-500',
+      gradient: 'from-emerald-400 via-teal-900 to-cyan-500',
       iconBg: 'bg-gradient-to-br from-violet-400/20 to-purple-500/20',
-      iconColor: 'text-violet-500',
-      glowColor: 'shadow-violet-500/50',
-      particleColor: 'bg-violet-400',
+     iconColor: 'text-emerald-500',
+      glowColor: 'shadow-emerald-500/50',
+      particleColor: 'bg-emerald-400',
       stat: '98%',
       statLabel: 'Accuracy'
     },
@@ -85,11 +85,11 @@ const HowItWorks = () => {
       title: 'Expert Consultation', 
       desc: 'Connect with certified dermatologists', 
       Icon: Stethoscope,
-      gradient: 'from-rose-400 via-pink-400 to-red-500',
+      gradient: 'from-emerald-400 via-teal-900 to-cyan-500',
       iconBg: 'bg-gradient-to-br from-rose-400/20 to-pink-500/20',
-      iconColor: 'text-rose-500',
-      glowColor: 'shadow-rose-500/50',
-      particleColor: 'bg-rose-400',
+     iconColor: 'text-emerald-500',
+      glowColor: 'shadow-emerald-500/50',
+      particleColor: 'bg-emerald-400',
       stat: '500+',
       statLabel: 'Experts'
     },
@@ -98,11 +98,11 @@ const HowItWorks = () => {
       title: 'Transform Your Skin', 
       desc: 'Follow your customized treatment plan', 
       Icon: Rocket,
-      gradient: 'from-amber-400 via-orange-400 to-red-500',
+      gradient: 'from-emerald-400 via-teal-900 to-cyan-500',
       iconBg: 'bg-gradient-to-br from-amber-400/20 to-orange-500/20',
-      iconColor: 'text-amber-500',
-      glowColor: 'shadow-amber-500/50',
-      particleColor: 'bg-amber-400',
+      iconColor: 'text-emerald-500',
+      glowColor: 'shadow-emerald-500/50',
+      particleColor: 'bg-emerald-400',
       stat: '2 weeks',
       statLabel: 'Results'
     },
@@ -201,7 +201,7 @@ const HowItWorks = () => {
               <span className="text-xs md:text-sm font-semibold text-emerald-500">✓ Clinically Proven</span>
             </div>
             <div className="px-3 md:px-4 py-1.5 md:py-2 bg-violet-500/10 backdrop-blur-xl border border-violet-500/30 rounded-full">
-              <span className="text-xs md:text-sm font-semibold text-violet-500">✓ AI-Powered</span>
+              <span className="text-xs md:text-sm font-semibold text-blue-700">✓ AI-Powered</span>
             </div>
             <div className="px-3 md:px-4 py-1.5 md:py-2 bg-rose-500/10 backdrop-blur-xl border border-rose-500/30 rounded-full">
               <span className="text-xs md:text-sm font-semibold text-rose-500">✓ Expert Approved</span>
@@ -240,7 +240,7 @@ const HowItWorks = () => {
                 
                 {/* Futuristic Card */}
                 <div className={`
-                  relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 
+                  relative bg-gradient-to-br from-slate-100/50 to-slate-100/50 
                   backdrop-blur-xl rounded-2xl md:rounded-3xl p-5 md:p-6 lg:p-8 
                   border transition-all duration-500 h-full
                   ${isActive 
@@ -395,14 +395,14 @@ const HowItWorks = () => {
               key={idx} 
               className="relative group"
             >
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl rounded-xl md:rounded-2xl p-6 md:p-8 border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20">
+              <div className="relative bg-gradient-to-br from-slate-100/50 to-slate-200/50 backdrop-blur-xl rounded-xl md:rounded-2xl p-6 md:p-8 border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20">
                 {/* Icon */}
                 <div className={`inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl bg-${stat.color}-500/10 border border-${stat.color}-500/30 mb-3 md:mb-4 group-hover:scale-110 transition-transform duration-300`}>
                   <stat.icon className={`w-6 h-6 md:w-8 md:h-8 text-${stat.color}-400`} />
                 </div>
                 
                 {/* Value with counter animation */}
-                <div className={`text-3xl md:text-4xl lg:text-5xl font-black bg-gradient-to-r from-white via-cyan-200 to-white bg-clip-text text-transparent mb-1 md:mb-2`}>
+                <div className={`text-3xl md:text-4xl lg:text-5xl font-black bg-gradient-to-r from-green-400 via-cyan-300 to-white bg-clip-text text-transparent mb-1 md:mb-2`}>
                   {stat.value}
                 </div>
                 
