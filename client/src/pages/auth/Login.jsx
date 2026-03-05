@@ -9,7 +9,7 @@ import api from "../../utils/api";
 // Import your background image
 import loginBg from "../../assets/Signup-bg.jpg";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5005";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5005").replace(/\/api\/?$/, "");
 
 const Login = () => {
   const navigate = useNavigate();
