@@ -6,7 +6,7 @@ import {
   ClipboardList,
   Package,
   ShoppingCart,
-  TextQuote,
+  Megaphone ,
   BarChart3,
   Settings,
   LogOut,
@@ -52,9 +52,9 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
       path: '/admin/orders',
     },
     {
-      name: 'Content',
-      icon: TextQuote,
-      path: '/admin/content',
+      name: 'Features',
+      icon: Megaphone ,
+      path: '/admin/Features',
     },
     {
       name: 'Analytics',
