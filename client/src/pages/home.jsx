@@ -11,7 +11,21 @@ import Card from '../components/common/Card';
 import HowItWorks from '../components/layout/HowItWorks';
 import WhyTakeTest from '../components/layout/WhyTaketest';
 import ProductShowcase from '../components/layout/ProductShowcase.jsx';
+import SpecialOffersBanner from '../components/layout/SpecialOffersBanner';
 
+function HomePage() {
+  return (
+    <div>
+      <HeroSection />
+      
+      {/* Add banner anywhere */}
+      <SpecialOffersBanner />
+      
+      <ProductShowcase />
+      <HowItWorks />
+    </div>
+  );
+}
 
 
 import heroImage from '../assets/heroImage.jpg';
@@ -259,6 +273,7 @@ const TrayaStyleHome = () => {
   </div>
 </section>
 
+    <SpecialOffersBanner />
 
    {/* Why Take Test Section */}
       <WhyTakeTest />
