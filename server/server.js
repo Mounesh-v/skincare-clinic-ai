@@ -10,6 +10,7 @@ import { rateLimit } from "express-rate-limit";
 import productRoutes from "./router/productRoutes.js";
 import orderRoutes from "./router/orderRoutes.js";
 import doctorRoutes from "./router/doctorRoutes.js";
+import featureRoutes from "./router/featureRoutes.js";
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use("/api/auth", authLimiter, authUser);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/doctors", doctorRoutes);
+app.use("/api/features", featureRoutes);
 
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => {

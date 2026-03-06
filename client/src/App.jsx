@@ -61,6 +61,7 @@ import DoctorList from "./pages/admin/Doctors/DoctorList";
 import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
+import FeatureList from "./pages/admin/Feature/FeatureList.jsx";
 
 /**
  * GuestRoute — redirects authenticated users away from auth pages (/login, /signup)
@@ -201,8 +202,8 @@ function App() {
 
             {/* Placeholder Routes */}
             <Route
-              path="content"
-              element={<ComingSoon title="Content Management" />}
+              path="Features"
+              element={<FeatureList />}
             />
             <Route
               path="analytics"
