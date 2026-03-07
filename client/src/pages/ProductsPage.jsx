@@ -23,7 +23,7 @@ import {
   ShoppingBag,
   Zap,
   BadgeCheck,
-  Clock
+  Clock,
 } from "lucide-react";
 import ProductCard from "../components/products/ProductCard";
 import Button from "../components/common/Button";
@@ -31,6 +31,7 @@ import productService from "../services/productService";
 import toast from "react-hot-toast";
 import AdBanner from "./AdBanner";
 import SlideSection from "../components/Slide/SlideSection";
+import ProductHero from "./ProductHero";
 
 /**
  * Enhanced Premium Products Page
@@ -55,14 +56,54 @@ const ProductsPage = () => {
 
   // Categories with icons and colors
   const PRODUCT_CATEGORIES = [
-    { value: "cleanser", label: "Cleansers", icon: "🧼", color: "from-blue-500 to-cyan-500" },
-    { value: "moisturizer", label: "Moisturizers", icon: "💧", color: "from-emerald-500 to-teal-500" },
-    { value: "serum", label: "Serums", icon: "✨", color: "from-violet-500 to-purple-500" },
-    { value: "sunscreen", label: "Sunscreens", icon: "☀️", color: "from-amber-500 to-orange-500" },
-    { value: "face_mask", label: "Face Masks", icon: "🎭", color: "from-pink-500 to-rose-500" },
-    { value: "toner", label: "Toners", icon: "🌸", color: "from-fuchsia-500 to-pink-500" },
-    { value: "eye_cream", label: "Eye Creams", icon: "👁️", color: "from-indigo-500 to-blue-500" },
-    { value: "treatment", label: "Treatments", icon: "💊", color: "from-red-500 to-pink-500" },
+    {
+      value: "cleanser",
+      label: "Cleansers",
+      icon: "🧼",
+      color: "from-blue-500 to-cyan-500",
+    },
+    {
+      value: "moisturizer",
+      label: "Moisturizers",
+      icon: "💧",
+      color: "from-emerald-500 to-teal-500",
+    },
+    {
+      value: "serum",
+      label: "Serums",
+      icon: "✨",
+      color: "from-violet-500 to-purple-500",
+    },
+    {
+      value: "sunscreen",
+      label: "Sunscreens",
+      icon: "☀️",
+      color: "from-amber-500 to-orange-500",
+    },
+    {
+      value: "face_mask",
+      label: "Face Masks",
+      icon: "🎭",
+      color: "from-pink-500 to-rose-500",
+    },
+    {
+      value: "toner",
+      label: "Toners",
+      icon: "🌸",
+      color: "from-fuchsia-500 to-pink-500",
+    },
+    {
+      value: "eye_cream",
+      label: "Eye Creams",
+      icon: "👁️",
+      color: "from-indigo-500 to-blue-500",
+    },
+    {
+      value: "treatment",
+      label: "Treatments",
+      icon: "💊",
+      color: "from-red-500 to-pink-500",
+    },
   ];
 
   const SKIN_TYPES = [
@@ -75,15 +116,24 @@ const ProductsPage = () => {
   ];
 
   const POPULAR_TAGS = [
-    "Anti-Aging", "Brightening", "Hydrating", "Acne Treatment",
-    "Natural", "Vegan", "Organic", "Fragrance-Free",
-    "Hypoallergenic", "Oil-Free", "Non-Comedogenic", "SPF"
+    "Anti-Aging",
+    "Brightening",
+    "Hydrating",
+    "Acne Treatment",
+    "Natural",
+    "Vegan",
+    "Organic",
+    "Fragrance-Free",
+    "Hypoallergenic",
+    "Oil-Free",
+    "Non-Comedogenic",
+    "SPF",
   ];
 
   // Fetch products
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory, selectedSkinType, priceRange, sortBy, searchTerm, selectedTags]);
+  }, []);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -95,13 +145,17 @@ const ProductsPage = () => {
         maxPrice: priceRange[1],
         sortBy: sortBy,
         search: searchTerm,
-        tags: selectedTags
+        tags: selectedTags,
       };
 
       const data = await productService.getAll(filters);
-      let productsArray = Array.isArray(data) ? data : 
-                         Array.isArray(data?.products) ? data.products :
-                         Array.isArray(data?.data) ? data.data : [];
+      let productsArray = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data?.data)
+            ? data.data
+            : [];
       setProducts(productsArray);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -114,7 +168,9 @@ const ProductsPage = () => {
 
   const handleAddToCart = (product) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const existingItem = cart.find(item => (item.id || item._id) === (product.id || product._id));
+    const existingItem = cart.find(
+      (item) => (item.id || item._id) === (product.id || product._id),
+    );
 
     if (existingItem) {
       existingItem.quantity += 1;
@@ -127,17 +183,21 @@ const ProductsPage = () => {
   };
 
   const toggleWishlist = (productId) => {
-    setWishlist(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
+    setWishlist((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId],
     );
-    toast.success(wishlist.includes(productId) ? "Removed from wishlist" : "Added to wishlist");
+    toast.success(
+      wishlist.includes(productId)
+        ? "Removed from wishlist"
+        : "Added to wishlist",
+    );
   };
 
   const toggleTag = (tag) => {
-    setSelectedTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -154,8 +214,59 @@ const ProductsPage = () => {
     selectedSkinType !== "all",
     priceRange[1] !== 5000,
     searchTerm !== "",
-    selectedTags.length > 0
+    selectedTags.length > 0,
   ].filter(Boolean).length;
+
+  const filteredProducts = products
+    .filter((product) => {
+      if (selectedCategory !== "all") {
+        const category = product.category?.toLowerCase().replace(/\s+/g, "_");
+
+        if (!category || !category.includes(selectedCategory)) {
+          return false;
+        }
+      }
+
+      if (selectedSkinType !== "all") {
+        const types = product.skinTypes || product.skinType || [];
+
+        if (
+          Array.isArray(types)
+            ? !types.map((t) => t.toLowerCase()).includes(selectedSkinType)
+            : types.toLowerCase() !== selectedSkinType
+        ) {
+          return false;
+        }
+      }
+
+      if (product.price < priceRange[0] || product.price > priceRange[1]) {
+        return false;
+      }
+
+      if (
+        searchTerm &&
+        !product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ) {
+        return false;
+      }
+
+      if (
+        selectedTags.length > 0 &&
+        !selectedTags.some((tag) => product.tags?.includes(tag))
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "price-asc") return a.price - b.price;
+      if (sortBy === "price-desc") return b.price - a.price;
+      if (sortBy === "rating") return b.rating - a.rating;
+      if (sortBy === "newest")
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -198,11 +309,16 @@ const ProductsPage = () => {
                 { icon: Shield, text: "100% Authentic" },
                 { icon: Truck, text: "Free Shipping" },
                 { icon: RotateCcw, text: "Easy Returns" },
-                { icon: BadgeCheck, text: "Verified Products" }
+                { icon: BadgeCheck, text: "Verified Products" },
               ].map((badge, i) => (
-                <div key={i} className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+                <div
+                  key={i}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20"
+                >
                   <badge.icon className="h-4 w-4 text-white" />
-                  <span className="text-sm font-semibold text-white">{badge.text}</span>
+                  <span className="text-sm font-semibold text-white">
+                    {badge.text}
+                  </span>
                 </div>
               ))}
             </div>
@@ -211,7 +327,11 @@ const ProductsPage = () => {
           {/* Stats */}
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
             {[
-              { icon: Package, label: "Products", value: products.length + "+" },
+              {
+                icon: Package,
+                label: "Products",
+                value: filteredProducts.length + "+",
+              },
               { icon: Star, label: "Avg Rating", value: "4.8" },
               { icon: Award, label: "Verified", value: "100%" },
               { icon: TrendingUp, label: "Satisfaction", value: "98%" },
@@ -221,7 +341,9 @@ const ProductsPage = () => {
                 className="group bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4 md:p-6 text-center hover:bg-white/20 transition-all hover:scale-105"
               >
                 <stat.icon className="mx-auto mb-2 h-8 w-8 text-white" />
-                <p className="text-2xl md:text-3xl font-black text-white mb-1">{stat.value}</p>
+                <p className="text-2xl md:text-3xl font-black text-white mb-1">
+                  {stat.value}
+                </p>
                 <p className="text-xs md:text-sm text-white/80">{stat.label}</p>
               </div>
             ))}
@@ -230,8 +352,7 @@ const ProductsPage = () => {
       </div>
 
       {/* SPECIAL SECTIONS */}
-      <AdBanner />
-      <SlideSection />
+      <ProductHero />
 
       {/* CATEGORY QUICK FILTERS */}
       <div className="border-y border-slate-200 bg-white sticky top-0 z-40 shadow-sm">
@@ -284,7 +405,9 @@ const ProductsPage = () => {
                   </span>
                 )}
               </div>
-              <ChevronDown className={`h-5 w-5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`h-5 w-5 transition-transform ${showFilters ? "rotate-180" : ""}`}
+              />
             </button>
 
             {/* Filters Panel */}
@@ -298,7 +421,9 @@ const ProductsPage = () => {
                         <SlidersHorizontal className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-black text-slate-900">Filters</h2>
+                        <h2 className="text-xl font-black text-slate-900">
+                          Filters
+                        </h2>
                         {activeFiltersCount > 0 && (
                           <span className="text-sm font-semibold text-emerald-600">
                             {activeFiltersCount} active
@@ -403,10 +528,12 @@ const ProductsPage = () => {
                         max="5000"
                         step="100"
                         value={priceRange[1]}
-                        onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
+                        onChange={(e) =>
+                          setPriceRange([0, parseInt(e.target.value)])
+                        }
                         className="w-full h-3 cursor-pointer appearance-none rounded-lg bg-slate-200"
                         style={{
-                          background: `linear-gradient(to right, #10b981 0%, #10b981 ${(priceRange[1]/5000)*100}%, #e2e8f0 ${(priceRange[1]/5000)*100}%, #e2e8f0 100%)`
+                          background: `linear-gradient(to right, #10b981 0%, #10b981 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 ${(priceRange[1] / 5000) * 100}%, #e2e8f0 100%)`,
                         }}
                       />
                       <div className="mt-4 flex justify-between">
@@ -437,7 +564,8 @@ const ProductsPage = () => {
                   <div>
                     <p className="text-sm text-slate-600">Showing</p>
                     <p className="text-lg font-black text-slate-900">
-                      {products.length} {products.length === 1 ? 'Product' : 'Products'}
+                      {filteredProducts.length}{" "}
+                      {filteredProducts.length === 1 ? "Product" : "Products"}
                     </p>
                   </div>
                 </div>
@@ -487,23 +615,44 @@ const ProductsPage = () => {
               {/* Active Filters Display */}
               {activeFiltersCount > 0 && (
                 <div className="mt-4 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-100">
-                  <span className="text-sm font-semibold text-slate-600">Active Filters:</span>
+                  <span className="text-sm font-semibold text-slate-600">
+                    Active Filters:
+                  </span>
                   {selectedCategory !== "all" && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      {PRODUCT_CATEGORIES.find(c => c.value === selectedCategory)?.label}
-                      <X onClick={() => setSelectedCategory("all")} className="h-3 w-3 cursor-pointer" />
+                      {
+                        PRODUCT_CATEGORIES.find(
+                          (c) => c.value === selectedCategory,
+                        )?.label
+                      }
+                      <X
+                        onClick={() => setSelectedCategory("all")}
+                        className="h-3 w-3 cursor-pointer"
+                      />
                     </span>
                   )}
                   {selectedSkinType !== "all" && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
-                      {SKIN_TYPES.find(s => s.value === selectedSkinType)?.label}
-                      <X onClick={() => setSelectedSkinType("all")} className="h-3 w-3 cursor-pointer" />
+                      {
+                        SKIN_TYPES.find((s) => s.value === selectedSkinType)
+                          ?.label
+                      }
+                      <X
+                        onClick={() => setSelectedSkinType("all")}
+                        className="h-3 w-3 cursor-pointer"
+                      />
                     </span>
                   )}
-                  {selectedTags.map(tag => (
-                    <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+                  {selectedTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700"
+                    >
                       {tag}
-                      <X onClick={() => toggleTag(tag)} className="h-3 w-3 cursor-pointer" />
+                      <X
+                        onClick={() => toggleTag(tag)}
+                        className="h-3 w-3 cursor-pointer"
+                      />
                     </span>
                   ))}
                 </div>
@@ -514,26 +663,36 @@ const ProductsPage = () => {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="h-16 w-16 animate-spin text-emerald-600 mb-4" />
-                <p className="text-lg font-semibold text-slate-600">Loading amazing products...</p>
+                <p className="text-lg font-semibold text-slate-600">
+                  Loading amazing products...
+                </p>
               </div>
             ) : (
               <>
                 {/* Products Grid */}
-                {Array.isArray(products) && products.length > 0 ? (
-                  <div className={`grid gap-6 ${
-                    viewMode === "grid"
-                      ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1"
-                  }`}>
-                    {products.map((product) => (
+                {Array.isArray(products) && filteredProducts.length > 0 ? (
+                  <div
+                    className={`grid gap-6 ${
+                      viewMode === "grid"
+                        ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {filteredProducts.map((product) => (
                       <ProductCard
                         key={product.id || product._id}
                         product={product}
                         onAddToCart={handleAddToCart}
-                        onBuyNow={() => navigate(`/products/${product.id || product._id}`)}
+                        onBuyNow={() =>
+                          navigate(`/products/${product.id || product._id}`)
+                        }
                         viewMode={viewMode}
-                        onToggleWishlist={() => toggleWishlist(product.id || product._id)}
-                        isWishlisted={wishlist.includes(product.id || product._id)}
+                        onToggleWishlist={() =>
+                          toggleWishlist(product.id || product._id)
+                        }
+                        isWishlisted={wishlist.includes(
+                          product.id || product._id,
+                        )}
                       />
                     ))}
                   </div>
@@ -546,9 +705,13 @@ const ProductsPage = () => {
                       No products found
                     </h3>
                     <p className="mb-8 text-lg text-slate-600">
-                      Try adjusting your filters or search term to find what you're looking for
+                      Try adjusting your filters or search term to find what
+                      you're looking for
                     </p>
-                    <Button onClick={clearFilters} className="mx-auto shadow-xl">
+                    <Button
+                      onClick={clearFilters}
+                      className="mx-auto shadow-xl"
+                    >
                       <X className="h-5 w-5 mr-2" />
                       Clear All Filters
                     </Button>
@@ -563,20 +726,39 @@ const ProductsPage = () => {
       {/* Animations */}
       <style jsx>{`
         @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(20px); }
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-20px);
+          }
         }
 
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-float-delayed { animation: float-delayed 8s ease-in-out infinite; }
-        
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes float-delayed {
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(20px);
+          }
+        }
+
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        .animate-float-delayed {
+          animation: float-delayed 8s ease-in-out infinite;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
     </div>
   );
