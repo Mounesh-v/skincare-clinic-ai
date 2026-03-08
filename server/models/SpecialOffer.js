@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import  mongoose from 'mongoose';
 
 /**
  * Special Offer Schema
@@ -143,4 +143,4 @@ specialOfferSchema.set('toObject', { virtuals: true });
 
 const SpecialOffer = mongoose.model('SpecialOffer', specialOfferSchema);
 
-module.exports = SpecialOffer;
+export default SpecialOffer;

@@ -2,7 +2,7 @@ import express from 'express';
 import { getActiveOffers, getAllOffers, getOffer, createOffer,
          updateOffer, deleteOffer, toggleOfferStatus,
          trackView, trackClick, getAnalytics } from '../controllers/specialOfferController.js';
-import { protect, authorize } from '../middleware/auth.js';
+import { protect, authorize } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
@@ -28,4 +28,4 @@ router.put('/:id', updateOffer);                     // Update offer
 router.delete('/:id', deleteOffer);                  // Delete offer
 router.patch('/:id/toggle', toggleOfferStatus);      // Toggle active status
 
-module.exports = router;
+export default router;

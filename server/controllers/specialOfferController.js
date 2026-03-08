@@ -1,5 +1,5 @@
-const SpecialOffer = require('../models/SpecialOffer');
-const Product = require('../models/Product');
+import SpecialOffer from "../models/SpecialOffer.js";
+import Product from "../models/Product.js";
 
 /**
  * Special Offer Controller
@@ -9,27 +9,35 @@ const Product = require('../models/Product');
 // @desc    Get all active special offers for banner
 // @route   GET /api/special-offers
 // @access  Public
-exports.getActiveOffers = async (req, res) => {
+export const getActiveOffers = async (req, res) => {
   try {
     const offers = await SpecialOffer.find({
       isActive: true,
-      expiresAt: { $gt: new Date() }
+      expiresAt: { $gt: new Date() },
     })
-    .populate('productId', 'name description images price originalPrice category skinType')
-    .sort({ position: 1 })
-    .limit(5)
-    .lean();
+      .populate(
+        "productId",
+        "name description images price originalPrice category skinType",
+      )
+      .sort({ position: 1 })
+      .limit(5)
+      .lean();
 
     // Format offers for frontend
-    const formattedOffers = offers.map(offer => {
+    const formattedOffers = offers.map((offer) => {
       const product = offer.productId;
-      
+
       return {
         id: offer._id,
         productId: product._id,
         name: product.name,
-        shortDesc: product.description ? product.description.substring(0, 50) : '',
-        image: product.images && product.images[0] ? product.images[0] : '/api/placeholder/120/120',
+        shortDesc: product.description
+          ? product.description.substring(0, 50)
+          : "",
+        image:
+          product.images && product.images[0]
+            ? product.images[0]
+            : "/api/placeholder/120/120",
         originalPrice: product.originalPrice || product.price,
         offerPrice: offer.offerPrice,
         discount: offer.discount,
@@ -38,22 +46,21 @@ exports.getActiveOffers = async (req, res) => {
         timeLeft: calculateTimeLeft(offer.expiresAt),
         expiresAt: offer.expiresAt,
         views: offer.views,
-        clicks: offer.clicks
+        clicks: offer.clicks,
       };
     });
 
     res.status(200).json({
       success: true,
       count: formattedOffers.length,
-      data: formattedOffers
+      data: formattedOffers,
     });
-
   } catch (error) {
-    console.error('Error fetching active offers:', error);
+    console.error("Error fetching active offers:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch special offers',
-      error: error.message
+      message: "Failed to fetch special offers",
+      error: error.message,
     });
   }
 };
@@ -61,28 +68,28 @@ exports.getActiveOffers = async (req, res) => {
 // @desc    Get all offers (Admin)
 // @route   GET /api/special-offers/admin
 // @access  Private/Admin
-exports.getAllOffers = async (req, res) => {
+export const getAllOffers = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
-    
+
     let query = {};
-    
+
     // Filter by status
-    if (status === 'active') {
+    if (status === "active") {
       query.isActive = true;
       query.expiresAt = { $gt: new Date() };
-    } else if (status === 'expired') {
+    } else if (status === "expired") {
       query.expiresAt = { $lte: new Date() };
-    } else if (status === 'inactive') {
+    } else if (status === "inactive") {
       query.isActive = false;
     }
 
     const skip = (page - 1) * limit;
 
     const offers = await SpecialOffer.find(query)
-      .populate('productId', 'name images price')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email')
+      .populate("productId", "name images price")
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email")
       .sort({ position: 1, createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -95,15 +102,14 @@ exports.getAllOffers = async (req, res) => {
       total,
       page: parseInt(page),
       pages: Math.ceil(total / limit),
-      data: offers
+      data: offers,
     });
-
   } catch (error) {
-    console.error('Error fetching all offers:', error);
+    console.error("Error fetching all offers:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch offers',
-      error: error.message
+      message: "Failed to fetch offers",
+      error: error.message,
     });
   }
 };
@@ -111,31 +117,30 @@ exports.getAllOffers = async (req, res) => {
 // @desc    Get single offer
 // @route   GET /api/special-offers/:id
 // @access  Private/Admin
-exports.getOffer = async (req, res) => {
+export const getOffer = async (req, res) => {
   try {
     const offer = await SpecialOffer.findById(req.params.id)
-      .populate('productId')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email');
+      .populate("productId")
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email");
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: offer
+      data: offer,
     });
-
   } catch (error) {
-    console.error('Error fetching offer:', error);
+    console.error("Error fetching offer:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch offer',
-      error: error.message
+      message: "Failed to fetch offer",
+      error: error.message,
     });
   }
 };
@@ -143,7 +148,7 @@ exports.getOffer = async (req, res) => {
 // @desc    Create new special offer
 // @route   POST /api/special-offers
 // @access  Private/Admin
-exports.createOffer = async (req, res) => {
+export const createOffer = async (req, res) => {
   try {
     const {
       productId,
@@ -153,7 +158,7 @@ exports.createOffer = async (req, res) => {
       offerPrice,
       expiresAt,
       position,
-      isActive
+      isActive,
     } = req.body;
 
     // Validate product exists
@@ -161,16 +166,19 @@ exports.createOffer = async (req, res) => {
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
     // Check if position is already taken
-    const existingPosition = await SpecialOffer.findOne({ position, isActive: true });
+    const existingPosition = await SpecialOffer.findOne({
+      position,
+      isActive: true,
+    });
     if (existingPosition) {
       return res.status(400).json({
         success: false,
-        message: `Position ${position} is already occupied. Please choose a different position (1-5).`
+        message: `Position ${position} is already occupied. Please choose a different position (1-5).`,
       });
     }
 
@@ -178,7 +186,7 @@ exports.createOffer = async (req, res) => {
     if (offerPrice >= product.price) {
       return res.status(400).json({
         success: false,
-        message: 'Offer price must be less than original product price'
+        message: "Offer price must be less than original product price",
       });
     }
 
@@ -192,33 +200,33 @@ exports.createOffer = async (req, res) => {
       expiresAt,
       position,
       isActive: isActive !== undefined ? isActive : true,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
 
     // Populate product details
-    await offer.populate('productId', 'name images price');
+    await offer.populate("productId", "name images price");
 
     res.status(201).json({
       success: true,
-      message: 'Special offer created successfully',
-      data: offer
+      message: "Special offer created successfully",
+      data: offer,
     });
-
   } catch (error) {
-    console.error('Error creating offer:', error);
-    
+    console.error("Error creating offer:", error);
+
     // Handle duplicate position error
     if (error.code === 11000 && error.keyPattern.position) {
       return res.status(400).json({
         success: false,
-        message: 'Position is already taken. Please choose a different position.'
+        message:
+          "Position is already taken. Please choose a different position.",
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Failed to create offer',
-      error: error.message
+      message: "Failed to create offer",
+      error: error.message,
     });
   }
 };
@@ -226,7 +234,7 @@ exports.createOffer = async (req, res) => {
 // @desc    Update special offer
 // @route   PUT /api/special-offers/:id
 // @access  Private/Admin
-exports.updateOffer = async (req, res) => {
+export const updateOffer = async (req, res) => {
   try {
     const {
       productId,
@@ -236,7 +244,7 @@ exports.updateOffer = async (req, res) => {
       offerPrice,
       expiresAt,
       position,
-      isActive
+      isActive,
     } = req.body;
 
     let offer = await SpecialOffer.findById(req.params.id);
@@ -244,22 +252,22 @@ exports.updateOffer = async (req, res) => {
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
     // If position is being changed, check if new position is available
     if (position && position !== offer.position) {
-      const existingPosition = await SpecialOffer.findOne({ 
-        position, 
+      const existingPosition = await SpecialOffer.findOne({
+        position,
         isActive: true,
-        _id: { $ne: req.params.id }
+        _id: { $ne: req.params.id },
       });
-      
+
       if (existingPosition) {
         return res.status(400).json({
           success: false,
-          message: `Position ${position} is already occupied.`
+          message: `Position ${position} is already occupied.`,
         });
       }
     }
@@ -270,7 +278,7 @@ exports.updateOffer = async (req, res) => {
       if (!product) {
         return res.status(404).json({
           success: false,
-          message: 'Product not found'
+          message: "Product not found",
         });
       }
     }
@@ -278,27 +286,25 @@ exports.updateOffer = async (req, res) => {
     // Update fields
     const updateData = {
       ...req.body,
-      updatedBy: req.user._id
+      updatedBy: req.user._id,
     };
 
-    offer = await SpecialOffer.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('productId', 'name images price');
+    offer = await SpecialOffer.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    }).populate("productId", "name images price");
 
     res.status(200).json({
       success: true,
-      message: 'Offer updated successfully',
-      data: offer
+      message: "Offer updated successfully",
+      data: offer,
     });
-
   } catch (error) {
-    console.error('Error updating offer:', error);
+    console.error("Error updating offer:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update offer',
-      error: error.message
+      message: "Failed to update offer",
+      error: error.message,
     });
   }
 };
@@ -306,14 +312,14 @@ exports.updateOffer = async (req, res) => {
 // @desc    Delete special offer
 // @route   DELETE /api/special-offers/:id
 // @access  Private/Admin
-exports.deleteOffer = async (req, res) => {
+export const deleteOffer = async (req, res) => {
   try {
     const offer = await SpecialOffer.findById(req.params.id);
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
@@ -321,16 +327,15 @@ exports.deleteOffer = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Offer deleted successfully',
-      data: {}
+      message: "Offer deleted successfully",
+      data: {},
     });
-
   } catch (error) {
-    console.error('Error deleting offer:', error);
+    console.error("Error deleting offer:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to delete offer',
-      error: error.message
+      message: "Failed to delete offer",
+      error: error.message,
     });
   }
 };
@@ -338,14 +343,14 @@ exports.deleteOffer = async (req, res) => {
 // @desc    Toggle offer active status
 // @route   PATCH /api/special-offers/:id/toggle
 // @access  Private/Admin
-exports.toggleOfferStatus = async (req, res) => {
+export const toggleOfferStatus = async (req, res) => {
   try {
     const offer = await SpecialOffer.findById(req.params.id);
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
@@ -355,16 +360,15 @@ exports.toggleOfferStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Offer ${offer.isActive ? 'activated' : 'deactivated'} successfully`,
-      data: offer
+      message: `Offer ${offer.isActive ? "activated" : "deactivated"} successfully`,
+      data: offer,
     });
-
   } catch (error) {
-    console.error('Error toggling offer status:', error);
+    console.error("Error toggling offer status:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to toggle offer status',
-      error: error.message
+      message: "Failed to toggle offer status",
+      error: error.message,
     });
   }
 };
@@ -372,32 +376,31 @@ exports.toggleOfferStatus = async (req, res) => {
 // @desc    Track offer view
 // @route   POST /api/special-offers/:id/view
 // @access  Public
-exports.trackView = async (req, res) => {
+export const trackView = async (req, res) => {
   try {
     const offer = await SpecialOffer.findByIdAndUpdate(
       req.params.id,
       { $inc: { views: 1 } },
-      { new: true }
+      { new: true },
     );
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: { views: offer.views }
+      data: { views: offer.views },
     });
-
   } catch (error) {
-    console.error('Error tracking view:', error);
+    console.error("Error tracking view:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to track view',
-      error: error.message
+      message: "Failed to track view",
+      error: error.message,
     });
   }
 };
@@ -405,32 +408,31 @@ exports.trackView = async (req, res) => {
 // @desc    Track offer click
 // @route   POST /api/special-offers/:id/click
 // @access  Public
-exports.trackClick = async (req, res) => {
+export const trackClick = async (req, res) => {
   try {
     const offer = await SpecialOffer.findByIdAndUpdate(
       req.params.id,
       { $inc: { clicks: 1 } },
-      { new: true }
+      { new: true },
     );
 
     if (!offer) {
       return res.status(404).json({
         success: false,
-        message: 'Offer not found'
+        message: "Offer not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: { clicks: offer.clicks }
+      data: { clicks: offer.clicks },
     });
-
   } catch (error) {
-    console.error('Error tracking click:', error);
+    console.error("Error tracking click:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to track click',
-      error: error.message
+      message: "Failed to track click",
+      error: error.message,
     });
   }
 };
@@ -438,36 +440,43 @@ exports.trackClick = async (req, res) => {
 // @desc    Get offer analytics
 // @route   GET /api/special-offers/analytics
 // @access  Private/Admin
-exports.getAnalytics = async (req, res) => {
+export const getAnalytics = async (req, res) => {
   try {
     const activeOffers = await SpecialOffer.find({
       isActive: true,
-      expiresAt: { $gt: new Date() }
-    }).populate('productId', 'name');
+      expiresAt: { $gt: new Date() },
+    }).populate("productId", "name");
 
     const expiredOffers = await SpecialOffer.countDocuments({
-      expiresAt: { $lte: new Date() }
+      expiresAt: { $lte: new Date() },
     });
 
     const totalViews = await SpecialOffer.aggregate([
-      { $group: { _id: null, total: { $sum: '$views' } } }
+      { $group: { _id: null, total: { $sum: "$views" } } },
     ]);
 
     const totalClicks = await SpecialOffer.aggregate([
-      { $group: { _id: null, total: { $sum: '$clicks' } } }
+      { $group: { _id: null, total: { $sum: "$clicks" } } },
     ]);
 
     const totalConversions = await SpecialOffer.aggregate([
-      { $group: { _id: null, total: { $sum: '$conversions' } } }
+      { $group: { _id: null, total: { $sum: "$conversions" } } },
     ]);
 
-    const clickThroughRate = totalViews[0]?.total > 0 
-      ? ((totalClicks[0]?.total || 0) / totalViews[0].total * 100).toFixed(2)
-      : 0;
+    const clickThroughRate =
+      totalViews[0]?.total > 0
+        ? (((totalClicks[0]?.total || 0) / totalViews[0].total) * 100).toFixed(
+            2,
+          )
+        : 0;
 
-    const conversionRate = totalClicks[0]?.total > 0
-      ? ((totalConversions[0]?.total || 0) / totalClicks[0].total * 100).toFixed(2)
-      : 0;
+    const conversionRate =
+      totalClicks[0]?.total > 0
+        ? (
+            ((totalConversions[0]?.total || 0) / totalClicks[0].total) *
+            100
+          ).toFixed(2)
+        : 0;
 
     res.status(200).json({
       success: true,
@@ -479,16 +488,15 @@ exports.getAnalytics = async (req, res) => {
         totalConversions: totalConversions[0]?.total || 0,
         clickThroughRate: `${clickThroughRate}%`,
         conversionRate: `${conversionRate}%`,
-        offers: activeOffers
-      }
+        offers: activeOffers,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching analytics:', error);
+    console.error("Error fetching analytics:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch analytics',
-      error: error.message
+      message: "Failed to fetch analytics",
+      error: error.message,
     });
   }
 };
@@ -497,16 +505,27 @@ exports.getAnalytics = async (req, res) => {
 function calculateTimeLeft(expiresAt) {
   const now = new Date();
   const diff = expiresAt - now;
-  
-  if (diff <= 0) return 'Expired';
-  
+
+  if (diff <= 0) return "Expired";
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
 }
 
-module.exports = exports;
+export default {
+  getActiveOffers,
+  getAllOffers,
+  getOffer,
+  createOffer,
+  updateOffer,
+  deleteOffer,
+  toggleOfferStatus,
+  trackView,
+  trackClick,
+  getAnalytics,
+};
