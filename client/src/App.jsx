@@ -35,9 +35,13 @@ import About from './pages/about'
 import Story from './pages/story.jsx'
 import UserProfile from './pages/UserProfile.jsx'
 
+
+
+
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
 import Dashboard from "./pages/admin/Dashboard";
+import AdminSpecialOffers from './pages/admin/Feature/AdminSpecialOffers'
 
 // Admin - Users
 import UserList from "./pages/admin/Users/UserList";
@@ -193,6 +197,7 @@ function App() {
 
             {/* Assessments Management */}
             <Route path="assessments" element={<AssessmentList />} />
+            <Route path="/admin/special-offers" element={<AdminSpecialOffers />} />
 
             {/* Doctors Management */}
             <Route path="doctors" element={<DoctorList />} />

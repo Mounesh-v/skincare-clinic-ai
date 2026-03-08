@@ -11,7 +11,7 @@ import Card from '../components/common/Card';
 import HowItWorks from '../components/layout/HowItWorks';
 import WhyTakeTest from '../components/layout/WhyTaketest';
 import ProductShowcase from '../components/layout/ProductShowcase.jsx';
-import SpecialOffersBanner from '../components/layout/SpecialOffersBanner';
+import SpecialOffersBanner from '../components/layout/SpecialOffersBanner.jsx';
 
 function HomePage() {
   return (

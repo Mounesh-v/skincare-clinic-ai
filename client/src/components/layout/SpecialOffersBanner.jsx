@@ -7,83 +7,90 @@ import {
   ArrowRight,
   Clock,
   Zap,
-  TrendingUp
+  TrendingUp,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import specialOfferService from '../../services/specialOfferService.js';
+import toast from 'react-hot-toast';
 
 /**
- * Special Offers Animated Banner
- * Continuously scrolling product offers with emerald theme
+ * Special Offers Animated Banner - Connected to Backend
+ * Fetches live data from admin-managed special offers
  */
 const SpecialOffersBanner = () => {
   const navigate = useNavigate();
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [trackedViews, setTrackedViews] = useState(new Set());
 
-  // Sample special offer products - Replace with real data
-  const specialOffers = [
-    {
-      id: 1,
-      name: "Vitamin C Glow Serum",
-      shortDesc: "Brighten & illuminate your skin",
-      image: "/api/placeholder/120/120",
-      originalPrice: 2499,
-      offerPrice: 1749,
-      discount: "30%",
-      badge: "FLASH SALE",
-      badgeColor: "bg-red-500",
-      timeLeft: "2h 15m"
-    },
-    {
-      id: 2,
-      name: "Hydrating Night Cream",
-      shortDesc: "Deep moisture overnight repair",
-      image: "/api/placeholder/120/120",
-      originalPrice: 1899,
-      offerPrice: 1329,
-      discount: "30%",
-      badge: "BEST SELLER",
-      badgeColor: "bg-emerald-500",
-      timeLeft: "4h 30m"
-    },
-    {
-      id: 3,
-      name: "Anti-Aging Eye Cream",
-      shortDesc: "Reduce fine lines & dark circles",
-      image: "/api/placeholder/120/120",
-      originalPrice: 1599,
-      offerPrice: 1119,
-      discount: "30%",
-      badge: "LIMITED",
-      badgeColor: "bg-amber-500",
-      timeLeft: "1h 45m"
-    },
-    {
-      id: 4,
-      name: "Sunscreen SPF 50+",
-      shortDesc: "Complete UV protection",
-      image: "/api/placeholder/120/120",
-      originalPrice: 1299,
-      offerPrice: 909,
-      discount: "30%",
-      badge: "HOT DEAL",
-      badgeColor: "bg-orange-500",
-      timeLeft: "5h 20m"
-    },
-    {
-      id: 5,
-      name: "Detox Clay Mask",
-      shortDesc: "Deep cleanse & purify pores",
-      image: "/api/placeholder/120/120",
-      originalPrice: 1099,
-      offerPrice: 769,
-      discount: "30%",
-      badge: "TRENDING",
-      badgeColor: "bg-violet-500",
-      timeLeft: "3h 10m"
+  // Fetch offers on mount
+  useEffect(() => {
+    fetchOffers();
+  }, []);
+
+  // Track views when offers are loaded
+  useEffect(() => {
+    if (offers.length > 0) {
+      offers.forEach(offer => {
+        if (!trackedViews.has(offer.id)) {
+          specialOfferService.trackView(offer.id);
+          setTrackedViews(prev => new Set([...prev, offer.id]));
+        }
+      });
     }
-  ];
+  }, [offers]);
 
-  // Duplicate products for seamless infinite scroll
-  const products = [...specialOffers, ...specialOffers, ...specialOffers];
+  const fetchOffers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await specialOfferService.getActiveOffers();
+      
+      if (response.success && response.data) {
+        setOffers(response.data);
+      } else {
+        setOffers([]);
+      }
+    } catch (err) {
+      console.error('Error fetching offers:', err);
+      setError('Failed to load special offers');
+      setOffers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOfferClick = async (offer) => {
+    // Track click
+    await specialOfferService.trackClick(offer.id);
+    
+    // Navigate to product
+    navigate(`/products/${offer.productId}`);
+  };
+
+  // If loading, show skeleton
+  if (loading) {
+    return (
+      <div className="relative py-8 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600">
+        <div className="container-custom">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 text-white animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If error or no offers, don't show banner
+  if (error || !offers || offers.length === 0) {
+    return null;
+  }
+
+  // Duplicate offers for seamless infinite scroll
+  const displayOffers = [...offers, ...offers, ...offers];
 
   return (
     <div className="relative py-6 md:py-8 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 overflow-hidden">
@@ -130,17 +137,17 @@ const SpecialOffersBanner = () => {
 
           {/* Scrolling Track */}
           <div className={`flex gap-4 md:gap-6 ${isPaused ? '' : 'animate-scroll'}`}>
-            {products.map((product, index) => (
+            {displayOffers.map((offer, index) => (
               <div
-                key={`${product.id}-${index}`}
-                onClick={() => navigate(`/products/${product.id}`)}
+                key={`${offer.id}-${index}`}
+                onClick={() => handleOfferClick(offer)}
                 className="group relative flex-shrink-0 w-[280px] md:w-[320px] bg-white rounded-2xl shadow-2xl hover:shadow-emerald-500/50 transition-all duration-500 cursor-pointer hover:scale-105 overflow-hidden"
               >
                 {/* Discount Badge - Top Right */}
                 <div className="absolute top-3 right-3 z-20">
                   <div className="relative">
                     <div className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full shadow-lg">
-                      <span className="text-white font-black text-sm">-{product.discount} OFF</span>
+                      <span className="text-white font-black text-sm">-{offer.discount} OFF</span>
                     </div>
                     {/* Pulse effect */}
                     <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-75"></div>
@@ -148,8 +155,8 @@ const SpecialOffersBanner = () => {
                 </div>
 
                 {/* Status Badge - Top Left */}
-                <div className={`absolute top-3 left-3 z-20 ${product.badgeColor} px-3 py-1 rounded-full shadow-lg`}>
-                  <span className="text-white font-bold text-xs tracking-wide">{product.badge}</span>
+                <div className={`absolute top-3 left-3 z-20 ${offer.badgeColor} px-3 py-1 rounded-full shadow-lg`}>
+                  <span className="text-white font-bold text-xs tracking-wide">{offer.badge}</span>
                 </div>
 
                 <div className="flex items-center gap-4 p-4">
@@ -157,9 +164,12 @@ const SpecialOffersBanner = () => {
                   <div className="relative flex-shrink-0">
                     <div className="w-24 h-24 md:w-28 md:h-28 rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 shadow-lg group-hover:scale-110 transition-transform duration-500">
                       <img
-                        src={product.image}
-                        alt={product.name}
+                        src={offer.image}
+                        alt={offer.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/api/placeholder/120/120';
+                        }}
                       />
                     </div>
                     {/* Glow effect */}
@@ -170,29 +180,29 @@ const SpecialOffersBanner = () => {
                   <div className="flex-1 min-w-0">
                     {/* Product Name */}
                     <h3 className="font-bold text-slate-900 text-sm md:text-base mb-1 truncate group-hover:text-emerald-600 transition-colors">
-                      {product.name}
+                      {offer.name}
                     </h3>
 
                     {/* Short Description */}
                     <p className="text-xs text-slate-600 mb-2 line-clamp-1">
-                      {product.shortDesc}
+                      {offer.shortDesc}
                     </p>
 
                     {/* Timer */}
                     <div className="flex items-center gap-1.5 mb-2">
                       <Clock className="w-3 h-3 text-red-500 animate-pulse" />
                       <span className="text-xs font-semibold text-red-600">
-                        Ends in: {product.timeLeft}
+                        Ends in: {offer.timeLeft}
                       </span>
                     </div>
 
                     {/* Pricing */}
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs text-slate-400 line-through">
-                        ₹{product.originalPrice}
+                        ₹{offer.originalPrice}
                       </span>
                       <span className="text-lg md:text-xl font-black text-emerald-600">
-                        ₹{product.offerPrice}
+                        ₹{offer.offerPrice}
                       </span>
                     </div>
 
