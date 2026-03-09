@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  ShoppingCart, Heart, Star, Eye, TrendingUp,
-  Truck, Shield, ArrowRight
-} from 'lucide-react';
-import Button from '../common/Button';
+  ShoppingCart,
+  Heart,
+  Star,
+  Eye,
+  TrendingUp,
+  Truck,
+  Shield,
+  ArrowRight,
+} from "lucide-react";
+import Button from "../common/Button";
 
 const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
   const navigate = useNavigate();
@@ -30,7 +36,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
   const handleBuyNow = (e) => {
     e.stopPropagation();
     handleAddToCart(e);
-    navigate('/checkout');
+    navigate("/checkout");
   };
 
   const handleCardClick = () => {
@@ -39,7 +45,9 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
 
   // Calculate discount percentage
   const discountPercentage = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    ? Math.round(
+        ((product.originalPrice - product.price) / product.originalPrice) * 100,
+      )
     : 0;
 
   return (
@@ -53,7 +61,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
       <div className="relative aspect-square overflow-hidden bg-slate-50">
         {/* Product Image */}
         <img
-          src={product.images?.[0]?.url || '/placeholder-product.jpg'}
+          src={product.images?.[0]?.url || "/placeholder-product.jpg"}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -65,12 +73,12 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
               {discountPercentage}% OFF
             </div>
           )}
-          {product.tags?.includes('bestseller') && (
+          {product.tags?.includes("bestseller") && (
             <div className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full shadow-lg">
               BESTSELLER
             </div>
           )}
-          {product.tags?.includes('new') && (
+          {product.tags?.includes("new") && (
             <div className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full shadow-lg">
               NEW
             </div>
@@ -83,8 +91,9 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
         >
           <Heart
-            className={`h-5 w-5 transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'
-              }`}
+            className={`h-5 w-5 transition-colors ${
+              isFavorite ? "fill-red-500 text-red-500" : "text-slate-600"
+            }`}
           />
         </button>
 
@@ -107,10 +116,13 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           <div className="absolute bottom-3 left-3 px-3 py-1 bg-slate-900 text-white text-xs font-semibold rounded-full">
             Out of Stock
           </div>
-        ) : product.stock > 0 && product.stock < 20 && (
-          <div className="absolute bottom-3 left-3 px-3 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full animate-pulse">
-            Only {product.stock} left
-          </div>
+        ) : (
+          product.stock > 0 &&
+          product.stock < 20 && (
+            <div className="absolute bottom-3 left-3 px-3 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full animate-pulse">
+              Only {product.stock} left
+            </div>
+          )
         )}
       </div>
 
@@ -124,8 +136,12 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
           {product.ratings?.average > 0 && (
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span className="text-sm font-semibold text-slate-900">{product.ratings.average}</span>
-              <span className="text-xs text-slate-500">({product.ratings.count})</span>
+              <span className="text-sm font-semibold text-slate-900">
+                {product.ratings.average}
+              </span>
+              <span className="text-xs text-slate-500">
+                ({product.ratings.count})
+              </span>
             </div>
           )}
         </div>
@@ -159,18 +175,28 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
         {/* Price Section */}
         <div className="flex items-baseline gap-2 pt-2">
           <span className="text-2xl font-bold text-primary-600">
-            ₹{product.price.toLocaleString('en-IN')}
+            ₹{product.price.toLocaleString("en-IN")}
           </span>
           {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-sm text-slate-400 line-through">
-              ₹{product.originalPrice.toLocaleString('en-IN')}
+              ₹{product.originalPrice.toLocaleString("en-IN")}
             </span>
           )}
+          <div className="hidden lg:block ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBuyNow}
+              disabled={!product.inStock}
+              className="px-2 py-0 rounded-full flex items-center gap-1"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-2">
-          <Button
+        {/* <div className="flex gap-2 pt-2"> */}
+        {/* <Button
             variant="primary"
             size="sm"
             fullWidth
@@ -179,18 +205,9 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
             leftIcon={<ShoppingCart className="h-4 w-4" />}
           >
             Add to Cart
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleBuyNow}
-            disabled={!product.inStock}
-            className="px-4"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
+          </Button> */}
 
+        {/* </div> */}
         {/* Trust Badges */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <div className="flex items-center gap-1 text-xs text-slate-600">
