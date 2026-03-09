@@ -127,14 +127,13 @@ specialOfferSchema.statics.getActiveOffers = async function() {
 };
 
 // Auto-deactivate expired offers (runs before find queries)
-specialOfferSchema.pre(/^find/, function(next) {
+specialOfferSchema.pre(/^find/, function() {
   this.find({ 
     $or: [
       { expiresAt: { $gt: new Date() } },
       { isActive: false }
     ]
   });
-  next();
 });
 
 // Set virtuals to JSON
