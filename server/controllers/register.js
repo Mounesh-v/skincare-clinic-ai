@@ -1,6 +1,8 @@
 import Register from "../models/Register.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import Assessment from "../models/Assessment.js";
+import Order from "../models/Order.js";
 
 // CREATE USER
 export const createUser = async (req, res) => {
@@ -44,7 +46,7 @@ export const createUser = async (req, res) => {
       name,
       email,
       password: hashPassword,
-      agreeToTerms
+      agreeToTerms,
     });
 
     return res.status(201).json({
@@ -54,11 +56,11 @@ export const createUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        agreeToTerms: user.agreeToTerms
+        agreeToTerms: user.agreeToTerms,
       },
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error("Signup error:", error);
     if (error.code === 11000) {
       // Duplicate key - email already exists
       return res.status(400).json({
@@ -84,11 +86,9 @@ export const loginUser = async (req, res) => {
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
-      const token = jwt.sign(
-        { role: "admin" },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
+      const token = jwt.sign({ role: "admin" }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
 
       return res.json({
         message: "Admin login successful",
@@ -126,7 +126,7 @@ export const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: "user" },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     res.json({
@@ -139,8 +139,93 @@ export const loginUser = async (req, res) => {
         role: "user",
       },
     });
-
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const user = await Register.find()
+      .select("-password -confirmPassword")
+      .populate("assessments")
+      .populate("orders")
+      .lean();
+
+    const formattedUsers = user.map((u) => ({
+      ...u,
+      assessments: u.assessments ? u.assessments.length : 0,
+      orders: u.orders ? u.orders.length : 0,
+    }));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found",
+      });
+    }
+    res.json({
+      success: true,
+      data: formattedUsers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const getUserById = async (req, res) => {
+  try {
+    const user = await Register.findById(req.params.id).select(
+      "-password -confirmPassword",
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    const updatedUser = await Register.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true },
+    );
+
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateUserStatus = async (req, res) => {
+  try {
+    const user = await Register.findById(req.params.id);
+
+    user.status = user.status === "Active" ? "Banned" : "Active";
+
+    await user.save();
+
+    res.json({ message: "Status updated", user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    await Register.findByIdAndDelete(req.params.id);
+
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

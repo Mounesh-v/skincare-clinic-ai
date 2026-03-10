@@ -1,7 +1,8 @@
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { createUser, loginUser } from "../controllers/register.js";
+import { createUser, deleteUser, getAllUsers, getUserById, loginUser, updateUser, updateUserStatus } from "../controllers/register.js";
+import verifyToken from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
@@ -124,5 +125,13 @@ router.get("/me", async (req, res) => {
         res.status(401).json({ message: "Invalid or expired token" });
     }
 });
+
+router.get("/users", verifyToken,getAllUsers);
+
+router.get("/user/:id",verifyToken,getUserById);
+
+router.put("/user/:id",verifyToken,updateUser)
+router.patch("/users/:id/status",verifyToken,updateUserStatus);
+router.delete("/users/:id",verifyToken,deleteUser);
 
 export default router;

@@ -190,6 +190,7 @@ function App() {
             <Route path="products/create" element={<ProductCreate />} />
             <Route path="products/:id" element={<ProductView />} />
             <Route path="products/:id/edit" element={<ProductEdit />} />
+            
 
             {/* Orders Management */}
             <Route path="orders" element={<OrderList />} />

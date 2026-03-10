@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const assessmentSchema = new mongoose.Schema({
   assessmentId: {
@@ -133,4 +133,4 @@ assessmentSchema.pre('save', async function(next) {
 
 const Assessment = mongoose.model('Assessment', assessmentSchema);
 
-module.exports = Assessment;
+export default Assessment;
