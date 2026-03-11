@@ -131,18 +131,21 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
               </button>
               <Link
                 to="/products"
+                onClick={() => setFullscreenMenuOpen(false)}
                 className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
               >
                 Products
               </Link>
               <Link
                 to="/find-doctors"
+                onClick={() => setFullscreenMenuOpen(false)}
                 className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
               >
                 Doctors
               </Link>
               <Link
                 to="/contact"
+                onClick={() => setFullscreenMenuOpen(false)}
                 className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
               >
                 Contact

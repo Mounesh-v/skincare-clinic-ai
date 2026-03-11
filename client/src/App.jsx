@@ -10,6 +10,17 @@ import {
 import { Toaster } from "react-hot-toast";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 
+/**
+ * Scrolls to top on every route change and on initial page load.
+ */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+  return null;
+}
+
 
 // Layouts
 import Header from "./components/layout/Header";
@@ -132,6 +143,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="flex flex-col min-h-screen">
         <Toaster
           position="top-right"

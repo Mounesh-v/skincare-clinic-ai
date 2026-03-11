@@ -369,7 +369,7 @@ const ProductShowcase = () => {
                 <button
                   key={dir}
                   onClick={() => {
-                    prevSlide();
+                    dir === "prev" ? prevSlide() : nextSlide();
                     stopAutoScroll();
                     startAutoScroll();
                   }}
@@ -393,7 +393,7 @@ const ProductShowcase = () => {
                 <button
                   key={i}
                   onClick={() => {
-                    nextSlide();
+                    goToSlide(i, i > currentSlide ? "right" : "left");
                     stopAutoScroll();
                     startAutoScroll();
                   }}
