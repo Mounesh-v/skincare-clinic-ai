@@ -41,8 +41,8 @@ for cname in class_names:
 
 # 4. Test data pipeline (load 1 batch)
 val_transform = torchvision.transforms.Compose([
-    torchvision.transforms.Resize(256),
-    torchvision.transforms.CenterCrop(224),
+    torchvision.transforms.Resize(416),
+    torchvision.transforms.CenterCrop(384),
     torchvision.transforms.ToTensor(),
     torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
@@ -66,17 +66,16 @@ if all_imgs:
 else:
     pipeline_ok = False
 
-# 5. Test model forward pass
+# 5. Test model forward pass (uses same AttentionClassifierHead as train.py)
 try:
-    model = torchvision.models.efficientnet_b0(weights='IMAGENET1K_V1')
-    model.classifier = nn.Sequential(
-        nn.Dropout(0.4),
-        nn.Linear(1280, 512),
-        nn.ReLU(),
-        nn.Dropout(0.3),
-        nn.Linear(512, len(class_names))
-    )
-    dummy = torch.randn(4, 3, 224, 224)
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from ml.model_utils import AttentionClassifierHead
+    from typing import cast as _cast
+    model = torchvision.models.efficientnet_v2_s(weights='IMAGENET1K_V1')
+    in_features = _cast(nn.Linear, model.classifier[1]).in_features
+    model.classifier[1] = AttentionClassifierHead(in_features, len(class_names))
+    dummy = torch.randn(4, 3, 384, 384)
     out = model(dummy)
     model_ok = out.shape == (4, len(class_names))
 except Exception as e:

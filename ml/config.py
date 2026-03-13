@@ -11,7 +11,10 @@ from typing import Dict, Sequence, Tuple
 
 @dataclass(frozen=True)
 class SkinConfig:
-    """Immutable settings shared across training, inference, and realtime apps."""
+    """Immutable settings shared across training, inference, and realtime apps.
+
+    Primary model: EfficientNetV2-S (skin_classifier_v2s.pt)
+    """
 
     base_dir: Path = Path(__file__).resolve().parent
     models_dir: Path = base_dir / "models"
@@ -19,7 +22,8 @@ class SkinConfig:
     class_map_path: Path = base_dir / "class_map.json"
     mediapipe_face_model: Path = assets_dir / "face_detection_short_range.tflite"
     dataset_root: Path = Path(os.getenv("SKINCARE_DATASET_ROOT", str(base_dir / "data" / "raw" / "Skin v2")))
-    image_size: int = 224
+    model_v2s_weights: Path = models_dir / "skin_classifier_v2s.pt"
+    image_size: int = 384
     batch_size: int = 16
     num_epochs: int = 35
     learning_rate_backbone: float = 1e-5

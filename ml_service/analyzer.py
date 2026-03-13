@@ -77,7 +77,7 @@ class SkinAnalyzerService:
             return self._model
         with self._lock:
             if self._model is None:
-                weights = CONFIG.models_dir / "skin_classifier.pt"
+                weights = CONFIG.model_v2s_weights
                 if not weights.exists():
                     raise FileNotFoundError(
                         f"Model weights not found at {weights}. Run training or copy the checkpoint first."

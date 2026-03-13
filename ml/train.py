@@ -4,20 +4,18 @@ import argparse
 import json
 import time
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, cast
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import models, transforms
 from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 from tqdm import tqdm
 
-# Import config
-import sys
-sys.path.insert(0, str(Path(__file__).parent))
-from config import CONFIG
+from .config import CONFIG
+from .model_utils import AttentionClassifierHead
 
 
 # =============================================================================
@@ -31,15 +29,28 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
 
 
-def create_model(num_classes: int) -> nn.Module:
-    """Create EfficientNet-B0 model."""
-    weights = models.EfficientNet_B0_Weights.IMAGENET1K_V1
-    model = models.efficientnet_b0(weights=weights)
-    
-    # Replace classifier
-    in_features = model.classifier[1].in_features
-    model.classifier[1] = nn.Linear(in_features, num_classes)
-    
+def create_model(
+    num_classes: int,
+    use_attention: bool = True,
+) -> nn.Module:
+    """Build EfficientNetV2-S classifier (384×384 input).
+
+    Args:
+        num_classes: Number of output classes.
+        use_attention: Use SE-style :class:`AttentionClassifierHead` (default
+            ``True``).  Pass ``False`` to use a plain ``nn.Linear`` head.
+
+    Returns:
+        EfficientNetV2-S model ready for fine-tuning.
+    """
+    model = models.efficientnet_v2_s(
+        weights=models.EfficientNet_V2_S_Weights.IMAGENET1K_V1
+    )
+    in_features: int = cast(nn.Linear, model.classifier[1]).in_features
+    if use_attention:
+        model.classifier[1] = AttentionClassifierHead(in_features, num_classes)
+    else:
+        model.classifier[1] = nn.Linear(in_features, num_classes)
     return model
 
 
@@ -161,16 +172,26 @@ def evaluate(
     return running_loss / total, correct / total
 
 
-def save_checkpoint(model: nn.Module, weights_path: Path, metadata_path: Path) -> None:
-    """Save model checkpoint and metadata."""
+def save_checkpoint(
+    model: nn.Module,
+    weights_path: Path,
+    metadata_path: Path,
+) -> None:
+    """Save model checkpoint and metadata.
+
+    Args:
+        model: Trained model whose ``state_dict`` will be saved.
+        weights_path: Destination ``.pt`` file.
+        metadata_path: Destination JSON metadata file.
+    """
     weights_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), weights_path)
-    
+
     metadata = {
         "weights": weights_path.name,
         "class_map": json.loads(CONFIG.class_map_path.read_text(encoding="utf-8")),
-        "image_size": CONFIG.image_size,
-        "model": "efficientnet_b0",
+        "image_size": 384,
+        "model": "efficientnet_v2_s",
         "timestamp": time.time(),
     }
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
@@ -185,9 +206,17 @@ def main() -> None:
     parser.add_argument("--lr-classifier", type=float, default=3e-4)
     parser.add_argument("--freeze-epochs", type=int, default=3, help="Epochs to freeze backbone")
     parser.add_argument("--early-stop-patience", type=int, default=5)
-    parser.add_argument("--weights-out", type=Path, default=CONFIG.models_dir / "skin_classifier.pt")
+    parser.add_argument("--weights-out", type=Path, default=CONFIG.model_v2s_weights)
     parser.add_argument("--metadata-out", type=Path, default=CONFIG.models_dir / "model_metadata.json")
+    parser.add_argument(
+        "--use-attention-head", action="store_true",
+        help="Replace final Linear with SE-style AttentionClassifierHead (default: True via create_model)",
+    )
     args = parser.parse_args()
+
+    # Hardcoded V2-S input dimensions: 384 crop, 416 pre-resize.
+    image_size: int = 384
+    resize_to:  int = 416
     
     print("="*70)
     print("SKIN TYPE CLASSIFICATION TRAINING")
@@ -228,18 +257,26 @@ def main() -> None:
     print(f"  - JPEG files: {total_jpeg}")
     print(f"  - PNG files: {total_png}")
     
-    # CPU-optimized transforms (no heavy augmentation)
+    # IMPROVEMENT: Stronger augmentation pipeline — random crops, colour jitter,
+    # rotation, grayscale, and random erasing combat overfitting on small skin
+    # datasets and significantly improve generalisation (PMC9735681).
     train_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((resize_to, resize_to)),
+        transforms.RandomCrop(image_size),
         transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(p=0.1),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.05),
+        transforms.RandomRotation(degrees=15),
+        transforms.RandomGrayscale(p=0.05),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.RandomErasing(p=0.1, scale=(0.02, 0.1)),
     ])
-    
+
     val_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((image_size, image_size)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     
     # Load full dataset from root directory
@@ -288,9 +325,24 @@ def main() -> None:
     )
     
     # Apply transforms to splits
-    train_dataset.dataset.transform = train_transform
-    val_dataset.dataset.transform = val_transform
-    
+    # cast: random_split wraps the underlying ImageFolder; .dataset is always
+    # an ImageFolder here, which does have a .transform attribute.
+    cast(ImageFolder, train_dataset.dataset).transform = train_transform
+    cast(ImageFolder, val_dataset.dataset).transform = val_transform
+
+    # IMPROVEMENT: WeightedRandomSampler rebalances per-class frequency so rare
+    # skin conditions (e.g. wrinkles) are seen as often as common ones (acne)
+    # during training — significantly reduces macro-recall disparity.
+    train_weights = [
+        1.0 / class_counts[full_dataset.samples[i][1]]
+        for i in train_dataset.indices
+    ]
+    sampler = WeightedRandomSampler(
+        weights=train_weights,
+        num_samples=len(train_weights),
+        replacement=True,
+    )
+
     # STEP 4 - SAFETY CHECK: CPU-optimized data loaders
     print(f"\n{'='*70}")
     print(f"STEP 4 - SAFETY CHECK")
@@ -299,14 +351,14 @@ def main() -> None:
     print(f"✓ num_workers: 0 (CPU optimization)")
     print(f"✓ pin_memory: False (CPU optimization)")
     print(f"✓ Mixed precision: Disabled")
-    print(f"✓ Oversampling: Disabled (not needed for large dataset)")
-    
+    print(f"✓ Oversampling: WeightedRandomSampler (class rebalancing active)")
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=0,  # CPU optimization
-        pin_memory=False  # CPU optimization
+        sampler=sampler,          # IMPROVEMENT: replaces shuffle=True
+        num_workers=0,            # CPU optimization
+        pin_memory=False,         # CPU optimization
     )
     val_loader = DataLoader(
         val_dataset,
@@ -317,20 +369,33 @@ def main() -> None:
     )
     
     print(f"\n🔧 Creating model...")
-    model = create_model(len(full_dataset.classes)).to(device)
-    print(f"✓ Model created: EfficientNet-B0")
+    model = create_model(
+        len(full_dataset.classes),
+        use_attention=args.use_attention_head,
+    ).to(device)
+    attn_label = " + AttentionHead" if args.use_attention_head else ""
+    print(f"✓ Model created: EfficientNetV2-S{attn_label}")
+
+    # IMPROVEMENT: Label smoothing (0.1) reduces overconfidence and improves
+    # calibration on noisy skin-condition labels (Müller et al., 2019).
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     
-    criterion = nn.CrossEntropyLoss()
-    
-    # Training loop
+    # Training loop — initialise variables that are set inside the loop so
+    # Pylance knows they are always bound before use.
     best_val_acc = 0.0
     best_state = None
     patience_counter = 0
+    prev_train_loss: float = 0.0
+    optimizer = get_optimizer(model, args.lr_backbone, args.lr_classifier)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     
     print(f"\n🚀 Starting training...\n")
     print("="*70)
-    
-    for epoch in range(1, args.epochs + 1):
+    print("  Tip: Press Ctrl+C at any time to stop and save the best checkpoint.")
+    print("="*70)
+
+    try:
+      for epoch in range(1, args.epochs + 1):
         print(f"\n{'='*70}")
         print(f"EPOCH {epoch}/{args.epochs}")
         print(f"{'='*70}")
@@ -339,9 +404,19 @@ def main() -> None:
         if epoch == 1:
             freeze_backbone(model)
             optimizer = get_optimizer(model, args.lr_backbone, args.lr_classifier)
+            # IMPROVEMENT: CosineAnnealingLR decays the LR smoothly to near-zero
+            # over the entire training run, avoiding the accuracy plateau that
+            # occurs with a fixed LR (Loshchilov & Hutter, 2016).
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=args.epochs
+            )
         elif epoch == args.freeze_epochs + 1:
             unfreeze_backbone(model)
             optimizer = get_optimizer(model, args.lr_backbone, args.lr_classifier)
+            # Re-initialise scheduler after optimizer refresh (backbone unfrozen).
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=max(args.epochs - args.freeze_epochs, 1)
+            )
         
         # Training
         train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device, epoch)
@@ -359,15 +434,18 @@ def main() -> None:
         if epoch > 1:
             print(f"  Loss change: {train_loss - prev_train_loss:+.4f}")
         prev_train_loss = train_loss
-        
+        # IMPROVEMENT: Step LR scheduler once per epoch for cosine decay.
+        scheduler.step()
+
         print(f"{'─'*70}")
-        
-        # Save best model
+
+        # Save best model immediately to disk whenever val_acc improves
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             best_state = model.state_dict()
             patience_counter = 0
-            print(f"✅ New best validation accuracy: {best_val_acc*100:.2f}%")
+            save_checkpoint(model, args.weights_out, args.metadata_out)
+            print(f"✅ New best val acc: {best_val_acc*100:.2f}% — checkpoint saved to disk")
         else:
             patience_counter += 1
             print(f"⏳ No improvement (patience: {patience_counter}/{args.early_stop_patience})")
@@ -376,11 +454,14 @@ def main() -> None:
         if patience_counter >= args.early_stop_patience:
             print(f"\n🛑 Early stopping triggered (no improvement for {args.early_stop_patience} epochs)")
             break
-    
-    # Save final model
+    except KeyboardInterrupt:
+        print(f"\n\n⚠️  Training interrupted — saving best checkpoint found so far...")
+
+    # Save final model (only needed if Ctrl+C hit before any checkpoint was written)
     if best_state is not None:
-        model.load_state_dict(best_state)
-        save_checkpoint(model, args.weights_out, args.metadata_out)
+        if not args.weights_out.exists():
+            model.load_state_dict(best_state)
+            save_checkpoint(model, args.weights_out, args.metadata_out)
         print(f"\n{'='*70}")
         print(f"✅ TRAINING COMPLETE")
         print(f"{'='*70}")

@@ -60,10 +60,13 @@ def validate_image_quality(
     _min_blur = min_blur_score if min_blur_score is not None else CONFIG.quality_min_blur_score
 
     gray = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2GRAY)
-    brightness = float(gray.mean())
+    # IMPROVEMENT: Normalize brightness to 0–1 scale to match CONFIG thresholds
+    # (quality_min_brightness=0.2, quality_max_brightness=0.9). Previously the raw
+    # 0–255 mean was compared against these 0–1 values, so the checks never fired.
+    brightness = float(gray.mean()) / 255.0
     blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
 
-    LOGGER.debug("Quality check — brightness=%.1f  blur=%.1f", brightness, blur_score)
+    LOGGER.debug("Quality check — brightness=%.3f  blur=%.1f", brightness, blur_score)
 
     if brightness < _min_b:
         return QualityResult(

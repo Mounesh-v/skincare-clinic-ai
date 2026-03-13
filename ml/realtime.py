@@ -13,7 +13,7 @@ import torch
 from .config import CONFIG
 from .model_utils import inference_model, load_class_map, to_tensor
 from .preprocessing import DetectionResult, detect_face_bbox, preprocess_array
-from .skin_type_vit import infer_skin_type_vit
+from .skin_type_vit import infer_skin_type_ensemble
 
 
 COLORS = {
@@ -77,8 +77,13 @@ def run_loop(weights: Path, class_map: Path, camera_index: int, min_score: float
                 with torch.no_grad():
                     logits = model(tensor)
                     probs = torch.softmax(logits, dim=1).squeeze(0).cpu().numpy()
-                # Infer skin type using ViT model
-                skin_result = infer_skin_type_vit(processed)
+                # IMPROVEMENT: Ensemble blends ViT vision scores with rule-based
+                # heuristics derived from EfficientNet condition probabilities,
+                # giving more robust skin-type output under varied lighting.
+                condition_probs = {
+                    idx_to_label[i]: float(probs[i]) for i in range(len(probs))
+                }
+                skin_result = infer_skin_type_ensemble(processed, condition_probs)
                 skin_type = skin_result["skin_type"]
                 best_idx = int(np.argmax(probs))
                 label_key = idx_to_label[best_idx]
@@ -101,7 +106,8 @@ def run_loop(weights: Path, class_map: Path, camera_index: int, min_score: float
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Realtime webcam skin analyzer")
-    parser.add_argument("--weights", type=Path, default=CONFIG.models_dir / "skin_classifier.pt")
+    parser.add_argument("--weights", type=Path, default=CONFIG.model_v2s_weights,
+                        help="Path to EfficientNetV2-S weights (.pt file)")
     parser.add_argument("--class-map", type=Path, default=CONFIG.class_map_path)
     parser.add_argument("--camera", type=int, default=0)
     parser.add_argument("--min-score", type=float, default=CONFIG.min_face_score)
