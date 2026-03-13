@@ -210,7 +210,7 @@ function App() {
 
             {/* Assessments Management */}
             <Route path="assessments" element={<AssessmentList />} />
-            <Route path="/admin/special-offers" element={<AdminSpecialOffers />} />
+            <Route path="special-offers" element={<AdminSpecialOffers />} />
 
             {/* Doctors Management */}
             <Route path="doctors" element={<DoctorList />} />
