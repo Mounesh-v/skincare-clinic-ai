@@ -6,11 +6,11 @@ import  mongoose from 'mongoose';
  */
 const specialOfferSchema = new mongoose.Schema({
   // Product Reference
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true
-  },
+ productId: {
+  type: String,
+  required: true,
+  trim: true
+},
 
   // Offer Details
   badge: {
