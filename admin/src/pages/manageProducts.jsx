@@ -17,46 +17,35 @@ import {
   CheckCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { productApi } from '../api';
+
+function mapProductFromApi(p) {
+  const images = (p.images && Array.isArray(p.images))
+    ? p.images.map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean)
+    : [];
+  return {
+    id: p._id,
+    _id: p._id,
+    name: p.name,
+    description: p.description,
+    category: p.category,
+    price: p.price,
+    originalPrice: p.originalPrice ?? p.price,
+    stock: p.stock,
+    images,
+    skinType: p.skinTypes || [],
+    ingredients: Array.isArray(p.ingredients) ? p.ingredients.join(', ') : (p.ingredients || ''),
+    howToUse: p.howToUse,
+    isActive: p.status === 'Active',
+    status: p.status,
+    views: p.views ?? 0,
+    sales: p.sold ?? 0,
+  };
+}
 
 const ManageProducts = () => {
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: 'Vitamin C Brightening Serum',
-      category: 'Serum',
-      price: 1499,
-      originalPrice: 2499,
-      stock: 45,
-      images: ['https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=200'],
-      isActive: true,
-      views: 543,
-      sales: 145
-    },
-    {
-      id: 2,
-      name: 'Hyaluronic Acid Moisturizer',
-      category: 'Moisturizer',
-      price: 1299,
-      originalPrice: 1999,
-      stock: 32,
-      images: ['https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=200'],
-      isActive: true,
-      views: 432,
-      sales: 98
-    },
-    {
-      id: 3,
-      name: 'Retinol Night Cream',
-      category: 'Cream',
-      price: 1799,
-      originalPrice: 2999,
-      stock: 12,
-      images: ['https://images.unsplash.com/photo-1571875257727-256c39da42af?w=200'],
-      isActive: false,
-      views: 321,
-      sales: 67
-    }
-  ]);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -65,7 +54,7 @@ const ManageProducts = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'Serum',
+    category: 'Serums',
     price: '',
     originalPrice: '',
     stock: '',
@@ -76,8 +65,25 @@ const ManageProducts = () => {
     isActive: true
   });
 
-  const categories = ['Serum', 'Moisturizer', 'Cleanser', 'Cream', 'Toner', 'Sunscreen', 'Mask'];
+  const categories = ['Cleansers', 'Moisturizers', 'Serums', 'Sunscreen', 'Masks', 'Toners', 'Eye Care', 'Treatments', 'Kits'];
   const skinTypes = ['Oily', 'Dry', 'Combination', 'Sensitive', 'Normal'];
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await productApi.getAll();
+        if (!cancelled && res.products) {
+          setProducts(res.products.map(mapProductFromApi));
+        }
+      } catch (err) {
+        if (!cancelled) toast.error(err.message || 'Failed to load products');
+      } finally {
+        if (!cancelled) setProductsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleOpenModal = (product = null) => {
     if (product) {
@@ -85,7 +91,7 @@ const ManageProducts = () => {
       setFormData({
         name: product.name,
         description: product.description || '',
-        category: product.category,
+        category: product.category || 'Serums',
         price: product.price,
         originalPrice: product.originalPrice,
         stock: product.stock,
@@ -93,14 +99,14 @@ const ManageProducts = () => {
         skinType: product.skinType || [],
         ingredients: product.ingredients || '',
         howToUse: product.howToUse || '',
-        isActive: product.isActive
+        isActive: product.isActive ?? true
       });
     } else {
       setEditingProduct(null);
       setFormData({
         name: '',
         description: '',
-        category: 'Serum',
+        category: 'Serums',
         price: '',
         originalPrice: '',
         stock: '',
@@ -155,42 +161,57 @@ const ManageProducts = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (editingProduct) {
-      // Update existing product
-      setProducts(products.map(p => 
-        p.id === editingProduct.id 
-          ? { ...p, ...formData } 
-          : p
-      ));
-      toast.success('Product updated successfully!');
-    } else {
-      // Add new product
-      const newProduct = {
-        id: Date.now(),
-        ...formData,
-        views: 0,
-        sales: 0
-      };
-      setProducts([...products, newProduct]);
-      toast.success('Product added successfully!');
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      price: Number(formData.price),
+      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : Number(formData.price),
+      stock: Number(formData.stock) || 0,
+      ingredients: formData.ingredients ? formData.ingredients.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      skinTypes: formData.skinType.length ? formData.skinType : ['All'],
+      howToUse: formData.howToUse,
+      status: formData.isActive ? 'Active' : 'Inactive',
+      images: (formData.images || []).map((url) => (typeof url === 'string' ? { url } : url)),
+    };
+    try {
+      if (editingProduct) {
+        await productApi.update(editingProduct.id, payload);
+        setProducts(products.map((p) => (p.id === editingProduct.id ? { ...p, ...formData, isActive: formData.isActive, status: payload.status } : p)));
+        toast.success('Product updated successfully!');
+      } else {
+        const res = await productApi.create(payload);
+        if (res.product) setProducts([...products, mapProductFromApi(res.product)]);
+        toast.success('Product added successfully!');
+      }
+      handleCloseModal();
+    } catch (err) {
+      toast.error(err.message || 'Failed to save product');
     }
-    
-    handleCloseModal();
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(products.filter(p => p.id !== id));
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    try {
+      await productApi.delete(id);
+      setProducts(products.filter((p) => p.id !== id));
       toast.success('Product deleted successfully!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete product');
     }
   };
 
-  const toggleStatus = (id) => {
-    setProducts(products.map(p => 
-      p.id === id ? { ...p, isActive: !p.isActive } : p
-    ));
-    toast.success('Product status updated!');
+  const toggleStatus = async (id) => {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    const newActive = !p.isActive;
+    try {
+      await productApi.update(id, { status: newActive ? 'Active' : 'Inactive' });
+      setProducts(products.map((prod) => (prod.id === id ? { ...prod, isActive: newActive } : prod)));
+      toast.success('Product status updated!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update status');
+    }
   };
 
   // Filter products
@@ -256,7 +277,11 @@ const ManageProducts = () => {
         </div>
 
         {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
+        {productsLoading ? (
+          <div className="bg-white rounded-xl p-12 text-center">
+            <p className="text-slate-600">Loading products...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
             <Package className="h-16 w-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-slate-900 mb-2">No Products Found</h3>
@@ -277,7 +302,7 @@ const ManageProducts = () => {
                 {/* Product Image */}
                 <div className="relative aspect-square bg-slate-100">
                   <img
-                    src={product.images[0] || 'https://via.placeholder.com/400'}
+                    src={(product.images && product.images[0]) || 'https://via.placeholder.com/400'}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />

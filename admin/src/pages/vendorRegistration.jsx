@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { UserPlus, Store, Mail, Phone, Lock, MapPin, Upload, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const VendorRegistration = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     businessName: '',
     ownerName: '',
@@ -72,10 +76,33 @@ const VendorRegistration = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Submit to API
-    console.log('Form submitted:', formData);
-    // Navigate to pending approval page
-    navigate('/vendor/pending-approval');
+    if (step !== 3) return;
+    setSubmitting(true);
+    try {
+      await register({
+        businessName: formData.businessName,
+        ownerName: formData.ownerName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        businessAddress: formData.businessAddress,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        gstNumber: formData.gstNumber,
+        panNumber: formData.panNumber,
+        bankAccountNumber: formData.bankAccountNumber,
+        ifscCode: formData.ifscCode,
+        accountHolderName: formData.accountHolderName,
+      });
+      toast.success('Registration submitted! Your account is pending approval.');
+      navigate('/pending-approval');
+    } catch (err) {
+      toast.error(err.message || 'Registration failed');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -437,9 +464,10 @@ const VendorRegistration = () => {
               ) : (
                 <button
                   type="submit"
-                  className="ml-auto px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                  disabled={submitting}
+                  className="ml-auto px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-70"
                 >
-                  Submit Application
+                  {submitting ? 'Submitting...' : 'Submit Application'}
                 </button>
               )}
             </div>

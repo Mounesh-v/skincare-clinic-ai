@@ -4,55 +4,96 @@ import {
   DollarSign,
   Package,
   ShoppingCart,
-  Eye,
-  AlertCircle,
   ArrowUp,
-  ArrowDown
 } from 'lucide-react';
-import { Line, Bar } from 'recharts';
+import { productApi, orderApi } from '../api';
+import toast from 'react-hot-toast';
 
 const VendorDashboard = () => {
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    totalSales: 45680,
-    totalOrders: 234,
-    totalProducts: 45,
-    totalRevenue: 156780,
-    salesGrowth: 12.5,
-    ordersGrowth: 8.3,
-    productsViews: 12543,
-    avgOrderValue: 670
+    totalSales: 0,
+    totalOrders: 0,
+    totalProducts: 0,
+    totalRevenue: 0,
+    salesGrowth: 0,
+    ordersGrowth: 0,
+    avgOrderValue: 0,
   });
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
 
-  const [recentOrders, setRecentOrders] = useState([
-    { id: 'ORD-001', customer: 'Priya Sharma', product: 'Vitamin C Serum', amount: 1499, status: 'Processing' },
-    { id: 'ORD-002', customer: 'Rahul Kumar', product: 'Retinol Cream', amount: 1799, status: 'Shipped' },
-    { id: 'ORD-003', customer: 'Sneha Patel', product: 'Hyaluronic Acid', amount: 1299, status: 'Delivered' }
-  ]);
-
-  const [topProducts, setTopProducts] = useState([
-    { name: 'Vitamin C Serum', sales: 145, revenue: 217355 },
-    { name: 'Retinol Night Cream', sales: 98, revenue: 176302 },
-    { name: 'Hyaluronic Moisturizer', sales: 87, revenue: 112913 }
-  ]);
-
-  // Sample sales data for chart
-  const salesData = [
-    { month: 'Jan', sales: 12000 },
-    { month: 'Feb', sales: 15000 },
-    { month: 'Mar', sales: 18000 },
-    { month: 'Apr', sales: 22000 },
-    { month: 'May', sales: 28000 },
-    { month: 'Jun', sales: 32000 }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [productsRes, ordersRes] = await Promise.all([
+          productApi.getAll(),
+          orderApi.getAll(),
+        ]);
+        if (cancelled) return;
+        const products = productsRes.products || [];
+        const orders = ordersRes.orders || [];
+        const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+        const totalOrders = orders.length;
+        const avgOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+        const productSales = {};
+        orders.forEach((o) => {
+          (o.items || []).forEach((item) => {
+            const name = item.product?.name || item.name || 'Product';
+            if (!productSales[name]) productSales[name] = { sales: 0, revenue: 0 };
+            productSales[name].sales += item.quantity || 0;
+            productSales[name].revenue += (item.price || 0) * (item.quantity || 0);
+          });
+        });
+        const top = Object.entries(productSales)
+          .map(([name, d]) => ({ name, ...d }))
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 5);
+        setStats({
+          totalSales: totalRevenue,
+          totalOrders,
+          totalProducts: products.length,
+          totalRevenue,
+          salesGrowth: 0,
+          ordersGrowth: 0,
+          avgOrderValue: avgOrder,
+        });
+        setRecentOrders(orders.slice(0, 5).map((o) => ({
+          id: o.orderNumber || o._id,
+          customer: o.user?.name || o.user?.email || 'Customer',
+          product: (o.items && o.items[0]) ? (o.items[0].product?.name || o.items[0].name) : '—',
+          amount: o.total || 0,
+          status: o.orderStatus || 'Pending',
+        })));
+        setTopProducts(top);
+      } catch (err) {
+        if (!cancelled) toast.error(err.message || 'Failed to load dashboard');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'Processing': return 'bg-yellow-100 text-yellow-700';
       case 'Shipped': return 'bg-blue-100 text-blue-700';
       case 'Delivered': return 'bg-emerald-100 text-emerald-700';
+      case 'Pending': return 'bg-slate-100 text-slate-700';
       default: return 'bg-slate-100 text-slate-700';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-600">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -134,12 +175,13 @@ const VendorDashboard = () => {
         {/* Charts and Tables Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           
-          {/* Sales Chart */}
+          {/* Sales Overview */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Sales Overview</h3>
             <div className="h-64 flex items-center justify-center bg-slate-50 rounded-lg">
-              <p className="text-slate-500">Sales chart visualization here</p>
-              {/* Add actual chart library like Recharts */}
+              <p className="text-slate-500">
+                Total revenue: ₹{stats.totalRevenue.toLocaleString()}
+              </p>
             </div>
           </div>
 

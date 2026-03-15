@@ -33,6 +33,18 @@ export const verifyAdmin = (req, res, next) => {
     });
 };
 
+/**
+ * Middleware: verify JWT AND require vendor role (for vendor portal).
+ */
+export const verifyVendor = (req, res, next) => {
+    verifyToken(req, res, () => {
+        if (req.user?.role !== "vendor") {
+            return res.status(403).json({ success: false, message: "Vendor access required." });
+        }
+        next();
+    });
+};
+
 
 /**
  * Protect middleware
