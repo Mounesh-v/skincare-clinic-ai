@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Package,
   Truck,
@@ -7,7 +7,6 @@ import {
   Eye,
   Search,
   Filter,
-  Download,
   X,
   MapPin,
   Phone,
@@ -15,75 +14,76 @@ import {
   Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { orderApi } from '../api';
+import { Download } from "lucide-react";
+
+function mapOrderFromApi(o) {
+  const firstItem = o.items && o.items[0];
+  return {
+    id: o.orderNumber || o._id,
+    _id: o._id,
+    customerName: o.user?.name || 'Customer',
+    customerEmail: o.user?.email || '',
+    customerPhone: o.user?.phone || '',
+    product: firstItem ? (firstItem.product?.name || firstItem.name) : '—',
+    quantity: firstItem?.quantity || 0,
+    amount: o.total || 0,
+    status: o.orderStatus || 'Pending',
+    orderDate: o.createdAt ? new Date(o.createdAt).toISOString().slice(0, 10) : '',
+    shippingAddress: o.shippingAddress || '—',
+    paymentMethod: o.paymentMethod || '—',
+    paymentStatus: o.paymentStatus || 'Pending',
+    items: o.items || [],
+  };
+}
 
 const OrdersManagement = () => {
-  const [orders, setOrders] = useState([
-    {
-      id: 'ORD-2026-001',
-      customerName: 'Priya Sharma',
-      customerEmail: 'priya@example.com',
-      customerPhone: '+91 98765 43210',
-      product: 'Vitamin C Serum',
-      quantity: 2,
-      amount: 2998,
-      status: 'Processing',
-      orderDate: '2026-03-14',
-      shippingAddress: '123 MG Road, Bangalore, Karnataka 560001',
-      paymentMethod: 'UPI',
-      paymentStatus: 'Paid'
-    },
-    {
-      id: 'ORD-2026-002',
-      customerName: 'Rahul Kumar',
-      customerEmail: 'rahul@example.com',
-      customerPhone: '+91 98765 43211',
-      product: 'Retinol Night Cream',
-      quantity: 1,
-      amount: 1799,
-      status: 'Shipped',
-      orderDate: '2026-03-13',
-      shippingAddress: '45 Park Street, Kolkata, West Bengal 700016',
-      paymentMethod: 'Credit Card',
-      paymentStatus: 'Paid',
-      trackingNumber: 'TRK123456789'
-    },
-    {
-      id: 'ORD-2026-003',
-      customerName: 'Sneha Patel',
-      customerEmail: 'sneha@example.com',
-      customerPhone: '+91 98765 43212',
-      product: 'Hyaluronic Moisturizer',
-      quantity: 3,
-      amount: 3897,
-      status: 'Delivered',
-      orderDate: '2026-03-10',
-      deliveredDate: '2026-03-12',
-      shippingAddress: '78 Carter Road, Mumbai, Maharashtra 400050',
-      paymentMethod: 'UPI',
-      paymentStatus: 'Paid',
-      trackingNumber: 'TRK987654321'
-    }
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await orderApi.getAll();
+        if (!cancelled && res.orders) {
+          setOrders(res.orders.map(mapOrderFromApi));
+        }
+      } catch (err) {
+        if (!cancelled) toast.error(err.message || 'Failed to load orders');
+      } finally {
+        if (!cancelled) setOrdersLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const statusConfig = {
+    'Pending': { color: 'bg-slate-100 text-slate-700', icon: Clock },
     'Processing': { color: 'bg-yellow-100 text-yellow-700', icon: Clock },
     'Shipped': { color: 'bg-blue-100 text-blue-700', icon: Truck },
     'Delivered': { color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle }
   };
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrders(orders.map(order => 
-      order.id === orderId 
-        ? { ...order, status: newStatus, updatedAt: new Date().toISOString() }
-        : order
-    ));
-    toast.success(`Order status updated to ${newStatus}`);
-    setShowDetails(false);
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const order = orders.find((o) => o.id === orderId || o._id === orderId);
+    if (!order) return;
+    try {
+      await orderApi.updateStatus(order._id, newStatus);
+      setOrders(orders.map((o) => (o.id === orderId || o._id === orderId) ? { ...o, status: newStatus } : o));
+      toast.success(`Order status updated to ${newStatus}`);
+      setShowDetails(false);
+      if (selectedOrder && (selectedOrder.id === orderId || selectedOrder._id === orderId)) {
+        setSelectedOrder({ ...selectedOrder, status: newStatus });
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to update order status');
+    }
   };
 
   const viewOrderDetails = (order) => {
@@ -91,23 +91,32 @@ const OrdersManagement = () => {
     setShowDetails(true);
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.product.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredOrders = orders.filter((order) => {
+    const id = String(order.id || '');
+    const customer = String(order.customerName || '');
+    const product = String(order.product || '');
+    const matchesSearch =
+      id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
     total: orders.length,
-    processing: orders.filter(o => o.status === 'Processing').length,
-    shipped: orders.filter(o => o.status === 'Shipped').length,
-    delivered: orders.filter(o => o.status === 'Delivered').length
+    processing: orders.filter((o) => o.status === 'Processing').length,
+    shipped: orders.filter((o) => o.status === 'Shipped').length,
+    delivered: orders.filter((o) => o.status === 'Delivered').length
   };
+
+  if (ordersLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-600">Loading orders...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

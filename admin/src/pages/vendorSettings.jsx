@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   Store,
@@ -6,36 +6,68 @@ import {
   Bell,
   Lock,
   Save,
-  Upload,
   Mail,
   Phone,
   MapPin,
   Building
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '../api';
 
 const VendorSettings = () => {
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState({
-    businessName: 'SkinCare Pro Store',
-    ownerName: 'John Doe',
-    email: 'vendor@skincare.com',
-    phone: '+91 98765 43210',
-    businessAddress: '123 Business Park, MG Road',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    zipCode: '560001',
-    gstNumber: '29ABCDE1234F1Z5',
-    panNumber: 'ABCDE1234F'
+    businessName: '',
+    ownerName: '',
+    email: '',
+    phone: '',
+    businessAddress: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    gstNumber: '',
+    panNumber: ''
   });
 
   const [bankData, setBankData] = useState({
-    accountHolderName: 'John Doe',
-    accountNumber: '1234567890',
-    ifscCode: 'HDFC0001234',
-    bankName: 'HDFC Bank',
-    branchName: 'MG Road Branch'
+    accountHolderName: '',
+    accountNumber: '',
+    ifscCode: ''
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.getVendorMe();
+        if (cancelled || !res.vendor) return;
+        const v = res.vendor;
+        setProfileData({
+          businessName: v.businessName || '',
+          ownerName: v.ownerName || '',
+          email: v.email || '',
+          phone: v.phone || '',
+          businessAddress: v.businessAddress || '',
+          city: v.city || '',
+          state: v.state || '',
+          zipCode: v.zipCode || '',
+          gstNumber: v.gstNumber || '',
+          panNumber: v.panNumber || ''
+        });
+        setBankData({
+          accountHolderName: v.accountHolderName || '',
+          accountNumber: v.bankAccountNumber || '',
+          ifscCode: v.ifscCode || ''
+        });
+      } catch (err) {
+        if (!cancelled) toast.error(err.message || 'Failed to load profile');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const [notifications, setNotifications] = useState({
     orderUpdates: true,
@@ -98,6 +130,14 @@ const VendorSettings = () => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Lock }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-600">Loading settings...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

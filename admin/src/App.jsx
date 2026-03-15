@@ -1,13 +1,16 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import './index.css';
 
-// Layout
+// Layout & Guard
 import VendorLayout from "./layout/VendorLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import VendorRegistration from "./pages/vendorRegistration";
 import PendingApproval from "./pages/pendingApproval";
+import VendorLogin from "./pages/VendorLogin";
 import VendorDashboard from "./pages/vendorDashboard";
 import ManageProducts from "./pages/manageProducts";
 import OrdersManagement from "./pages/orderManagement";
@@ -39,11 +42,19 @@ function App() {
 
       <Routes>
         {/* Public Routes */}
+        <Route path="/login" element={<VendorLogin />} />
         <Route path="/register" element={<VendorRegistration />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
 
-        {/* Layout Routes */}
-        <Route path="/" element={<VendorLayout />}>
+        {/* Protected Layout Routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <VendorLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<VendorDashboard />} />
           <Route path="vendor/products" element={<ManageProducts />} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Clock, Mail, CheckCircle, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const PendingApproval = () => {
   const navigate = useNavigate();
@@ -92,8 +92,14 @@ const PendingApproval = () => {
 
           {/* Contact Information */}
           <div className="border-t border-slate-200 pt-6">
-            <p className="text-slate-600 mb-4">Need help with your application?</p>
+            <p className="text-slate-600 mb-4">Already approved? Sign in to your dashboard.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Sign in
+              </Link>
               <a
                 href="mailto:vendor-support@skincare.com"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors"
@@ -101,12 +107,6 @@ const PendingApproval = () => {
                 <Mail className="h-5 w-5" />
                 Email Support
               </a>
-              <button
-                onClick={() => navigate('/')}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                Back to Home
-              </button>
             </div>
           </div>
 

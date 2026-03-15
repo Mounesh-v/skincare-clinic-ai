@@ -12,31 +12,30 @@ import {
   User,
   ChevronDown
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const VendorLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { vendor, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  // Sample vendor data
-  const vendor = {
-    name: 'SkinCare Pro Store',
-    email: 'vendor@skincare.com',
-    avatar: null
+  const vendorDisplay = {
+    name: vendor?.businessName || 'Vendor',
+    email: vendor?.email || ''
   };
 
   const menuItems = [
-    { path: '/vendor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/vendor/products', label: 'Manage Products', icon: Package },
     { path: '/vendor/orders', label: 'Orders', icon: ShoppingCart },
     { path: '/vendor/settings', label: 'Settings', icon: Settings }
   ];
 
   const handleLogout = () => {
-    // Clear auth and redirect
-    localStorage.removeItem('vendorToken');
-    navigate('/vendor/login');
+    logout();
+    navigate('/login');
   };
 
   const isActive = (path) => location.pathname === path;
@@ -64,11 +63,11 @@ const VendorLayout = () => {
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-lg">
-              {vendor.name.charAt(0)}
+              {vendorDisplay.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 truncate">{vendor.name}</p>
-              <p className="text-xs text-slate-500 truncate">{vendor.email}</p>
+              <p className="font-semibold text-slate-900 truncate">{vendorDisplay.name}</p>
+              <p className="text-xs text-slate-500 truncate">{vendorDisplay.email}</p>
             </div>
           </div>
         </div>
@@ -146,7 +145,7 @@ const VendorLayout = () => {
                 className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-sm">
-                  {vendor.name.charAt(0)}
+                  {vendorDisplay.name.charAt(0)}
                 </div>
                 <ChevronDown className="h-4 w-4 text-slate-600" />
               </button>
