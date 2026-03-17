@@ -10,9 +10,9 @@ from typing import Dict, Iterable, List, TypedDict
 import numpy as np
 import torch
 
-from .config import CONFIG
-from .preprocessing import preprocess_image_file
-from .model_utils import inference_model, load_class_map, to_tensor
+from ml.config import CONFIG
+from ml.preprocessing import preprocess_image_file
+from ml.model_utils import inference_model, load_class_map, to_tensor
 
 
 class TopPrediction(TypedDict):
