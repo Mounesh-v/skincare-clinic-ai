@@ -2,7 +2,7 @@
 Fine-tuning script for the ViT skin-type classifier.
 
 Usage:
-    python -m ml.train_vit
+    python -m tools.training.train_vit
 
 Dataset expected at: ml/data/raw/Skin v2/
 Label mapping:
@@ -38,7 +38,7 @@ except ImportError as exc:
     print("Run: pip install transformers torch Pillow tqdm")
     sys.exit(1)
 
-from .config import CONFIG
+from ml.config import CONFIG
 
 # ---------------------------------------------------------------------------
 # Constants

@@ -74,11 +74,20 @@ const LIFESTYLE_OPTIONS = {
     ],
 };
 
+const ANALYSIS_STAGES = [
+    { label: 'Detecting face', progress: 20 },
+    { label: 'Analyzing skin conditions', progress: 50 },
+    { label: 'Determining skin type', progress: 78 },
+    { label: 'Generating dermatologist-backed plan', progress: 96 },
+];
+
 const StartAssessment = ({ onComplete }) => {
     const [stepIndex, setStepIndex] = useState(0);
     const [lead, setLead] = useState(INITIAL_LEAD);
     const [answers, setAnswers] = useState(INITIAL_ANSWERS);
     const [submitting, setSubmitting] = useState(false);
+    const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
+    const [analysisProgress, setAnalysisProgress] = useState(8);
     const [imageData, setImageData] = useState(null);
     const [cameraActive, setCameraActive] = useState(false);
     const videoRef = useRef(null);
@@ -201,6 +210,22 @@ const StartAssessment = ({ onComplete }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stepIndex]);
 
+    useEffect(() => {
+        if (!submitting) {
+            return undefined;
+        }
+
+        setAnalysisStageIndex(0);
+        setAnalysisProgress(8);
+
+        const interval = setInterval(() => {
+            setAnalysisStageIndex((prev) => Math.min(prev + 1, ANALYSIS_STAGES.length - 1));
+            setAnalysisProgress((prev) => Math.min(prev + 24, 96));
+        }, 1400);
+
+        return () => clearInterval(interval);
+    }, [submitting]);
+
     const handleNext = () => {
         if (!stepIsValid) {
             toast.error('Please complete this section before continuing.');
@@ -238,6 +263,8 @@ const StartAssessment = ({ onComplete }) => {
             };
 
             const data = await analyzeAssessment(payload);
+            setAnalysisStageIndex(ANALYSIS_STAGES.length - 1);
+            setAnalysisProgress(100);
             onComplete({
                 lead: payload.lead,
                 answers: payload.answers,
@@ -1018,8 +1045,26 @@ const StartAssessment = ({ onComplete }) => {
 
             {submitting && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="rounded-2xl bg-white px-6 py-4 text-slate-900 shadow-xl">
-                        Crafting your dermatologist-backed plan...
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-900 shadow-xl">
+                        <div className="mb-4 flex items-center gap-3">
+                            <span className="h-3 w-3 animate-pulse rounded-full bg-[#97b94f]" />
+                            <span className="h-6 w-6 animate-spin rounded-full border-2 border-[#97b94f]/30 border-t-[#97b94f]" />
+                            <p className="text-base font-semibold text-slate-800">
+                                {ANALYSIS_STAGES[analysisStageIndex]?.label}
+                            </p>
+                        </div>
+
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-[#8eb241] via-[#6b8f34] to-[#4a6d27] transition-all duration-700 ease-out"
+                                style={{ width: `${analysisProgress}%` }}
+                            />
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <span>Processing image</span>
+                            <span>{analysisProgress}%</span>
+                        </div>
                     </div>
                 </div>
             )}

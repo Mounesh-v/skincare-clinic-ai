@@ -17,6 +17,7 @@ from typing import Any, Dict
 from urllib.parse import ParseResult, unquote, urlparse
 
 from .analyzer import SkinAnalyzerService
+from .retraining import RetrainConfig, RetrainMonitor
 
 LOGGER = logging.getLogger("ml_service")
 
@@ -75,6 +76,7 @@ INDEX_FILE = STATIC_ROOT / "index.html"
 class SkinServiceHandler(BaseHTTPRequestHandler):
     analyzer: SkinAnalyzerService | None = None
     analyzer_lock = threading.Lock()
+    retrain_monitor: RetrainMonitor | None = None
     started_at = time.time()
     static_root = STATIC_ROOT
     index_file = INDEX_FILE
@@ -243,6 +245,21 @@ class SkinServiceHandler(BaseHTTPRequestHandler):
 
 def create_server(host: str, port: int) -> ThreadingHTTPServer:
     SkinServiceHandler.started_at = time.time()
+    analyzer = SkinAnalyzerService()
+    analyzer.load_models()
+    SkinServiceHandler.analyzer = analyzer
+
+    SkinServiceHandler.retrain_monitor = RetrainMonitor(
+        RetrainConfig(
+            dataset_root=PROJECT_ROOT / "ml" / "data" / "user_collected",
+            production_weights=Path(os.getenv("SKINCARE_PROD_WEIGHTS", str(PROJECT_ROOT / "ml" / "models" / "skin_classifier_v2s.pt"))),
+            production_metadata=Path(os.getenv("SKINCARE_PROD_METADATA", str(PROJECT_ROOT / "ml" / "models" / "model_metadata.json"))),
+            retrain_threshold=int(os.getenv("SKINCARE_RETRAIN_THRESHOLD", "500")),
+            poll_interval_seconds=int(os.getenv("SKINCARE_RETRAIN_POLL_SECONDS", "300")),
+        )
+    )
+    SkinServiceHandler.retrain_monitor.start()
+
     server = ThreadingHTTPServer((host, port), SkinServiceHandler)
     LOGGER.info("Starting ML service on http://%s:%s serving %s", host, port, STATIC_ROOT)
     return server
@@ -258,6 +275,8 @@ def serve_forever(server: ThreadingHTTPServer) -> None:
     try:
         server.serve_forever()
     finally:
+        if SkinServiceHandler.retrain_monitor is not None:
+            SkinServiceHandler.retrain_monitor.stop()
         server.server_close()
         LOGGER.info("ML service stopped")
 

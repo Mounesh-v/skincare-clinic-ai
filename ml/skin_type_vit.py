@@ -28,7 +28,8 @@ _MODEL_DIR = Path(__file__).resolve().parent / "models" / "vit_skin_type"
 _lock = threading.Lock()
 _extractor = None
 _model = None
-_load_event = threading.Event()  # set once model is fully loaded
+_device = None
+_warmed = False
 
 # Map from HuggingFace label → canonical skin type key (lowercase, matches scores dict)
 # dima806/skin_types_image_detection uses: dry, normal, oily
@@ -59,50 +60,60 @@ def _ensure_model():
     """Load model and extractor from local disk (once, thread-safe)."""
     global _extractor, _model
 
-    # Fast path — model already loaded, no lock needed
+    # Fast path: model already loaded.
     if _model is not None:
         return _extractor, _model
 
-    # Wait for the loading thread to finish (avoids deadlock)
-    _load_event.wait(timeout=120)
-    if _model is None:
-        raise RuntimeError("ViT model failed to load within timeout")
+    # Lazy-load synchronously if startup preload has not happened yet.
+    preload_vit_model()
     return _extractor, _model
 
 
 def preload_vit_model() -> None:
     """Load model once at startup (call from a background thread)."""
-    global _extractor, _model
+    global _extractor, _model, _device, _warmed
 
     if _model is not None:
-        _load_event.set()
         return
 
     with _lock:
         if _model is not None:
-            _load_event.set()
             return
 
         if not _MODEL_DIR.exists():
             raise FileNotFoundError(
-                f"ViT model not found. Run: python -m ml.download_models"
+                f"ViT model not found. Run: python -m tools.training.download_models"
             )
 
         try:
             from transformers import AutoImageProcessor, AutoModelForImageClassification
-            import torch  # noqa: F401
+            import torch
         except ImportError as exc:
             raise ImportError(
                 "Required packages missing. Run: pip install transformers torch Pillow"
             ) from exc
 
         from transformers import AutoImageProcessor, AutoModelForImageClassification
+        from .config import CONFIG
 
         _extractor = AutoImageProcessor.from_pretrained(str(_MODEL_DIR))
         _m = AutoModelForImageClassification.from_pretrained(str(_MODEL_DIR))
+        preferred_device = CONFIG.default_device
+        if preferred_device.startswith("cuda") and not torch.cuda.is_available():
+            preferred_device = "cpu"
+        _device = torch.device(preferred_device)
+        _m.to(_device)
         _m.eval()
         _model = _m
-        _load_event.set()  # unblock any waiting inference calls
+        if not _warmed and _extractor is not None:
+            from PIL import Image
+
+            dummy = Image.fromarray(np.zeros((224, 224, 3), dtype=np.uint8))
+            inputs = _extractor(images=dummy, return_tensors="pt")
+            inputs = {k: v.to(_device) for k, v in inputs.items()}
+            with torch.no_grad():
+                _model(**inputs)
+            _warmed = True
 
 
 def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
@@ -133,6 +144,8 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
 
     extractor, model = _ensure_model()
     assert extractor is not None  # guaranteed by _ensure_model(); narrows type for Pylance
+    assert model is not None
+    assert _device is not None
 
     # Convert numpy array → PIL Image (extractor expects PIL or list of PIL)
     if image_rgb.dtype != np.uint8:
@@ -141,6 +154,7 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
 
     # Preprocess
     inputs = extractor(images=pil_image, return_tensors="pt")
+    inputs = {k: v.to(_device) for k, v in inputs.items()}
 
     # Inference
     with torch.no_grad():

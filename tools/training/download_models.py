@@ -1,13 +1,14 @@
 """
 Run once before first launch:
-    python -m ml.download_models
+    python -m tools.training.download_models
 Downloads ~330MB ViT model. After this the app runs fully offline.
 """
 
 from __future__ import annotations
 
 import sys
-from pathlib import Path
+
+from ml.config import CONFIG
 
 
 def main() -> None:
@@ -19,7 +20,7 @@ def main() -> None:
         sys.exit(1)
 
     model_id = "dima806/skin_types_image_detection"
-    save_dir = Path(__file__).resolve().parent / "models" / "vit_skin_type"
+    save_dir = CONFIG.models_dir / "vit_skin_type"
 
     if save_dir.exists() and any(save_dir.iterdir()):
         print(f"[INFO] Model already present at: {save_dir}")
