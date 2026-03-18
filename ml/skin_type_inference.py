@@ -10,6 +10,15 @@ This module works purely on model output probabilities without requiring PyTorch
 from typing import Dict, Any
 
 
+CONDITION_TO_TYPE = {
+    "blackheads": {"oily": 0.85, "dry": 0.05, "normal": 0.10, "combination": 0.65},
+    "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.20, "combination": 0.65},
+    "acne": {"oily": 0.65, "dry": 0.10, "normal": 0.15, "combination": 0.80},
+    "wrinkles": {"oily": 0.10, "dry": 0.55, "normal": 0.40, "combination": 0.20},
+    "dark_spots": {"oily": 0.05, "dry": 0.70, "normal": 0.50, "combination": 0.15},
+}
+
+
 def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
     """
     Infer skin type from condition classifier probabilities.
@@ -40,80 +49,31 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
         "pores": max(0.0, min(1.0, condition_scores.get("pores", 0.0))),
         "wrinkles": max(0.0, min(1.0, condition_scores.get("wrinkles", 0.0))),
         "blackheads": max(0.0, min(1.0, condition_scores.get("blackheads", 0.0))),
-        "dark_spots": max(0.0, min(1.0, condition_scores.get("dark_spots", 0.0))),
+        "dark_spots": max(
+            0.0,
+            min(
+                1.0,
+                max(
+                    condition_scores.get("dark_spots", 0.0),
+                    condition_scores.get("dark spots", 0.0),
+                ),
+            ),
+        ),
     }
-    
-    # Step 2: Calculate OILY score
-    score_oily = (
-        normalized["pores"] * 0.40 +
-        normalized["acne"] * 0.35 +
-        normalized["blackheads"] * 0.25
-    )
-    
-    # Boost oily score if wrinkles are low (young skin tends to be oilier)
-    if normalized["wrinkles"] < 0.35:
-        score_oily *= 1.15
-    
-    score_oily = min(score_oily, 1.0)  # Clip to 1.0
-    
-    # Step 3: Calculate DRY score
-    score_dry = (
-        normalized["wrinkles"] * 0.45 +
-        (1 - normalized["pores"]) * 0.35 +
-        (1 - normalized["acne"]) * 0.20
-    )
-    
-    score_dry = min(score_dry, 1.0)  # Clip to 1.0
-    
-    # Step 4: Calculate NORMAL score
-    # Count conditions in balanced range (0.30 to 0.60)
-    balanced_count = sum(
-        1 for value in normalized.values()
-        if 0.30 <= value <= 0.60
-    )
-    total_conditions = len(normalized)
-    normal_score = balanced_count / total_conditions
-    
-    # Step 5: Calculate COMBINATION score
-    oily_indicators = (
-        normalized["pores"] * 0.50 +
-        normalized["acne"] * 0.30 +
-        normalized["blackheads"] * 0.20
-    )
-    
-    dry_indicators = (
-        normalized["wrinkles"] * 0.50 +
-        (1 - normalized["pores"]) * 0.30 +
-        normalized["dark_spots"] * 0.20
-    )
-    
-    # Check ALL combination conditions
-    is_combination = all([
-        oily_indicators >= 0.50,  # Oily traits present
-        dry_indicators >= 0.45,   # Dry traits present
-        oily_indicators < 0.80,   # Not purely oily
-        dry_indicators < 0.80     # Not purely dry
-    ])
-    
-    if is_combination:
-        base_score = (oily_indicators + dry_indicators) / 2.0
-        imbalance_penalty = abs(oily_indicators - dry_indicators)
-        
-        # Apply penalty if traits are too imbalanced
-        if imbalance_penalty > 0.30:
-            base_score *= 0.85
-        
-        score_combination = min(base_score, 1.0)
-    else:
-        score_combination = 0.0
-    
-    # Step 6: Collect all scores
-    all_scores = {
-        "oily": score_oily,
-        "dry": score_dry,
-        "normal": normal_score,
-        "combination": score_combination
-    }
+
+    # Step 2: Aggregate skin-type scores from condition-to-type mapping.
+    all_scores = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+    for condition, confidence in normalized.items():
+        weight_map = CONDITION_TO_TYPE.get(condition)
+        if weight_map is None:
+            continue
+        for skin_type in all_scores:
+            all_scores[skin_type] += confidence * float(weight_map[skin_type])
+
+    # Step 3: Normalize to a valid distribution.
+    total = sum(all_scores.values())
+    if total > 0:
+        all_scores = {k: v / total for k, v in all_scores.items()}
     
     # Step 7: Decision logic
     max_type = max(all_scores, key=all_scores.get)

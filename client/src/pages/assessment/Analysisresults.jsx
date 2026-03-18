@@ -20,13 +20,66 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-const SKIN_TYPE_LABELS = {
-  oily: 'Oily',
-  dry: 'Dry',
-  combination: 'Combination',
-  sensitive: 'Sensitive',
-  normal: 'Normal',
+const SKIN_TYPE_CONFIG = {
+  oily: {
+    label: 'Oily',
+    description: 'Your skin produces excess sebum. T-zone appears shiny.',
+    color: '#2196F3',
+    tips: [
+      'Use oil-free moisturizers',
+      'Wash face twice daily',
+      'Use salicylic acid cleanser',
+      'Avoid heavy creams',
+    ],
+  },
+  dry: {
+    label: 'Dry',
+    description: 'Your skin lacks moisture. May feel tight or flaky.',
+    color: '#FF9800',
+    tips: [
+      'Use rich hydrating moisturizer',
+      'Avoid hot showers',
+      'Use gentle cream cleanser',
+      'Apply hyaluronic acid serum',
+    ],
+  },
+  normal: {
+    label: 'Normal',
+    description: 'Your skin is well balanced. Lucky you!',
+    color: '#4CAF50',
+    tips: [
+      'Maintain current routine',
+      'Use SPF daily',
+      'Light moisturizer works fine',
+      'Stay hydrated',
+    ],
+  },
+  combination: {
+    label: 'Combination',
+    description: 'Oily T-zone with dry or normal cheeks.',
+    color: '#9C27B0',
+    tips: [
+      'Use different products per zone',
+      'Gel cleanser for T-zone',
+      'Light moisturizer on cheeks',
+      'Use balancing toner',
+    ],
+  },
 };
+
+const UNKNOWN_SKIN_TYPE_CONFIG = {
+  label: 'Unable to determine',
+  description: 'The model could not confidently determine your skin type.',
+  color: '#64748B',
+  tips: [
+    'Retake your photo in natural lighting',
+    'Keep your face centered and in focus',
+    'Avoid heavy makeup for analysis',
+    'Try again with a neutral expression',
+  ],
+};
+
+const SCORE_KEYS = ['oily', 'dry', 'normal', 'combination'];
 
 const CAUSE_ICON_MAP = [
   { match: 'stress', icon: '😰' },
@@ -61,18 +114,42 @@ const pickCauseIcon = (text = '') => {
   return match?.icon ?? '✨';
 };
 
-const formatSkinLabel = (key = '') => {
-  if (!key) {
-    return 'Custom';
+const normalizeSkinTypeKey = (value = '') => String(value || '').trim().toLowerCase();
+
+const getSkinTypePresentation = (value = '') => {
+  const normalizedKey = normalizeSkinTypeKey(value);
+  const config = SKIN_TYPE_CONFIG[normalizedKey];
+  if (!config) {
+    return {
+      key: 'unknown',
+      config: UNKNOWN_SKIN_TYPE_CONFIG,
+    };
   }
-  if (SKIN_TYPE_LABELS[key]) {
-    return SKIN_TYPE_LABELS[key];
+  return {
+    key: normalizedKey,
+    config,
+  };
+};
+
+const normalizeScores = (scores) => {
+  const base = {
+    oily: 0,
+    dry: 0,
+    normal: 0,
+    combination: 0,
+  };
+
+  if (!scores || typeof scores !== 'object') {
+    return base;
   }
-  return key
-    .split(/[_\s]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+
+  return SCORE_KEYS.reduce((acc, key) => {
+    const raw = scores[key];
+    const num = typeof raw === 'number' ? raw : Number(raw);
+    const clamped = Number.isFinite(num) ? Math.max(0, Math.min(1, num)) : 0;
+    acc[key] = clamped;
+    return acc;
+  }, { ...base });
 };
 
 /**
@@ -89,6 +166,15 @@ const SkinAnalysisResults = ({ assessmentData }) => {
   const defaultAnalysis = {
     skinType: 'Combination',
     predictedSkinType: 'Combination',
+    predictedSkinTypeKey: 'combination',
+    predictedSkinTypeConfig: SKIN_TYPE_CONFIG.combination,
+    predictionScores: {
+      oily: 0,
+      dry: 0,
+      normal: 0,
+      combination: 1,
+    },
+    predictionConfidence: null,
     severity: 'Moderate',
     stageLabel: 'Stage 2 · Barrier Rehab',
     monthsToResults: 4,
@@ -111,7 +197,6 @@ const SkinAnalysisResults = ({ assessmentData }) => {
     planFocus: DEFAULT_PLAN_FOCUS,
     lifestyle: DEFAULT_LIFESTYLE,
     featureInsights: DEFAULT_FEATURE_INSIGHTS,
-    imageConfidence: 0.86,
     imageNotes: 'Lighting looks consistent. Keep using natural light for future scans.',
     timeline: [
       { month: 1, title: 'Month 1: Reset', description: 'Stabilise inflammation and reset your routine.' },
@@ -139,10 +224,16 @@ const SkinAnalysisResults = ({ assessmentData }) => {
 
     const analysis = assessmentData.analysis;
 
-    // Get SKIN TYPE (Oily/Dry/Normal/Combination) from new response structure
-    const skinTypeValue = analysis.skin_type ?? 'Combination';
-    const skinTypeLabel = formatSkinLabel(skinTypeValue);
-    const predictedSkinType = skinTypeLabel;
+    // Get skin type from backend response only.
+    const skinTypeValue = analysis.skin_type;
+    const { key: predictedSkinTypeKey, config: predictedSkinTypeConfig } = getSkinTypePresentation(skinTypeValue);
+    const predictedSkinType = predictedSkinTypeConfig.label;
+    const skinTypeLabel = predictedSkinType;
+    const predictionScores = normalizeScores(analysis.scores);
+    const confidenceRaw = typeof analysis.confidence === 'number' ? analysis.confidence : Number(analysis.confidence);
+    const predictionConfidence = Number.isFinite(confidenceRaw)
+      ? Math.max(0, Math.min(1, confidenceRaw))
+      : null;
 
     // Image analysis data (for feature insights,quality metrics)
     const imageAnalysis = analysis.image_analysis ?? null;
@@ -192,7 +283,6 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       value: typeof item.value === 'number' ? Number(item.value.toFixed(2)) : item.value,
       unit: item.unit ?? '',
     }));
-    const imageConfidence = typeof imageAnalysis?.confidence === 'number' ? imageAnalysis.confidence : null;
     const imageNotes = imageAnalysis?.notes ?? null;
     const stageLabel = analysis.stage_label ?? defaultAnalysis.stageLabel;
     const monthsToResults = typeof analysis.months_to_results === 'number' ? analysis.months_to_results : defaultAnalysis.monthsToResults;
@@ -219,6 +309,10 @@ const SkinAnalysisResults = ({ assessmentData }) => {
     return {
       skinType: skinTypeLabel,
       predictedSkinType,
+      predictedSkinTypeKey,
+      predictedSkinTypeConfig,
+      predictionScores,
+      predictionConfidence,
       severity,
       rootCauses: rootCauses.length ? rootCauses : defaultAnalysis.rootCauses,
       recommendations: recommendations.length ? recommendations : defaultAnalysis.recommendations,
@@ -228,7 +322,6 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       planFocus,
       lifestyle,
       featureInsights: featureInsights.length ? featureInsights : DEFAULT_FEATURE_INSIGHTS,
-      imageConfidence: imageConfidence ?? defaultAnalysis.imageConfidence,
       imageNotes: imageNotes ?? defaultAnalysis.imageNotes,
       stageLabel,
       monthsToResults,
@@ -255,8 +348,8 @@ const SkinAnalysisResults = ({ assessmentData }) => {
   );
   const primaryFocus = planFocus[0] ?? 'Stabilise your routine';
   const successPercent = Math.round((analysisResults.successProbability ?? defaultAnalysis.successProbability) * 100);
-  const confidencePercent = analysisResults.imageConfidence
-    ? Math.round(analysisResults.imageConfidence * 100)
+  const confidencePercent = analysisResults.predictionConfidence !== null && analysisResults.predictionConfidence !== undefined
+    ? Math.round(analysisResults.predictionConfidence * 100)
     : null;
 
   const treatmentPlans = [
@@ -421,10 +514,10 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                   <Clock className="h-4 w-4 text-teal-400" />
                   <span>Results in ~{analysisResults.monthsToResults} months</span>
                 </div>
-                {confidencePercent && (
+                {confidencePercent !== null && confidencePercent !== undefined && (
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
                     <Shield className="h-4 w-4 text-blue-400" />
-                    <span>Photo confidence {confidencePercent}%</span>
+                    <span>Model confidence {confidencePercent}%</span>
                   </div>
                 )}
               </div>
@@ -443,11 +536,11 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                 <p className="text-xs uppercase tracking-wider text-white/60 font-semibold mb-3">
                   Predicted Skin Type
                 </p>
-                <p className="text-3xl font-bold mb-3 text-white group-hover:text-emerald-400 transition-colors">
+                <p className="text-3xl font-bold mb-3 transition-colors" style={{ color: analysisResults.predictedSkinTypeConfig.color }}>
                   {analysisResults.predictedSkinType}
                 </p>
                 <p className="text-sm text-white/70 leading-relaxed">
-                  Photo analysis confirmed your questionnaire responses for accuracy.
+                  {analysisResults.predictedSkinTypeConfig.description}
                 </p>
               </div>
 
@@ -640,20 +733,20 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                             <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2">
                               Predicted Skin Type
                             </p>
-                            <p className="text-4xl font-bold text-slate-900 mb-3">
+                            <p className="text-4xl font-bold mb-3" style={{ color: analysisResults.predictedSkinTypeConfig.color }}>
                               {analysisResults.predictedSkinType}
                             </p>
 
-                            {analysisResults.imageConfidence !== null && analysisResults.imageConfidence !== undefined && (
+                            {analysisResults.predictionConfidence !== null && analysisResults.predictionConfidence !== undefined && (
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between text-xs font-semibold">
                                   <span className="text-slate-700">Confidence Level</span>
-                                  <span className="text-slate-900">{(analysisResults.imageConfidence * 100).toFixed(0)}%</span>
+                                  <span className="text-slate-900">{(analysisResults.predictionConfidence * 100).toFixed(0)}%</span>
                                 </div>
                                 <div className="h-2 bg-white/40 rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full transition-all duration-1000 ease-out"
-                                    style={{ width: `${analysisResults.imageConfidence * 100}%` }}
+                                    style={{ width: `${analysisResults.predictionConfidence * 100}%` }}
                                   ></div>
                                 </div>
                               </div>
@@ -661,7 +754,39 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                           </div>
                         </div>
 
-                        {/* Feature Insights */}
+                        {/* Model Score Breakdown */}
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 mb-3">
+                            Skin Type Score Breakdown
+                          </h4>
+                          <div className="space-y-3">
+                            {SCORE_KEYS.map((scoreKey) => {
+                              const scoreConfig = SKIN_TYPE_CONFIG[scoreKey];
+                              const scorePercent = Math.round((analysisResults.predictionScores[scoreKey] ?? 0) * 100);
+                              return (
+                                <div key={scoreKey} className="space-y-1.5">
+                                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                                    <span>{scoreConfig.label}</span>
+                                    <span>{scorePercent}%</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full transition-all duration-700"
+                                      style={{ width: `${scorePercent}%`, backgroundColor: scoreConfig.color }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Image Quality Metrics (informational only) */}
+                        <div>
+                          <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 mb-3">
+                            Image Quality Metrics
+                          </h4>
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
                           {featureInsights.slice(0, 4).map((insight) => (
                             <div
@@ -678,6 +803,9 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                             </div>
                           ))}
                         </div>
+                        <p className="text-xs text-slate-500">
+                          Image Quality Metrics are shown for reference only and are not used on the frontend to determine skin type.
+                        </p>
 
                         {/* AI Notes */}
                         {analysisResults.imageNotes && (
@@ -712,6 +840,20 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                 </CardTitle>
               </CardHeader>
               <CardBody>
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold" style={{ backgroundColor: `${analysisResults.predictedSkinTypeConfig.color}1A`, color: analysisResults.predictedSkinTypeConfig.color }}>
+                  {analysisResults.predictedSkinType}
+                </div>
+                <p className="text-slate-700 mb-4">{analysisResults.predictedSkinTypeConfig.description}</p>
+                <div className="mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Recommended Tips</p>
+                  <ul className="grid gap-2 md:grid-cols-2">
+                    {analysisResults.predictedSkinTypeConfig.tips.map((tip) => (
+                      <li key={tip} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 <p className="text-slate-600">
                   Based on your responses, we see <strong className="text-slate-900">{analysisResults.skinType}</strong> tendencies.
                   The AI photo scan leans <strong className="text-slate-900">{analysisResults.predictedSkinType}</strong> with

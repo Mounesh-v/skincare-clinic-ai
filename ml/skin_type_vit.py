@@ -37,6 +37,7 @@ _LABEL_MAP: Dict[str, str] = {
     "dry": "dry",
     "normal": "normal",
     "oily": "oily",
+    "combination": "combination",
 }
 
 # Display names (title-cased) for each skin type key
@@ -116,6 +117,20 @@ def preload_vit_model() -> None:
             _warmed = True
 
 
+def normalize_skin_tone(img_rgb: np.ndarray) -> np.ndarray:
+    import cv2
+
+    lab = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(
+        clipLimit=2.0,
+        tileGridSize=(8, 8)
+    )
+    l_norm = clahe.apply(l)
+    normalized = cv2.merge([l_norm, a, b])
+    return cv2.cvtColor(normalized, cv2.COLOR_LAB2RGB)
+
+
 def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
     """
     Infer skin type from a 224×224 RGB numpy array using the local ViT model.
@@ -128,9 +143,10 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
             "skin_type":  "Oily" | "Dry" | "Normal" | "Combination",
             "confidence": float,          # 0.0 – 1.0
             "scores": {                   # per-type softmax scores
-                "oily":   float,
-                "dry":    float,
-                "normal": float,
+                "oily":        float,
+                "dry":         float,
+                "normal":      float,
+                "combination": float,
             },
             "explanation": str,
         }
@@ -150,6 +166,7 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
     # Convert numpy array → PIL Image (extractor expects PIL or list of PIL)
     if image_rgb.dtype != np.uint8:
         image_rgb = np.clip(image_rgb, 0, 255).astype(np.uint8)
+    image_rgb = normalize_skin_tone(image_rgb)
     pil_image = Image.fromarray(image_rgb)
 
     # Preprocess
@@ -167,7 +184,7 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
         id2label: Dict[int, str] = model.config.id2label  # e.g. {0: "dry", 1: "normal", 2: "oily"}
 
         # Map to canonical names and collect scores
-        scores: Dict[str, float] = {"oily": 0.0, "dry": 0.0, "normal": 0.0}
+        scores: Dict[str, float] = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
         for idx, raw_label in id2label.items():
             canonical = _LABEL_MAP.get(raw_label.lower(), raw_label.lower())
             prob_val = float(probs[idx].item())
@@ -214,8 +231,8 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
 def infer_skin_type_ensemble(
     image_rgb: "np.ndarray",
     condition_probs: "dict[str, float]",
-    vit_weight: float = 0.65,
-    rule_weight: float = 0.35,
+    vit_weight: float = 0.80,
+    rule_weight: float = 0.20,
 ) -> "dict":
     """Blend ViT model scores with rule-based scores from skin_type_inference.
 
@@ -256,15 +273,23 @@ def infer_skin_type_ensemble(
     rule_result = infer_skin_type(condition_probs)
     rule_scores: dict = rule_result["scores"]  # adds "combination" key
 
+    top_condition = max(condition_probs, key=lambda key: condition_probs[key]) if condition_probs else ""
+    top_confidence = float(condition_probs.get(top_condition, 0.0)) if condition_probs else 0.0
+    if (
+        top_condition == "wrinkles"
+        and top_confidence > 0.85
+        and len(condition_probs) == 1
+    ):
+        rule_weight = 0.10
+        vit_weight = 0.90
+
     # --- Blend ----------------------------------------------------------------
-    # ViT does not produce "combination"; carry it solely from the rule branch.
     blended: dict = {}
-    for key in ("oily", "dry", "normal"):
+    for key in ("oily", "dry", "normal", "combination"):
         blended[key] = (
             vit_weight * vit_scores.get(key, 0.0)
             + rule_weight * rule_scores.get(key, 0.0)
         )
-    blended["combination"] = rule_scores.get("combination", 0.0) * rule_weight
 
     # Normalise to a valid probability distribution
     total = sum(blended.values()) or 1.0
