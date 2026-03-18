@@ -21,7 +21,7 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import decode_image_payload, detect_face_with_retry, preprocess_array
-from ml.skin_type_vit import infer_skin_type_vit, preload_vit_model
+from ml.skin_type_vit import infer_skin_type_ensemble, infer_skin_type_vit, preload_vit_model
 
 from .recommendations import build_personalized_plan
 
@@ -509,24 +509,41 @@ class SkinAnalyzerService:
         prediction = self._run_prediction(normalized_for_condition)
         t_eff_end = time.perf_counter()
         
-        # Infer skin type from the preprocessed image using ViT
+        # Build condition probabilities dict for ensemble input (EfficientNet per-class probs)
+        condition_probs: Dict[str, float] = {
+            entry["label"]: float(entry["probability"])
+            for entry in prediction.top_predictions
+        }
+
+        # Ensemble: ViT (80%) + condition rule-based (20%)
         # Semaphore ensures only one ViT inference runs at a time (CPU memory safety)
         t_vit_start = time.perf_counter()
         with self._vit_sem:
-            LOGGER.info("Running ViT skin type inference...")
-            skin_type_result = infer_skin_type_vit(processed)
-            LOGGER.info("ViT done: %s", skin_type_result.get("skin_type"))
+            LOGGER.info("Running ViT ensemble skin type inference...")
+            skin_type_result = infer_skin_type_ensemble(
+                processed,
+                condition_probs,
+                vit_weight=0.80,
+                rule_weight=0.20,
+            )
+            LOGGER.info(
+                "Ensemble done: %s (%.4f) | scores=%s",
+                skin_type_result.get("skin_type"),
+                skin_type_result.get("confidence", 0.0),
+                skin_type_result.get("scores"),
+            )
         t_vit_end = time.perf_counter()
 
         t_ens_start = time.perf_counter()
         plan = build_personalized_plan(prediction.label_key, answers)
 
+        # Keep condition-based result for the drivers metadata only
         derived_skin_type = self.condition_to_skintype(prediction.top_predictions)
 
-        vit_scores = skin_type_result.get("scores", {})
-        vit_entropy = -float(
-            sum(float(score) * np.log2(float(score)) for score in vit_scores.values() if float(score) > 1e-9)
-        ) if vit_scores else 0.0
+        ensemble_scores = skin_type_result.get("scores", {})
+        ensemble_entropy = -float(
+            sum(float(s) * np.log2(float(s)) for s in ensemble_scores.values() if float(s) > 1e-9)
+        ) if ensemble_scores else 0.0
 
         detected_conditions = [
             {
@@ -538,20 +555,19 @@ class SkinAnalyzerService:
         ]
 
         response = {
-            "skin_type": derived_skin_type["skin_type"],
-            "confidence": derived_skin_type["confidence"],
+            # Ensemble result: ViT 80% + condition 20%
+            "skin_type": skin_type_result["skin_type"],
+            "confidence": skin_type_result["confidence"],
+            "scores": {k: round(v, 4) for k, v in ensemble_scores.items()},
             "detected_conditions": detected_conditions,
-            "explanation": (
-                "Skin type derived from top-3 condition probabilities using condition-to-type mapping."
+            "explanation": skin_type_result.get(
+                "explanation",
+                "Skin type determined by ViT (80%) and condition-based (20%) ensemble.",
             ),
             "recommendations": plan["recommendations"],
-            "condition_type_scores": derived_skin_type["scores"],
             "condition_top3_used": derived_skin_type["drivers"],
-            "vit_aux": {
-                "skin_type": skin_type_result.get("skin_type"),
-                "confidence": skin_type_result.get("confidence"),
-                "entropy": round(vit_entropy, 4),
-            },
+            "source": skin_type_result.get("source", "ensemble"),
+            "entropy": round(ensemble_entropy, 4),
         }
         t_ens_end = time.perf_counter()
         total_end = time.perf_counter()
