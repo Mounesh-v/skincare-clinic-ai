@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Tuple
 from uuid import uuid4
 
+import cv2
 import numpy as np
 import torch
 
@@ -40,6 +41,14 @@ _MAGIC_SIGNATURES: list[tuple[bytes, str]] = [
 ]
 # Maximum decoded (raw bytes) image size: 8 MB
 _MAX_DECODED_BYTES = 8 * 1024 * 1024
+
+CONDITION_TO_TYPE: Dict[str, Dict[str, float]] = {
+    "blackheads": {"oily": 0.85, "dry": 0.05, "normal": 0.10, "combination": 0.65},
+    "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.20, "combination": 0.65},
+    "acne": {"oily": 0.65, "dry": 0.10, "normal": 0.15, "combination": 0.80},
+    "wrinkles": {"oily": 0.05, "dry": 0.80, "normal": 0.40, "combination": 0.10},
+    "dark_spots": {"oily": 0.05, "dry": 0.70, "normal": 0.50, "combination": 0.15},
+}
 
 global_condition_model: torch.nn.Module | None = None
 global_vit_model: Any = None
@@ -253,6 +262,206 @@ class SkinAnalyzerService:
     def _persist_user_sample_async(self, raw_bytes: bytes, prediction: PredictionPayload) -> None:
         self._io_executor.submit(self._persist_user_sample, raw_bytes, prediction)
 
+    @staticmethod
+    def normalize_skin_tone(img: np.ndarray) -> np.ndarray:
+        lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l_norm = clahe.apply(l)
+        normalized = cv2.merge([l_norm, a, b])
+        return cv2.cvtColor(normalized, cv2.COLOR_LAB2RGB)
+
+    @staticmethod
+    def _normalize_condition_label(label: str) -> str:
+        return label.strip().lower().replace(" ", "_")
+
+    def condition_to_skintype(self, top_predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        top3 = top_predictions[:3]
+        raw_scores = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+
+        for entry in top3:
+            label_key = self._normalize_condition_label(str(entry.get("label", "")))
+            confidence = float(entry.get("probability", 0.0))
+            weight_map = CONDITION_TO_TYPE.get(label_key)
+            if weight_map is None:
+                continue
+            for skin_type in raw_scores:
+                raw_scores[skin_type] += confidence * float(weight_map[skin_type])
+
+        total = sum(raw_scores.values())
+        if total <= 0:
+            normalized_scores = {"oily": 0.34, "dry": 0.22, "normal": 0.22, "combination": 0.22}
+        else:
+            normalized_scores = {key: value / total for key, value in raw_scores.items()}
+
+        top_condition_key = self._normalize_condition_label(str(top3[0].get("label", ""))) if top3 else ""
+        oily_score = normalized_scores["oily"]
+        dry_score = normalized_scores["dry"]
+
+        if (oily_score > 0.60 and dry_score > 0.25) or (top_condition_key == "acne" and oily_score > 0.55):
+            final_type_key = "combination"
+        else:
+            final_type_key = max(normalized_scores, key=lambda key: normalized_scores[key])
+
+        return {
+            "skin_type": final_type_key.title(),
+            "confidence": round(float(np.clip(normalized_scores[final_type_key], 0.0, 1.0)), 4),
+            "scores": {k: round(float(v), 4) for k, v in normalized_scores.items()},
+            "drivers": [
+                {
+                    "condition": str(item.get("label", "")),
+                    "confidence": float(item.get("probability", 0.0)),
+                }
+                for item in top3
+            ],
+        }
+
+    @staticmethod
+    def _zone_metrics(zone: np.ndarray) -> Dict[str, float]:
+        gray = cv2.cvtColor(zone, cv2.COLOR_RGB2GRAY)
+        shininess = float(np.percentile(np.max(zone, axis=2), 90))
+        roughness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        edges = cv2.Canny(gray, 80, 160)
+        edge_density = float(np.sum(edges > 0) / max(1, edges.size))
+        return {
+            "shininess": shininess,
+            "roughness": roughness,
+            "edge_density": edge_density,
+        }
+
+    def _extract_zone_signals(self, image_rgb: np.ndarray) -> Dict[str, float | bool]:
+        # Fixed zones on the already-cropped 384x384 face tensor.
+        t_zone = image_rgb[0:230, 140:244]
+        l_cheek = image_rgb[150:280, 20:140]
+        r_cheek = image_rgb[150:280, 244:364]
+        chin = image_rgb[280:384, 100:284]
+
+        t_metrics = self._zone_metrics(t_zone)
+        l_metrics = self._zone_metrics(l_cheek)
+        r_metrics = self._zone_metrics(r_cheek)
+        chin_metrics = self._zone_metrics(chin)
+
+        cheek_shine = float((l_metrics["shininess"] + r_metrics["shininess"]) / 2.0)
+        roughness = float(
+            np.mean(
+                [
+                    t_metrics["roughness"],
+                    l_metrics["roughness"],
+                    r_metrics["roughness"],
+                    chin_metrics["roughness"],
+                ]
+            )
+        )
+        edge_density = float(
+            np.mean(
+                [
+                    t_metrics["edge_density"],
+                    l_metrics["edge_density"],
+                    r_metrics["edge_density"],
+                    chin_metrics["edge_density"],
+                ]
+            )
+        )
+
+        asymmetry = float(t_metrics["shininess"] - cheek_shine)
+        global_std = float(np.std(image_rgb.astype(np.float32)))
+        is_synthetic = global_std < 18.0
+
+        return {
+            "t_zone_shine": float(t_metrics["shininess"]),
+            "cheek_shine": cheek_shine,
+            "roughness": roughness,
+            "edge_density": edge_density,
+            "asymmetry": asymmetry,
+            "is_synthetic": bool(is_synthetic),
+        }
+
+    @staticmethod
+    def _clip_nudge(value: float) -> float:
+        return float(np.clip(value, -0.15, 0.15))
+
+    def _apply_zone_aware_adjustment(
+        self,
+        vit_result: Dict[str, Any],
+        image_rgb: np.ndarray,
+    ) -> Tuple[Dict[str, Any], Dict[str, float | bool]]:
+        vit_scores: Dict[str, float] = {
+            "oily": float(vit_result.get("scores", {}).get("oily", 0.0)),
+            "dry": float(vit_result.get("scores", {}).get("dry", 0.0)),
+            "normal": float(vit_result.get("scores", {}).get("normal", 0.0)),
+        }
+        zone_signals = self._extract_zone_signals(image_rgb)
+
+        t_shine = float(zone_signals["t_zone_shine"])
+        cheek_shine = float(zone_signals["cheek_shine"])
+        roughness = float(zone_signals["roughness"])
+        edge_density = float(zone_signals["edge_density"])
+        asymmetry = float(zone_signals["asymmetry"])
+        is_synthetic = bool(zone_signals["is_synthetic"])
+
+        # Soft nudges: ViT stays primary; adjustments are bounded to +/- 0.15.
+        nudge = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+
+        high_t_shine = (t_shine - 175.0) / 80.0
+        high_cheek_shine = (cheek_shine - 170.0) / 80.0
+        low_cheek_shine = (160.0 - cheek_shine) / 80.0
+        low_global_shine = (165.0 - ((t_shine + cheek_shine) / 2.0)) / 80.0
+        high_roughness = (roughness - 120.0) / 260.0
+        low_roughness = (90.0 - roughness) / 180.0
+        balance = (20.0 - abs(asymmetry)) / 40.0
+
+        nudge["oily"] += max(0.0, high_t_shine) * max(0.0, high_cheek_shine) * 0.15
+        nudge["combination"] += max(0.0, high_t_shine) * max(0.0, low_cheek_shine) * 0.15
+        nudge["dry"] += max(0.0, low_global_shine) * max(0.0, high_roughness) * 0.15
+
+        smooth_balance = max(0.0, balance) * max(0.0, low_roughness) * 0.15
+        nudge["normal"] += smooth_balance
+
+        # Mild penalty for very high texture noise to keep normal in check.
+        nudge["normal"] -= min(0.08, edge_density * 0.25)
+
+        for key in nudge:
+            nudge[key] = self._clip_nudge(nudge[key])
+
+        adjusted_scores = {
+            "oily": max(0.0, vit_scores["oily"] + nudge["oily"]),
+            "dry": max(0.0, vit_scores["dry"] + nudge["dry"]),
+            "normal": max(0.0, vit_scores["normal"] + nudge["normal"]),
+            "combination": max(0.0, nudge["combination"]),
+        }
+
+        total = sum(adjusted_scores.values())
+        if total > 0:
+            adjusted_scores = {k: float(v / total) for k, v in adjusted_scores.items()}
+
+        vit_top = max(vit_scores, key=lambda key: vit_scores[key])
+        combination_rule_fired = vit_top == "oily" and asymmetry > 40.0
+        if combination_rule_fired:
+            final_type = "Combination"
+            confidence = float(vit_scores["oily"] * 0.85)
+            explanation = "T-zone appears significantly oilier than cheeks, indicating combination skin pattern."
+        else:
+            final_key = max(adjusted_scores, key=lambda key: adjusted_scores[key])
+            final_type = final_key.title()
+            confidence = float(adjusted_scores[final_key])
+            explanation = str(vit_result.get("explanation", f"Classified as {final_type}."))
+
+        if is_synthetic:
+            adjusted_scores = {k: float(v * 0.70) for k, v in adjusted_scores.items()}
+            confidence *= 0.70
+            confidence = min(confidence, 0.65)
+            explanation = explanation + " Confidence reduced due to filtered/synthetic image characteristics."
+
+        updated_result = {
+            **vit_result,
+            "skin_type": final_type,
+            "confidence": round(float(np.clip(confidence, 0.0, 1.0)), 4),
+            "scores": {k: round(v, 4) for k, v in adjusted_scores.items()},
+            "explanation": explanation,
+            "low_confidence_filtered_image": is_synthetic,
+        }
+        return updated_result, zone_signals
+
     def analyze_request(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
         t0 = time.perf_counter()
         if not isinstance(payload, Mapping):
@@ -293,8 +502,11 @@ class SkinAnalyzerService:
                 "Please retake the photo with your face centred, well-lit, and filling the frame."
             )
 
+        # CLAHE normalization before EfficientNet inference to reduce tone bias.
+        normalized_for_condition = self.normalize_skin_tone(processed)
+
         t_eff_start = time.perf_counter()
-        prediction = self._run_prediction(processed)
+        prediction = self._run_prediction(normalized_for_condition)
         t_eff_end = time.perf_counter()
         
         # Infer skin type from the preprocessed image using ViT
@@ -309,6 +521,13 @@ class SkinAnalyzerService:
         t_ens_start = time.perf_counter()
         plan = build_personalized_plan(prediction.label_key, answers)
 
+        derived_skin_type = self.condition_to_skintype(prediction.top_predictions)
+
+        vit_scores = skin_type_result.get("scores", {})
+        vit_entropy = -float(
+            sum(float(score) * np.log2(float(score)) for score in vit_scores.values() if float(score) > 1e-9)
+        ) if vit_scores else 0.0
+
         detected_conditions = [
             {
                 "label": entry["label"],
@@ -319,11 +538,20 @@ class SkinAnalyzerService:
         ]
 
         response = {
-            "skin_type": skin_type_result["skin_type"],
-            "confidence": skin_type_result["confidence"],
+            "skin_type": derived_skin_type["skin_type"],
+            "confidence": derived_skin_type["confidence"],
             "detected_conditions": detected_conditions,
-            "explanation": skin_type_result["explanation"],
+            "explanation": (
+                "Skin type derived from top-3 condition probabilities using condition-to-type mapping."
+            ),
             "recommendations": plan["recommendations"],
+            "condition_type_scores": derived_skin_type["scores"],
+            "condition_top3_used": derived_skin_type["drivers"],
+            "vit_aux": {
+                "skin_type": skin_type_result.get("skin_type"),
+                "confidence": skin_type_result.get("confidence"),
+                "entropy": round(vit_entropy, 4),
+            },
         }
         t_ens_end = time.perf_counter()
         total_end = time.perf_counter()
