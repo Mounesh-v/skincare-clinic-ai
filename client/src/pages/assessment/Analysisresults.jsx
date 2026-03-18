@@ -143,13 +143,29 @@ const normalizeScores = (scores) => {
     return base;
   }
 
-  return SCORE_KEYS.reduce((acc, key) => {
-    const raw = scores[key];
-    const num = typeof raw === 'number' ? raw : Number(raw);
-    const clamped = Number.isFinite(num) ? Math.max(0, Math.min(1, num)) : 0;
-    acc[key] = clamped;
-    return acc;
-  }, { ...base });
+  const normalized = { ...base };
+  for (const [rawKey, rawValue] of Object.entries(scores)) {
+    const key = String(rawKey || '').trim().toLowerCase();
+    if (!SCORE_KEYS.includes(key)) {
+      continue;
+    }
+    const num = typeof rawValue === 'number' ? rawValue : Number(rawValue);
+    normalized[key] = Number.isFinite(num) ? Math.max(0, Math.min(1, num)) : 0;
+  }
+
+  return normalized;
+};
+
+const getAnalysisPayload = (analysis) => {
+  if (!analysis || typeof analysis !== 'object') {
+    return {};
+  }
+
+  if (analysis.analysis && typeof analysis.analysis === 'object') {
+    return analysis.analysis;
+  }
+
+  return analysis;
 };
 
 /**
@@ -222,15 +238,29 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       return null;
     }
 
-    const analysis = assessmentData.analysis;
+    const analysis = getAnalysisPayload(assessmentData.analysis);
 
     // Get skin type from backend response only.
-    const skinTypeValue = analysis.skin_type;
+    const skinTypeValue =
+      analysis.skin_type
+      ?? analysis.skinType
+      ?? analysis.type
+      ?? analysis.predicted_type
+      ?? analysis.predictedSkinType
+      ?? '';
     const { key: predictedSkinTypeKey, config: predictedSkinTypeConfig } = getSkinTypePresentation(skinTypeValue);
     const predictedSkinType = predictedSkinTypeConfig.label;
     const skinTypeLabel = predictedSkinType;
-    const predictionScores = normalizeScores(analysis.scores);
-    const confidenceRaw = typeof analysis.confidence === 'number' ? analysis.confidence : Number(analysis.confidence);
+    const predictionScores = normalizeScores(
+      analysis.scores
+      ?? analysis.skin_scores
+      ?? analysis.type_scores
+    );
+    const confidenceSource =
+      analysis.confidence
+      ?? analysis.prediction_confidence
+      ?? analysis.imageConfidence;
+    const confidenceRaw = typeof confidenceSource === 'number' ? confidenceSource : Number(confidenceSource);
     const predictionConfidence = Number.isFinite(confidenceRaw)
       ? Math.max(0, Math.min(1, confidenceRaw))
       : null;
@@ -1127,7 +1157,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">
-                {getTopDoctors(assessmentData?.analysis?.skin_type, 3).map((doctor) => (
+                {getTopDoctors(analysisResults.predictedSkinTypeKey === 'unknown' ? '' : analysisResults.predictedSkinTypeKey, 3).map((doctor) => (
                   <Card key={doctor.id} className="h-full flex flex-col" hoverable>
                     <CardBody className="flex flex-col h-full p-6">
                       <div className="flex items-start justify-between mb-4">

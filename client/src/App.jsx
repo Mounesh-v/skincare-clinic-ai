@@ -78,6 +78,8 @@ import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
 import FeatureList from "./pages/admin/Feature/FeatureList.jsx";
 
+const ASSESSMENT_STORAGE_KEY = "assessmentResultV2";
+
 /**
  * GuestRoute — redirects authenticated users away from auth pages (/login, /signup)
  */
@@ -127,8 +129,31 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const raw = window.localStorage.getItem(ASSESSMENT_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        setAssessmentData(parsed);
+      }
+    } catch {
+      window.localStorage.removeItem(ASSESSMENT_STORAGE_KEY);
+    }
+  }, []);
+
   const handleAssessmentComplete = (data) => {
     setAssessmentData(data);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(ASSESSMENT_STORAGE_KEY, JSON.stringify(data));
+    }
   };
 
   const handleLogout = () => {
