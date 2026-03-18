@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 _DATA_URL_PATTERN = re.compile(r"^data:(?P<mime>[^;]+);base64,(?P<payload>.+)$")
 
 # MIME allowlist for uploaded images
-_ALLOWED_MIMES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"})
+_ALLOWED_MIMES = frozenset({"image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/bmp"})
 
 # Known image magic bytes (file signatures)
 _MAGIC_SIGNATURES: list[tuple[bytes, str]] = [

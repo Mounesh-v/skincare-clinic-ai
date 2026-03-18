@@ -81,6 +81,63 @@ const ANALYSIS_STAGES = [
     { label: 'Generating dermatologist-backed plan', progress: 96 },
 ];
 
+const MAX_UPLOAD_DIMENSION = 1600;
+const MAX_DECODED_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Unable to read selected image.'));
+    reader.readAsDataURL(file);
+});
+
+const loadImageElement = (dataUrl) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('This image format is not supported. Please use JPG, PNG, WEBP, GIF, or BMP.'));
+    image.src = dataUrl;
+});
+
+const estimateDataUrlBytes = (dataUrl) => {
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex === -1) {
+        return 0;
+    }
+    const base64Length = dataUrl.length - commaIndex - 1;
+    return Math.floor((base64Length * 3) / 4);
+};
+
+const normalizeImageForUpload = async (file) => {
+    const sourceDataUrl = await readFileAsDataUrl(file);
+    const image = await loadImageElement(sourceDataUrl);
+
+    const scale = Math.min(1, MAX_UPLOAD_DIMENSION / Math.max(image.width, image.height));
+    const targetWidth = Math.max(1, Math.round(image.width * scale));
+    const targetHeight = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+        throw new Error('Unable to process image in browser. Please try another image.');
+    }
+    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+    let quality = 0.9;
+    let outputDataUrl = canvas.toDataURL('image/jpeg', quality);
+    while (estimateDataUrlBytes(outputDataUrl) > MAX_DECODED_UPLOAD_BYTES && quality > 0.45) {
+        quality -= 0.1;
+        outputDataUrl = canvas.toDataURL('image/jpeg', quality);
+    }
+
+    if (estimateDataUrlBytes(outputDataUrl) > MAX_DECODED_UPLOAD_BYTES) {
+        throw new Error('Image is too large after compression. Please use a smaller or lower-resolution photo.');
+    }
+
+    return outputDataUrl;
+};
+
 const StartAssessment = ({ onComplete }) => {
     const [stepIndex, setStepIndex] = useState(0);
     const [lead, setLead] = useState(INITIAL_LEAD);
@@ -184,21 +241,25 @@ const StartAssessment = ({ onComplete }) => {
         stopCamera();
     };
 
-    const handleFileUpload = (event) => {
+    const handleFileUpload = async (event) => {
         const file = event.target.files?.[0];
         if (!file) {
             return;
         }
         if (!file.type.startsWith('image/')) {
             toast.error('Please select an image file.');
+            event.target.value = '';
             return;
         }
-        const reader = new FileReader();
-        reader.onload = () => {
-            setImageData(reader.result);
+
+        try {
+            const normalizedImageData = await normalizeImageForUpload(file);
+            setImageData(normalizedImageData);
             stopCamera();
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            toast.error(error?.message || 'Could not process this image. Please try another one.');
+        }
+
         event.target.value = '';
     };
 
