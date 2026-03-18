@@ -81,6 +81,56 @@ const ANALYSIS_STAGES = [
     { label: 'Generating dermatologist-backed plan', progress: 96 },
 ];
 
+const ASSESSMENT_STORAGE_KEY = 'assessmentResultV2';
+const SCORE_KEYS = ['oily', 'dry', 'normal', 'combination'];
+
+const clampToUnit = (value) => {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) {
+        return 0;
+    }
+    return Math.max(0, Math.min(1, numeric));
+};
+
+const normalizeApiScores = (rawScores) => {
+    const baseScores = { oily: 0, dry: 0, normal: 0, combination: 0 };
+    if (!rawScores || typeof rawScores !== 'object') {
+        return baseScores;
+    }
+
+    for (const [key, value] of Object.entries(rawScores)) {
+        const normalizedKey = String(key || '').trim().toLowerCase();
+        if (SCORE_KEYS.includes(normalizedKey)) {
+            baseScores[normalizedKey] = clampToUnit(value);
+        }
+    }
+
+    return baseScores;
+};
+
+const normalizeAnalyzeResponse = (response) => {
+    const source = response && typeof response === 'object'
+        ? (response.analysis && typeof response.analysis === 'object' ? response.analysis : response)
+        : {};
+
+    const normalizedScores = normalizeApiScores(
+        source.scores ?? source.skin_scores ?? source.type_scores
+    );
+
+    return {
+        ...source,
+        skin_type:
+            source.skin_type
+            ?? source.skinType
+            ?? source.type
+            ?? source.predicted_type
+            ?? source.predictedSkinType
+            ?? 'Unknown',
+        confidence: clampToUnit(source.confidence),
+        scores: normalizedScores,
+    };
+};
+
 const MAX_UPLOAD_DIMENSION = 1600;
 const MAX_DECODED_UPLOAD_BYTES = 8 * 1024 * 1024;
 
@@ -324,14 +374,23 @@ const StartAssessment = ({ onComplete }) => {
             };
 
             const data = await analyzeAssessment(payload);
-            setAnalysisStageIndex(ANALYSIS_STAGES.length - 1);
-            setAnalysisProgress(100);
-            onComplete({
+            const normalizedAnalysis = normalizeAnalyzeResponse(data);
+            const assessmentResult = {
                 lead: payload.lead,
                 answers: payload.answers,
-                analysis: data,
+                analysis: normalizedAnalysis,
                 image: imageData,
-            });
+            };
+
+            if (typeof window !== 'undefined') {
+                window.localStorage.removeItem('assessmentResult');
+                window.localStorage.removeItem('assessmentData');
+                window.localStorage.setItem(ASSESSMENT_STORAGE_KEY, JSON.stringify(assessmentResult));
+            }
+
+            setAnalysisStageIndex(ANALYSIS_STAGES.length - 1);
+            setAnalysisProgress(100);
+            onComplete(assessmentResult);
         } catch (error) {
             const message = error?.message || 'We could not generate the plan. Please try again.';
             toast.error(message);
