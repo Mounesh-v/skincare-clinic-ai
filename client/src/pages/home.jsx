@@ -29,7 +29,7 @@ function HomePage() {
 
 
 import heroImage from '../assets/heroImage.jpg';
-import beforeImage from '../assets/beforeimage.jpg';
+import beforeImage from '../assets/beforeImage.jpg';
 import afterImage from '../assets/afterImage.jpg';
 import bgPattern from '../assets/hero2.jpg';
 import beforeImage2 from '../assets/beforeImage2.jpg';
