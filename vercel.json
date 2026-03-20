@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd vendor && npm install && npm run build",
-  "outputDirectory": "vendor/dist",
-  "installCommand": "cd vendor && npm install"
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/dist",
+  "installCommand": "cd client && npm install"
 }
