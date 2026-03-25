@@ -1,0 +1,23 @@
+# ── Web server ────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+
+# ── ML / inference ────────────────────────────────────────────────────────
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.40.0
+
+# ── Image processing ──────────────────────────────────────────────────────
+# opencv-python-headless instead of opencv-python (no GUI deps needed in container)
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# ── Face detection ────────────────────────────────────────────────────────
+mediapipe>=0.10.0
+
+# ── Misc ──────────────────────────────────────────────────────────────────
+scipy>=1.10.0
+scikit-learn>=1.3.0
+tqdm
