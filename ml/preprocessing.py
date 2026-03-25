@@ -21,6 +21,8 @@ LOGGER = logging.getLogger(__name__)
 
 _FACE_DETECTOR_LOCK = threading.Lock()
 _FACE_DETECTOR: Optional[Any] = None
+_CLAHE_LOCK = threading.Lock()
+_CLAHE: Optional[Any] = None
 DebugHook = Callable[[Dict[str, Any]], None]
 
 
@@ -47,6 +49,14 @@ def _get_face_detector() -> Any:
         if _FACE_DETECTOR is None:
             _FACE_DETECTOR = _build_face_detector()
         return _FACE_DETECTOR
+
+
+def _get_clahe() -> Any:
+    with _CLAHE_LOCK:
+        global _CLAHE
+        if _CLAHE is None:
+            _CLAHE = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        return _CLAHE
 
 
 def detect_face_bbox(image_rgb: np.ndarray, min_score: float) -> Optional[DetectionResult]:
@@ -122,10 +132,34 @@ def crop_to_face(image_rgb: np.ndarray, detection: Optional[DetectionResult], pa
 def normalise_lighting(image_rgb: np.ndarray) -> np.ndarray:
     hsv = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2HSV)
     h, s, v = cv2.split(hsv)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe = _get_clahe()
     v_eq = clahe.apply(v)
     hsv_eq = cv2.merge((h, s, v_eq))
     return cv2.cvtColor(hsv_eq, cv2.COLOR_HSV2RGB)
+
+
+def detect_face_with_retry(image_rgb: np.ndarray, enforce_face: bool = True) -> Optional[DetectionResult]:
+    if not enforce_face:
+        return None
+    detection = detect_face_bbox(image_rgb, CONFIG.min_face_score)
+    if detection is None:
+        retry_score = max(0.1, CONFIG.min_face_score * 0.5)
+        detection = detect_face_bbox(image_rgb, retry_score)
+    if detection is None:
+        raise ValueError(
+            "Unable to detect a face with sufficient confidence."
+            " Ensure good lighting and keep your face centered in the frame."
+        )
+    return detection
+
+
+def decode_image_payload(payload: bytes) -> np.ndarray:
+    buffer = np.frombuffer(payload, dtype=np.uint8)
+    decoded = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
+    if decoded is None:
+        raise ValueError("Unable to decode image bytes")
+    rgb = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
+    return np.ascontiguousarray(rgb)
 
 
 def _emit_crop_debug(
@@ -172,29 +206,20 @@ def preprocess_array(
 ) -> Tuple[np.ndarray, float]:
     if image_rgb.ndim != 3 or image_rgb.shape[2] != 3:
         raise ValueError("Expected an RGB image with three channels")
-    # Only run face detection if enforce_face is True or detection is provided
-    if detection is not None:
-        local_detection = detection
-    elif enforce_face:
-        local_detection = detect_face_bbox(image_rgb, CONFIG.min_face_score)
-        if local_detection is None:
-            retry_score = max(0.1, CONFIG.min_face_score * 0.5)
-            local_detection = detect_face_bbox(image_rgb, retry_score)
-        if local_detection is None:
-            raise ValueError(
-                "Unable to detect a face with sufficient confidence."
-                " Ensure good lighting and keep your face centered in the frame."
-            )
-    else:
-        local_detection = None
-    
+    local_detection = detection if detection is not None else detect_face_with_retry(image_rgb, enforce_face)
+
     fallback_to_center = local_detection is None
     cropped = crop_to_face(image_rgb, local_detection, CONFIG.face_padding if not fallback_to_center else 0.0)
-    # Ensure image_size is a tuple (width, height)
     dsize = (CONFIG.image_size, CONFIG.image_size) if isinstance(CONFIG.image_size, int) else CONFIG.image_size
     resized = cv2.resize(cropped, dsize, interpolation=cv2.INTER_AREA)
-    normalised = normalise_lighting(resized)
-    tensor_ready = np.clip(normalised, 0, 255).astype(np.uint8)
+    gray_mean = float(cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY).mean())
+    min_ok = CONFIG.quality_min_brightness * 255.0
+    max_ok = CONFIG.quality_max_brightness * 255.0
+    if min_ok <= gray_mean <= max_ok:
+        normalised = resized
+    else:
+        normalised = normalise_lighting(resized)
+    tensor_ready = np.ascontiguousarray(np.clip(normalised, 0, 255).astype(np.uint8))
     face_score = local_detection.score if local_detection else 0.0
     _emit_crop_debug(tensor_ready, local_detection, face_score, debug_hook, debug_tag)
     return tensor_ready, face_score
@@ -222,11 +247,7 @@ def preprocess_image_bytes(
     debug_hook: Optional[DebugHook] = None,
     debug_tag: Optional[str] = None,
 ) -> Tuple[np.ndarray, float]:
-    buffer = np.frombuffer(payload, dtype=np.uint8)
-    decoded = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
-    if decoded is None:
-        raise ValueError("Unable to decode image bytes")
-    rgb = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
+    rgb = decode_image_payload(payload)
     return preprocess_array(rgb, enforce_face=enforce_face, debug_hook=debug_hook, debug_tag=debug_tag)
 
 
