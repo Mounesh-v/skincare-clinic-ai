@@ -7,14 +7,17 @@ FROM python:3.11-slim
 # libgl1 / libglib2.0-0 : OpenCV headless still needs these at runtime
 # libsm6 / libxrender1 / libxext6 : MediaPipe transitive deps
 # git + git-lfs : needed only if you do in-container git ops; safe to keep
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1 \
-        libglib2.0-0 \
-        libsm6 \
-        libxrender1 \
-        libxext6 \
-        git \
-        git-lfs \
+# System dependencies for OpenCV and MediaPipe
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libsm6 \
+    libxext6 \
+    libglib2.0-0 \
+    libgles2 \
+    libegl1 \
+    libxrender1 \
+    git \
+    git-lfs \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python deps ───────────────────────────────────────────────────────────
