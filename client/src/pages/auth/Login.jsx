@@ -9,9 +9,7 @@ import api from "../../utils/api";
 // Import your background image
 import loginBg from "../../assets/signup-bg.jpg";
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5005"
-).replace(/\/api\/?$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5005").replace(/\/api\/?$/, "");
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,26 +18,18 @@ const Login = () => {
   const [justRegisteredName, setJustRegisteredName] = useState("");
 
   // Redirect already-logged-in users away from login
-  // useEffect(() => {
-  //   const token = localStorage.getItem("authToken");
-
-  //   let user = null;
-  //   try {
-  //     user = JSON.parse(localStorage.getItem("authUser"));
-  //   } catch {
-  //     user = null;
-  //   }
-
-  //   console.log("user:", user);
-
-  //   if (token && user) {
-  //     if (user.role === "admin") {
-  //       navigate("/admin/dashboard", { replace: true });
-  //     } else {
-  //       navigate("/", { replace: true });
-  //     }
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (localStorage.getItem("authToken")) {
+      navigate("/", { replace: true });
+      return;
+    }
+    // Check if user just registered — show a welcome banner
+    const name = sessionStorage.getItem("justRegistered");
+    if (name) {
+      setJustRegisteredName(name);
+      sessionStorage.removeItem("justRegistered");
+    }
+  }, [navigate]);
 
   const handleGoogleLogin = () => {
     window.location.href = `${API_URL}/api/auth/google`;
@@ -79,22 +69,18 @@ const Login = () => {
         password: formData.password,
       });
 
-      console.log("Admin Res Crendentials", res);
-
       // Save token
       localStorage.setItem("authToken", res.data.token);
       localStorage.setItem("authUser", JSON.stringify(res.data.user));
       window.dispatchEvent(new Event("auth:updated"));
 
       const userName = res.data.user?.name || "";
-      toast.success(
-        userName ? `Welcome back, ${userName}! 👋` : "Welcome back! 👋",
-      );
+      toast.success(userName ? `Welcome back, ${userName}! 👋` : "Welcome back! 👋");
 
-      if (res?.data?.user?.role === "admin") {
-        navigate("/admin/dashboard"); //  Admin
+      if (res.data.user.role === "admin") {
+        navigate("/admin/dashboard"); // 👑 Admin
       } else {
-        navigate("/"); //  Normal User
+        navigate("/"); // 👤 Normal User
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
@@ -139,9 +125,7 @@ const Login = () => {
                     Account created successfully!
                   </p>
                   <p className="text-xs text-emerald-700">
-                    Welcome,{" "}
-                    <span className="font-semibold">{justRegisteredName}</span>!
-                    Please log in to continue.
+                    Welcome, <span className="font-semibold">{justRegisteredName}</span>! Please log in to continue.
                   </p>
                 </div>
               </div>
@@ -156,9 +140,7 @@ const Login = () => {
                 </span>
               </div>
               <h2 className="mb-3 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-3xl font-bold text-transparent lg:text-4xl">
-                {justRegisteredName
-                  ? `Hi, ${justRegisteredName}! 👋`
-                  : "Welcome Back! 👋"}
+                {justRegisteredName ? `Hi, ${justRegisteredName}! 👋` : "Welcome Back! 👋"}
               </h2>
               <p className="text-base text-slate-600">
                 {justRegisteredName
