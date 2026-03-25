@@ -68,6 +68,10 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Pending",
     },
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vendor",
+    },
 
     timeline: [
       {
