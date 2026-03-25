@@ -1,5 +1,11 @@
 {
+<<<<<<< HEAD
   "buildCommand": "cd vendor && npm install && npm run build",
   "outputDirectory": "vendor/dist",
   "installCommand": "cd vendor && npm install"
+=======
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/dist",
+  "installCommand": "cd client && npm install"
+>>>>>>> 95d69527b680e467ccfd2a0242e7dd6547e47eb4
 }
