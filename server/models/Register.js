@@ -25,6 +25,7 @@ const RegisterUsers = new mongoose.Schema(
     },
     providerId: {
       type: String,
+      sparse: true,
     },
     picture: {
       type: String,

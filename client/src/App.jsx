@@ -21,38 +21,34 @@ function ScrollToTop() {
   return null;
 }
 
-
 // Layouts
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import AdminLayout from "./components/admin/AdminLayout";
 
 // Public Pages
-import TrayaStyleHome from './pages/home';
-import StartAssessment from './pages/assessment/StartAssessment.jsx';
-import AnalysisResults from './pages/assessment/Analysisresults.jsx';
-import ProductsPage from './pages/ProductsPage';
-import ProductDetail from './pages/ProductDetail';
-import CheckoutPage from './pages/CheckoutPage';
-import Contact from './pages/Contact';
-import Signup from './pages/auth/Signup';
-import Login from './pages/auth/Login.jsx';
-import AuthCallback from './pages/auth/AuthCallback.jsx';
-import FindDoctors from './pages/FindDoctors';
-import OurScience from './pages/OurScience';
-import Ingredients from './pages/Ingredients';
-import ClinicalStudies from './pages/ClinicalStudies';
-import About from './pages/about'
-import Story from './pages/story.jsx'
-import UserProfile from './pages/UserProfile.jsx'
-
-
-
+import TrayaStyleHome from "./pages/home";
+import StartAssessment from "./pages/assessment/StartAssessment.jsx";
+import AnalysisResults from "./pages/assessment/Analysisresults.jsx";
+import ProductsPage from "./pages/ProductsPage";
+import ProductDetail from "./pages/ProductDetail";
+import CheckoutPage from "./pages/CheckoutPage";
+import Contact from "./pages/Contact";
+import Signup from "./pages/auth/Signup";
+import Login from "./pages/auth/Login.jsx";
+import AuthCallback from "./pages/auth/AuthCallback.jsx";
+import FindDoctors from "./pages/FindDoctors";
+import OurScience from "./pages/OurScience";
+import Ingredients from "./pages/Ingredients";
+import ClinicalStudies from "./pages/ClinicalStudies";
+import About from "./pages/about";
+import Story from "./pages/story.jsx";
+import UserProfile from "./pages/UserProfile.jsx";
 
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
 import Dashboard from "./pages/admin/Dashboard";
-import AdminSpecialOffers from './pages/admin/Feature/AdminSpecialOffers'
+import AdminSpecialOffers from "./pages/admin/Feature/AdminSpecialOffers";
 
 // Admin - Users
 import UserList from "./pages/admin/Users/UserList";
@@ -83,8 +79,11 @@ const ASSESSMENT_STORAGE_KEY = "assessmentResultV2";
 /**
  * GuestRoute — redirects authenticated users away from auth pages (/login, /signup)
  */
-function GuestRoute({ isAuthenticated, children }) {
+function GuestRoute({ isAuthenticated, user, children }) {
   if (isAuthenticated) {
+    if (user?.role === "admin") {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
     return <Navigate to="/" replace />;
   }
   return children;
@@ -227,7 +226,6 @@ function App() {
             <Route path="products/create" element={<ProductCreate />} />
             <Route path="products/:id" element={<ProductView />} />
             <Route path="products/:id/edit" element={<ProductEdit />} />
-            
 
             {/* Orders Management */}
             <Route path="orders" element={<OrderList />} />
@@ -244,17 +242,12 @@ function App() {
             <Route path="doctors/:id/edit" element={<DoctorCreate />} />
 
             {/* Placeholder Routes */}
-            <Route
-              path="Features"
-              element={<FeatureList />}
-            />
+            <Route path="Features" element={<FeatureList />} />
             <Route
               path="analytics"
               element={<ComingSoon title="Analytics & Reports" />}
             />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
-
-
           </Route>
 
           {/* ============================================ */}
@@ -329,7 +322,6 @@ function PublicAppRoutes({
           }
         />
 
-
         {/* Find Doctors */}
         <Route path="/find-doctors" element={<FindDoctors />} />
 
@@ -352,7 +344,7 @@ function PublicAppRoutes({
         <Route
           path="/login"
           element={
-            <GuestRoute isAuthenticated={isAuthenticated}>
+            <GuestRoute isAuthenticated={isAuthenticated} user={user}>
               <Login />
             </GuestRoute>
           }
