@@ -53,11 +53,19 @@ const DoctorList = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this doctor?")) {
-      return;
-    }
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this doctor?",
+    );
+    if (!confirmDelete) return;
+
     try {
-      await api.delete(`/api/doctors/${id}`);
+      await api.delete(`/api/doctors/${id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       setDoctors((prev) => prev.filter((doc) => doc.id !== id));
       toast.success("Doctor deleted successfully");
     } catch (err) {
@@ -245,9 +253,9 @@ const DoctorList = () => {
           <p className="text-2xl font-bold text-yellow-600 mt-1">
             {doctors.length > 0
               ? (
-                doctors.reduce((sum, d) => sum + Number(d.rating), 0) /
-                doctors.length
-              ).toFixed(1)
+                  doctors.reduce((sum, d) => sum + Number(d.rating), 0) /
+                  doctors.length
+                ).toFixed(1)
               : "—"}{" "}
             ⭐
           </p>
