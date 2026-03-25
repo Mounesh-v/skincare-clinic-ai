@@ -2,7 +2,7 @@ import axios from "axios";
 
 const VITE_API_URL =
   import.meta.env.VITE_API_URL ?? "http://localhost:5005/api";
-const ML_BASE = import.meta.env.VITE_ML_URL ?? "http://localhost:8000";
+const ML_BASE = import.meta.env.VITE_ML_URL ?? "https://niamaraa-skincare-ai-api.hf.space";
 
 const apiClient = axios.create({
   baseURL: VITE_API_URL,
