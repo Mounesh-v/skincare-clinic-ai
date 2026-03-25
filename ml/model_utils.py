@@ -53,7 +53,8 @@ def normalize_tensor(tensor: torch.Tensor) -> torch.Tensor:
 
 
 def to_tensor(image: np.ndarray, add_batch_dim: bool = True, normalize: bool = True) -> torch.Tensor:
-    tensor = torch.from_numpy(image).float().permute(2, 0, 1) / 255.0
+    contiguous = np.ascontiguousarray(image)
+    tensor = torch.from_numpy(contiguous).float().permute(2, 0, 1) / 255.0
     if normalize:
         tensor = normalize_tensor(tensor)
     if add_batch_dim:

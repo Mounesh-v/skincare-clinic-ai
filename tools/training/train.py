@@ -14,14 +14,14 @@ from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, random_split, WeightedRandomSampler
 from tqdm import tqdm
 
-from .config import CONFIG
-from .model_utils import AttentionClassifierHead
+from ml.config import CONFIG
+from ml.model_utils import AttentionClassifierHead
 
 
 # =============================================================================
 # DATASET CONFIGURATION
 # =============================================================================
-DATA_DIR = Path(__file__).parent / "data" / "raw" / "Skin v2"
+DATA_DIR = CONFIG.dataset_root
 
 
 def set_seed(seed: int) -> None:

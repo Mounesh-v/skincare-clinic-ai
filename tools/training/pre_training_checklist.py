@@ -11,10 +11,11 @@ import time
 import logging
 from glob import glob
 import json
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data', 'raw', 'Skin_v2')
+DATA_DIR = str(Path(__file__).resolve().parents[2] / 'ml' / 'data' / 'raw' / 'Skin v2')
 
 # 1. Verify dataset exists
 if not os.path.isdir(DATA_DIR):

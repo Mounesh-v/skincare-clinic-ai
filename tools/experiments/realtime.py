@@ -10,10 +10,10 @@ import cv2
 import numpy as np
 import torch
 
-from .config import CONFIG
-from .model_utils import inference_model, load_class_map, to_tensor
-from .preprocessing import DetectionResult, detect_face_bbox, preprocess_array
-from .skin_type_vit import infer_skin_type_ensemble
+from ml.config import CONFIG
+from ml.model_utils import inference_model, load_class_map, to_tensor
+from ml.preprocessing import DetectionResult, detect_face_bbox, preprocess_array
+from ml.skin_type_vit import infer_skin_type_ensemble
 
 
 COLORS = {
