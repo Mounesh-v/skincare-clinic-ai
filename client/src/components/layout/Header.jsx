@@ -162,7 +162,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                     className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 rounded-lg transition-all"
                   >
-                    {/*  YOUR LETTER AVATAR */}
+                    {/* 🔥 YOUR LETTER AVATAR */}
                     <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                       <span className="text-white font-bold text-sm">
                         {initial}
