@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema(
 
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "LoginUsers",
+      ref: "RegisterUsers",
       required: true,
     },
 
@@ -86,16 +86,15 @@ const orderSchema = new mongoose.Schema(
 );
 
 // GENERATE ORDER NUMBER
-orderSchema.pre("save", async function () {
+orderSchema.pre("save", async function (next) {
   if (!this.orderNumber) {
-    const count = await mongoose.model("Order").countDocuments();
-    this.orderNumber = `ORD-${String(count + 1).padStart(6, "0")}`;
+    const random = Math.floor(1000 + Math.random() * 9000);
+    this.orderNumber = `ORD-${Date.now()}-${random}`;
   }
   // next();
 });
 
-// TIMELINE UPDATE
-orderSchema.pre("save", async function () {
+orderSchema.pre("save", function (next) {
   if (this.isNew) {
     this.timeline.push({
       status: this.orderStatus,

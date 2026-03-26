@@ -48,7 +48,7 @@ export const createOrder = async (req, res) => {
     const order = await Order.create({
       user: req.user.id,
       items: orderItems,
-      totalAmount,
+      total: totalAmount,
       shippingAddress,
     });
 
@@ -178,15 +178,15 @@ export const deleteOrder = async (req, res) => {
   }
 };
 
-
 /* ==============================
    GET OWN ORDER
 ============================== */
 
 export const getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user.id })
-      .populate("items.product");
+    const orders = await Order.find({ user: req.user.id }).populate(
+      "items.product",
+    );
 
     res.json({
       success: true,
@@ -197,23 +197,30 @@ export const getMyOrders = async (req, res) => {
   }
 };
 
-
 /* ==============================
    ONLY VENDOR ORDER
 ============================== */
 
-
 export const getVendorOrders = async (req, res) => {
-  try {
-    const orders = await Order.find({
-      "items.vendor": req.user.id,
-    }).populate("items.product user");
+  const vendorId = req.user._id;
 
-    res.json({
-      success: true,
-      orders,
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+  const orders = await Order.find()
+    .populate({
+      path: "items.product",
+      match: { vendor: vendorId }, //  key logic
+    })
+    .populate("user", "name email");
+
+  // filter orders that actually contain vendor products
+  const filteredOrders = orders
+    .map((order) => ({
+      ...order._doc,
+      items: order.items.filter((i) => i.product !== null),
+    }))
+    .filter((order) => order.items.length > 0);
+
+  res.json({
+    success: true,
+    orders: filteredOrders,
+  });
 };
