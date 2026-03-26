@@ -17,6 +17,13 @@ import toast from "react-hot-toast";
 import { orderApi } from "../api";
 import { Download } from "lucide-react";
 
+const orderSteps = [
+  "Pending",
+  "Processing",
+  "Shipped",
+  "Out for Delivery",
+  "Delivered",
+];
 function mapOrderFromApi(o) {
   return {
     id: o.orderNumber || o._id,
@@ -155,7 +162,6 @@ const OrdersManagement = () => {
     );
   }
 
-
   const handleExport = () => {
     if (!orders.length) {
       toast.error("No orders to export");
@@ -198,7 +204,6 @@ const OrdersManagement = () => {
     document.body.removeChild(link);
   };
 
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -212,7 +217,10 @@ const OrdersManagement = () => {
               View and manage your customer orders
             </p>
           </div>
-          <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+          >
             <Download className="h-5 w-5" />
             Export Orders
           </button>
@@ -428,7 +436,7 @@ const OrdersManagement = () => {
             {/* Modal Body */}
             <div className="p-6 space-y-6">
               {/* Order Status */}
-              <div className="bg-slate-50 rounded-xl p-6">
+              {/* <div className="bg-slate-50 rounded-xl p-6">
                 <h3 className="font-bold text-slate-900 mb-4">
                   Update Order Status
                 </h3>
@@ -452,6 +460,60 @@ const OrdersManagement = () => {
                       {status}
                     </button>
                   ))}
+                </div>
+              </div> */}
+
+              <div className="bg-white border border-slate-200 rounded-xl p-6">
+                <h3 className="font-bold text-slate-900 mb-6">
+                  Order Progress
+                </h3>
+
+                <div className="flex items-center justify-between relative">
+                  {orderSteps.map((step, index) => {
+                    const currentIndex = orderSteps.indexOf(
+                      selectedOrder.orderStatus || selectedOrder.status,
+                    );
+
+                    const isCompleted = index <= currentIndex;
+
+                    return (
+                      <div
+                        key={step}
+                        className="flex-1 flex flex-col items-center relative"
+                      >
+                        {/* Line */}
+                        {index !== 0 && (
+                          <div
+                            className={`absolute top-4 left-[-50%] w-full h-1 ${
+                              index <= currentIndex
+                                ? "bg-emerald-500"
+                                : "bg-slate-300"
+                            }`}
+                          />
+                        )}
+
+                        {/* Circle */}
+                        <div
+                          className={`z-10 w-8 h-8 flex items-center justify-center rounded-full text-white text-xs font-bold ${
+                            isCompleted ? "bg-emerald-500" : "bg-slate-300"
+                          }`}
+                        >
+                          {index + 1}
+                        </div>
+
+                        {/* Label */}
+                        <p
+                          className={`mt-2 text-xs text-center ${
+                            isCompleted
+                              ? "text-emerald-600 font-semibold"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          {step}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
