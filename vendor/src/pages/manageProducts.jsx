@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Edit2,
@@ -14,15 +14,18 @@ import {
   Package,
   DollarSign,
   AlertCircle,
-  CheckCircle
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import { productApi } from '../api';
+  CheckCircle,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { productApi } from "../api";
 
 function mapProductFromApi(p) {
-  const images = (p.images && Array.isArray(p.images))
-    ? p.images.map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean)
-    : [];
+  const images =
+    p.images && Array.isArray(p.images)
+      ? p.images
+          .map((img) => (typeof img === "string" ? img : img?.url))
+          .filter(Boolean)
+      : [];
   return {
     id: p._id,
     _id: p._id,
@@ -34,9 +37,11 @@ function mapProductFromApi(p) {
     stock: p.stock,
     images,
     skinType: p.skinTypes || [],
-    ingredients: Array.isArray(p.ingredients) ? p.ingredients.join(', ') : (p.ingredients || ''),
+    ingredients: Array.isArray(p.ingredients)
+      ? p.ingredients.join(", ")
+      : p.ingredients || "",
     howToUse: p.howToUse,
-    isActive: p.status === 'Active',
+    isActive: p.status === "Active",
     status: p.status,
     views: p.views ?? 0,
     sales: p.sold ?? 0,
@@ -49,24 +54,34 @@ const ManageProducts = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: 'Serums',
-    price: '',
-    originalPrice: '',
-    stock: '',
+    name: "",
+    description: "",
+    category: "Serums",
+    price: "",
+    originalPrice: "",
+    stock: "",
     images: [],
     skinType: [],
-    ingredients: '',
-    howToUse: '',
-    isActive: true
+    ingredients: "",
+    howToUse: "",
+    isActive: true,
   });
 
-  const categories = ['Cleansers', 'Moisturizers', 'Serums', 'Sunscreen', 'Masks', 'Toners', 'Eye Care', 'Treatments', 'Kits'];
-  const skinTypes = ['Oily', 'Dry', 'Combination', 'Sensitive', 'Normal'];
+  const categories = [
+    "Cleansers",
+    "Moisturizers",
+    "Serums",
+    "Sunscreen",
+    "Masks",
+    "Toners",
+    "Eye Care",
+    "Treatments",
+    "Kits",
+  ];
+  const skinTypes = ["Oily", "Dry", "Combination", "Sensitive", "Normal"];
 
   useEffect(() => {
     let cancelled = false;
@@ -77,12 +92,14 @@ const ManageProducts = () => {
           setProducts(res.products.map(mapProductFromApi));
         }
       } catch (err) {
-        if (!cancelled) toast.error(err.message || 'Failed to load products');
+        if (!cancelled) toast.error(err.message || "Failed to load products");
       } finally {
         if (!cancelled) setProductsLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleOpenModal = (product = null) => {
@@ -90,31 +107,31 @@ const ManageProducts = () => {
       setEditingProduct(product);
       setFormData({
         name: product.name,
-        description: product.description || '',
-        category: product.category || 'Serums',
+        description: product.description || "",
+        category: product.category || "Serums",
         price: product.price,
         originalPrice: product.originalPrice,
         stock: product.stock,
         images: product.images || [],
         skinType: product.skinType || [],
-        ingredients: product.ingredients || '',
-        howToUse: product.howToUse || '',
-        isActive: product.isActive ?? true
+        ingredients: product.ingredients || "",
+        howToUse: product.howToUse || "",
+        isActive: product.isActive ?? true,
       });
     } else {
       setEditingProduct(null);
       setFormData({
-        name: '',
-        description: '',
-        category: 'Serums',
-        price: '',
-        originalPrice: '',
-        stock: '',
+        name: "",
+        description: "",
+        category: "Serums",
+        price: "",
+        originalPrice: "",
+        stock: "",
         images: [],
         skinType: [],
-        ingredients: '',
-        howToUse: '',
-        isActive: true
+        ingredients: "",
+        howToUse: "",
+        isActive: true,
       });
     }
     setShowModal(true);
@@ -127,35 +144,44 @@ const ManageProducts = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleSkinTypeChange = (type) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       skinType: prev.skinType.includes(type)
-        ? prev.skinType.filter(t => t !== type)
-        : [...prev.skinType, type]
+        ? prev.skinType.filter((t) => t !== type)
+        : [...prev.skinType, type],
     }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    // In real app, upload to server and get URLs
-    const imageUrls = files.map(file => URL.createObjectURL(file));
-    setFormData(prev => ({
+
+    const base64Images = await Promise.all(
+      files.map((file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result); // base64
+          reader.readAsDataURL(file);
+        });
+      }),
+    );
+
+    setFormData((prev) => ({
       ...prev,
-      images: [...prev.images, ...imageUrls]
+      images: [...prev.images, ...base64Images],
     }));
   };
 
   const removeImage = (index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
     }));
   };
 
@@ -166,38 +192,57 @@ const ManageProducts = () => {
       description: formData.description,
       category: formData.category,
       price: Number(formData.price),
-      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : Number(formData.price),
+      originalPrice: formData.originalPrice
+        ? Number(formData.originalPrice)
+        : Number(formData.price),
       stock: Number(formData.stock) || 0,
-      ingredients: formData.ingredients ? formData.ingredients.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      skinTypes: formData.skinType.length ? formData.skinType : ['All'],
       howToUse: formData.howToUse,
-      status: formData.isActive ? 'Active' : 'Inactive',
-      images: (formData.images || []).map((url) => (typeof url === 'string' ? { url } : url)),
+      ingredients: formData.ingredients
+        ? formData.ingredients.split(",").map((s) => s.trim())
+        : [],
+      skinTypes: formData.skinType,
+      status: formData.isActive ? "Active" : "Inactive",
+
+      // 🔥 IMPORTANT → send base64
+      images: formData.images,
     };
     try {
       if (editingProduct) {
         await productApi.update(editingProduct.id, payload);
-        setProducts(products.map((p) => (p.id === editingProduct.id ? { ...p, ...formData, isActive: formData.isActive, status: payload.status } : p)));
-        toast.success('Product updated successfully!');
+        setProducts(
+          products.map((p) =>
+            p.id === editingProduct.id
+              ? {
+                  ...p,
+                  ...formData,
+                  isActive: formData.isActive,
+                  status: payload.status,
+                }
+              : p,
+          ),
+        );
+        toast.success("Product updated successfully!");
       } else {
         const res = await productApi.create(payload);
-        if (res.product) setProducts([...products, mapProductFromApi(res.product)]);
-        toast.success('Product added successfully!');
+        if (res.product)
+          setProducts([...products, mapProductFromApi(res.product)]);
+        toast.success("Product added successfully!");
       }
       handleCloseModal();
     } catch (err) {
-      toast.error(err.message || 'Failed to save product');
+      toast.error(err.message || "Failed to save product");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    if (!window.confirm("Are you sure you want to delete this product?"))
+      return;
     try {
       await productApi.delete(id);
       setProducts(products.filter((p) => p.id !== id));
-      toast.success('Product deleted successfully!');
+      toast.success("Product deleted successfully!");
     } catch (err) {
-      toast.error(err.message || 'Failed to delete product');
+      toast.error(err.message || "Failed to delete product");
     }
   };
 
@@ -206,30 +251,43 @@ const ManageProducts = () => {
     if (!p) return;
     const newActive = !p.isActive;
     try {
-      await productApi.update(id, { status: newActive ? 'Active' : 'Inactive' });
-      setProducts(products.map((prod) => (prod.id === id ? { ...prod, isActive: newActive } : prod)));
-      toast.success('Product status updated!');
+      await productApi.update(id, {
+        status: newActive ? "Active" : "Inactive",
+      });
+      setProducts(
+        products.map((prod) =>
+          prod.id === id ? { ...prod, isActive: newActive } : prod,
+        ),
+      );
+      toast.success("Product status updated!");
     } catch (err) {
-      toast.error(err.message || 'Failed to update status');
+      toast.error(err.message || "Failed to update status");
     }
   };
 
   // Filter products
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      filterCategory === "all" || product.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
 
+  
   return (
     <div className="min-h-screen bg-slate-50">
-      
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Manage Products</h1>
-            <p className="text-slate-600">Add, edit, and manage your product listings</p>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Manage Products
+            </h1>
+            <p className="text-slate-600">
+              Add, edit, and manage your product listings
+            </p>
           </div>
           <button
             onClick={() => handleOpenModal()}
@@ -245,7 +303,6 @@ const ManageProducts = () => {
       <div className="p-6 max-w-7xl mx-auto">
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            
             {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -267,12 +324,13 @@ const ManageProducts = () => {
                 className="pl-10 pr-8 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 outline-none appearance-none bg-white"
               >
                 <option value="all">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
-
           </div>
         </div>
 
@@ -284,8 +342,12 @@ const ManageProducts = () => {
         ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-xl p-12 text-center">
             <Package className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-slate-900 mb-2">No Products Found</h3>
-            <p className="text-slate-600 mb-6">Start by adding your first product</p>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              No Products Found
+            </h3>
+            <p className="text-slate-600 mb-6">
+              Start by adding your first product
+            </p>
             <button
               onClick={() => handleOpenModal()}
               className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700"
@@ -296,13 +358,18 @@ const ManageProducts = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+              >
                 {/* Product Image */}
                 <div className="relative aspect-square bg-slate-100">
                   <img
-                    src={(product.images && product.images[0]) || 'https://via.placeholder.com/400'}
+                    src={
+                      (product.images && product.images[0]) ||
+                      "https://via.placeholder.com/400"
+                    }
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -310,12 +377,16 @@ const ManageProducts = () => {
                     <button
                       onClick={() => toggleStatus(product.id)}
                       className={`p-2 rounded-full ${
-                        product.isActive 
-                          ? 'bg-emerald-500 text-white' 
-                          : 'bg-slate-200 text-slate-600'
+                        product.isActive
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-200 text-slate-600"
                       }`}
                     >
-                      {product.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      {product.isActive ? (
+                        <Eye className="h-4 w-4" />
+                      ) : (
+                        <EyeOff className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                   <div className="absolute top-3 left-3">
@@ -385,11 +456,10 @@ const ManageProducts = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            
             {/* Modal Header */}
             <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">
-                {editingProduct ? 'Edit Product' : 'Add New Product'}
+                {editingProduct ? "Edit Product" : "Add New Product"}
               </h2>
               <button
                 onClick={handleCloseModal}
@@ -401,18 +471,28 @@ const ManageProducts = () => {
 
             {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              
               {/* Product Images */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-3">
                   <ImageIcon className="inline h-4 w-4 mr-1" />
                   Product Images
                 </label>
-                
+
                 <div className="grid grid-cols-4 gap-4 mb-4">
                   {formData.images.map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    <div
+                      key={index}
+                      className="relative aspect-square rounded-lg overflow-hidden group"
+                    >
+                      <img
+                        src={
+                          typeof img === "string"
+                            ? img
+                            : URL.createObjectURL(img)
+                        }
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
@@ -422,7 +502,7 @@ const ManageProducts = () => {
                       </button>
                     </div>
                   ))}
-                  
+
                   {/* Upload Button */}
                   <label className="aspect-square border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-emerald-500 transition-colors">
                     <input
@@ -469,8 +549,10 @@ const ManageProducts = () => {
                     required
                     className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-emerald-500 outline-none"
                   >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -547,15 +629,15 @@ const ManageProducts = () => {
                   Suitable for Skin Types
                 </label>
                 <div className="flex flex-wrap gap-3">
-                  {skinTypes.map(type => (
+                  {skinTypes.map((type) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => handleSkinTypeChange(type)}
                       className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                         formData.skinType.includes(type)
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
                     >
                       {type}
@@ -604,7 +686,10 @@ const ManageProducts = () => {
                   id="isActive"
                   className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                 />
-                <label htmlFor="isActive" className="text-sm font-semibold text-slate-700">
+                <label
+                  htmlFor="isActive"
+                  className="text-sm font-semibold text-slate-700"
+                >
                   Make product visible in store
                 </label>
               </div>
@@ -622,11 +707,10 @@ const ManageProducts = () => {
                   type="submit"
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
                 >
-                  {editingProduct ? 'Update Product' : 'Add Product'}
+                  {editingProduct ? "Update Product" : "Add Product"}
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}

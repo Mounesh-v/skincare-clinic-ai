@@ -121,7 +121,7 @@ const ProductDetail = () => {
       toast.success("Order placed successfully!");
 
       //  redirect after order
-      navigate("/orders"); // or success page
+      navigate("/products"); // or success page
     } catch (error) {
       toast.error(error.response?.data?.message || "Order failed");
     }
