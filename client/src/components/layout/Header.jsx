@@ -144,6 +144,13 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 Doctors
               </Link>
               <Link
+                to="/Offers"
+                onClick={() => setFullscreenMenuOpen(false)}
+                className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
+              >
+                Offers
+              </Link>
+              <Link
                 to="/contact"
                 onClick={() => setFullscreenMenuOpen(false)}
                 className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"

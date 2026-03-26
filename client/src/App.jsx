@@ -77,6 +77,7 @@ import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
 import FeatureList from "./pages/admin/Feature/FeatureList.jsx";
+import MedicalPackages from "./pages/MedicalPackages/MedicalPackages";
 
 const ASSESSMENT_STORAGE_KEY = "assessmentResultV2";
 
@@ -328,6 +329,10 @@ function PublicAppRoutes({
             )
           }
         />
+
+
+          {/* MedicalPackages Route */}
+           <Route path="/offers" element={<MedicalPackages />} />
 
 
         {/* Find Doctors */}
