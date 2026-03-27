@@ -374,7 +374,11 @@ const StartAssessment = ({ onComplete }) => {
             };
 
             const data = await analyzeAssessment(payload);
+            // DEBUG: Verify API response → state mapping (remove if confident in production)
+            console.log('[SkinAnalysis] Raw API response:', data);
             const normalizedAnalysis = normalizeAnalyzeResponse(data);
+            console.log('[SkinAnalysis] Normalized:', normalizedAnalysis);
+            console.log('[SkinAnalysis] skin_type =', normalizedAnalysis.skin_type, '| confidence =', normalizedAnalysis.confidence, '| scores =', normalizedAnalysis.scores);
             const assessmentResult = {
                 lead: payload.lead,
                 answers: payload.answers,
