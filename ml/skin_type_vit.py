@@ -177,7 +177,10 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
     with torch.no_grad():
         logits = model(**inputs).logits  # shape: (1, num_labels)
 
-    probs = F.softmax(logits, dim=-1).squeeze(0)  # shape: (num_labels,)
+    # Temperature scaling (T > 1 softens distribution, reduces overconfident "dry" bias)
+    _TEMPERATURE = 1.3
+    scaled_logits = logits / _TEMPERATURE
+    probs = F.softmax(scaled_logits, dim=-1).squeeze(0)  # shape: (num_labels,)
 
     try:
         # Build id2label from model config
@@ -196,8 +199,21 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
         best_key = max(scores, key=scores.__getitem__)
         confidence = scores[best_key]
 
-        # Low-confidence fallback
-        if confidence < 0.30:
+        import logging
+        logger = logging.getLogger("ml.skin_type_vit")
+
+        # Log top-3 predictions for every inference call — helps diagnose bias
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top3 = [(k, round(v * 100, 1)) for k, v in sorted_scores[:3]]
+        logger.info(
+            "ViT top-3 predictions: %s | raw_logits_max=%.3f | temperature=%.1f",
+            top3,
+            float(logits.max().item()),
+            _TEMPERATURE,
+        )
+
+        # Low-confidence fallback (raised threshold: 0.40 for clearer signal)
+        if confidence < 0.40:
             skin_type = "Uncertain - Retake image"
             explanation = (
                 f"Low confidence ({confidence * 100:.0f}%) — retake in better lighting."
@@ -206,8 +222,6 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
             skin_type = _DISPLAY.get(best_key, best_key.capitalize())
             explanation = _EXPLANATIONS.get(best_key, f"Classified as {skin_type}.")
 
-        import logging
-        logger = logging.getLogger("ml.skin_type_vit")
         logger.info("Skin type prediction: %s (%.2f) | scores=%s", skin_type, confidence, scores)
 
     except Exception as exc:

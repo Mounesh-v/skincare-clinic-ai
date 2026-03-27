@@ -265,6 +265,15 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       ? Math.max(0, Math.min(1, confidenceRaw))
       : null;
 
+    // Detected conditions from EfficientNet (top-3)
+    const detectedConditions = Array.isArray(analysis.detected_conditions)
+      ? analysis.detected_conditions.slice(0, 3).map((c) => ({
+          label: c.label ?? '',
+          display: c.display ?? (c.label ?? '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          probability: typeof c.probability === 'number' ? c.probability : Number(c.probability ?? 0),
+        }))
+      : [];
+
     // Image analysis data (for feature insights,quality metrics)
     const imageAnalysis = analysis.image_analysis ?? null;
 
@@ -344,6 +353,7 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       predictionScores,
       predictionConfidence,
       severity,
+      detectedConditions,
       rootCauses: rootCauses.length ? rootCauses : defaultAnalysis.rootCauses,
       recommendations: recommendations.length ? recommendations : defaultAnalysis.recommendations,
       estimatedTimeline,
@@ -781,10 +791,55 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                                 </div>
                               </div>
                             )}
+
+                            {/* Low-confidence retake suggestion */}
+                            {analysisResults.predictionConfidence !== null &&
+                              analysisResults.predictionConfidence !== undefined &&
+                              analysisResults.predictionConfidence < 0.40 && (
+                              <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <div>
+                                  <p className="text-xs font-bold text-amber-800">Low Confidence — Retake Suggested</p>
+                                  <p className="text-xs text-amber-700 mt-0.5">Try a photo with better lighting, no makeup, and face centered.</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Model Score Breakdown */}
+                        {/* Detected Skin Conditions (top-3 from EfficientNet) */}
+                        {analysisResults.detectedConditions && analysisResults.detectedConditions.length > 0 && (
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
+                              <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">🔬</span>
+                              Detected Conditions (Top 3)
+                            </h4>
+                            <div className="space-y-3">
+                              {analysisResults.detectedConditions.map((cond) => {
+                                const pct = Math.round(cond.probability * 100);
+                                return (
+                                  <div key={cond.label} className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                                      <span>{cond.display}</span>
+                                      <span>{pct}%</span>
+                                    </div>
+                                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-400 transition-all duration-700"
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-2">Detected by EfficientNetV2-S on your uploaded image.</p>
+                          </div>
+                        )}
+
+                        {/* Skin Type Score Breakdown */}
                         <div className="rounded-2xl border border-slate-200 bg-white p-4">
                           <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 mb-3">
                             Skin Type Score Breakdown
