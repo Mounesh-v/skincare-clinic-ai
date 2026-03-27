@@ -18,7 +18,6 @@ import {
 } from "../controllers/vendorOrderController.js";
 import { listVendors, updateVendorStatus } from "../controllers/adminController.js";
 import { verifyVendor, verifyAdmin } from "../middleware/verifyToken.js";
-
 const router = express.Router();
 
 // —— Auth (public)

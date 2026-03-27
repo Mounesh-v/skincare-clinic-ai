@@ -4,18 +4,13 @@ import AdBanner from "./AdBanner";
 
 export default function ProductHero() {
   return (
-    <section className="w-full min-h-[85vh] grid lg:grid-cols-2">
+    <section className="w-full min-h-[85vh]">
 
-      {/* Left Side */}
-      <div className="flex items-center">
-        <AdBanner />
-      </div>
+  {/* Full Width Right Side */}
+  <div className="flex items-center w-full">
+    <SlideSection />
+  </div>
 
-      {/* Right Side */}
-      <div className="flex items-center">
-        <SlideSection />
-      </div>
-
-    </section>
+</section>
   );
 }

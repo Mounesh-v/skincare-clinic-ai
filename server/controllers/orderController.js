@@ -7,9 +7,12 @@ import Login from "../models/Login.js";
 ============================== */
 export const createOrder = async (req, res) => {
   try {
-    const order = await Order.create(req.body);
+    const { items, shippingAddress } = req.body;
 
-    for (const item of order.items) {
+    let totalAmount = 0;
+    const orderItems = [];
+
+    for (const item of items) {
       const product = await Product.findById(item.product);
 
       if (!product) {
@@ -26,11 +29,28 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      product.stock -= item.quantity;
-      product.sold += item.quantity || 0;
+      // 👇 IMPORTANT (vendor linking)
+      orderItems.push({
+        product: product._id,
+        vendor: product.vendor, // must exist in product schema
+        quantity: item.quantity,
+        price: product.price,
+      });
 
+      totalAmount += product.price * item.quantity;
+
+      // update stock
+      product.stock -= item.quantity;
+      product.sold += item.quantity;
       await product.save();
     }
+
+    const order = await Order.create({
+      user: req.user.id,
+      items: orderItems,
+      total: totalAmount,
+      shippingAddress,
+    });
 
     res.status(201).json({
       success: true,
@@ -38,13 +58,12 @@ export const createOrder = async (req, res) => {
       order,
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 /* ==============================
    GET ALL ORDERS
 ============================== */
@@ -157,4 +176,51 @@ export const deleteOrder = async (req, res) => {
       message: error.message,
     });
   }
+};
+
+/* ==============================
+   GET OWN ORDER
+============================== */
+
+export const getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user.id }).populate(
+      "items.product",
+    );
+
+    res.json({
+      success: true,
+      orders,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ==============================
+   ONLY VENDOR ORDER
+============================== */
+
+export const getVendorOrders = async (req, res) => {
+  const vendorId = req.user._id;
+
+  const orders = await Order.find()
+    .populate({
+      path: "items.product",
+      match: { vendor: vendorId }, //  key logic
+    })
+    .populate("user", "name email");
+
+  // filter orders that actually contain vendor products
+  const filteredOrders = orders
+    .map((order) => ({
+      ...order._doc,
+      items: order.items.filter((i) => i.product !== null),
+    }))
+    .filter((order) => order.items.length > 0);
+
+  res.json({
+    success: true,
+    orders: filteredOrders,
+  });
 };

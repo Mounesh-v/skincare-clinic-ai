@@ -13,18 +13,21 @@ import doctorRoutes from "./router/doctorRoutes.js";
 import featureRoutes from "./router/featureRoutes.js";
 import specialOfferRoutes from "./router/specialOfferRoutes.js";
 import adminRoutes from "./router/adminRoutes.js";
+import offerRoute from "./router/MedicalPackagesRoutes.js"
 
 dotenv.config();
 
 if (!process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET environment variable is required but not set. Add it to your .env file.");
+  throw new Error(
+    "SESSION_SECRET environment variable is required but not set. Add it to your .env file.",
+  );
 }
 
 const app = express();
 
 // Body parsing (declared once — 10 MB covers base64-encoded images comfortably)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 app.use(
   cors({
@@ -48,11 +51,11 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  })
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }),
 );
 
 // Initialize passport
@@ -71,7 +74,10 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: "Too many requests, please try again later." },
+  message: {
+    success: false,
+    message: "Too many requests, please try again later.",
+  },
 });
 
 app.use("/api/auth", authLimiter, authUser);
@@ -80,8 +86,9 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/features", featureRoutes);
-app.use('/api/special-offers', specialOfferRoutes);
+app.use("/api/special-offers", specialOfferRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/offers", offerRoute);
 
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => {
