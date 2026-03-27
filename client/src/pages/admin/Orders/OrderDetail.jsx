@@ -1,11 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, User, Mail, Phone, MapPin, Package,
-  Truck, CheckCircle, Clock, CreditCard, Download
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import api from '../../../utils/api.js';
+  ArrowLeft,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Package,
+  Truck,
+  CheckCircle,
+  Clock,
+  CreditCard,
+  Download,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import api from "../../../utils/api.js";
 
 const OrderDetail = () => {
   const { id } = useParams();
@@ -20,8 +29,15 @@ const OrderDetail = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const { data } = await api.get(`/api/orders/${id}`);
+        let token = localStorage.getItem("authToken");
+        const { data } = await api.get(`/api/orders/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         setOrder(data.order);
+        console.log("orders Details Section", data.order);
       } catch (error) {
         toast.error("Failed to fetch order");
       } finally {
@@ -37,9 +53,20 @@ const OrderDetail = () => {
   ============================== */
   const updateStatus = async (newStatus) => {
     try {
-      await api.put(`/api/orders/${id}`, {
-        orderStatus: newStatus,
-      });
+      let token = localStorage.getItem("authToken");
+
+      await api.put(
+        `/api/orders/${id}`,
+        {
+          orderStatus: newStatus,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
       toast.success(`Order status updated to ${newStatus}`);
 
@@ -53,19 +80,30 @@ const OrderDetail = () => {
   };
 
   const downloadInvoice = () => {
-    toast.success('Downloading invoice...');
+    toast.success("Downloading invoice...");
   };
 
   if (loading) return <p>Loading...</p>;
   if (!order) return <p>Order not found</p>;
 
+  const subtotal =
+    order?.items?.reduce(
+      (acc, item) => acc + (item.price || 0) * (item.quantity || 0),
+      0,
+    ) || 0;
+
+  const total =
+    subtotal +
+    (order?.shipping || 0) +
+    (order?.tax || 0) -
+    (order?.discount || 0);
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/admin/orders')}
+            onClick={() => navigate("/admin/orders")}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -108,19 +146,36 @@ const OrderDetail = () => {
         {/* Order Items */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Order Items</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Order Items
+            </h2>
 
             <div className="space-y-4">
               {order.items.map((item) => (
-                <div key={item._id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+                <div
+                  key={item._id}
+                  className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg"
+                >
                   <div className="w-16 h-16 rounded-lg bg-slate-200 flex items-center justify-center">
-                    <Package className="w-8 h-8 text-slate-400" />
+                    <img
+                      src={item.product?.images?.[0]?.url}
+                      alt=""
+                      className="w-16 h-16 object-cover rounded"
+                    />
                   </div>
 
                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-900">
-                      {item.name || item.product?.name}
+                      {item.product?.name || "Product"}
                     </h3>
+                    <p className="text-xs text-slate-500">
+                      {item.product?.category}
+                    </p>
+
+                    <p className="text-xs text-slate-400">
+                      ⭐ {item.product?.ratings?.average} (
+                      {item.product?.ratings?.count})
+                    </p>
                     <p className="text-sm text-slate-600 mt-1">
                       Quantity: {item.quantity}
                     </p>
@@ -139,19 +194,19 @@ const OrderDetail = () => {
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-medium text-slate-900">
-                  ₹{order.subtotal?.toLocaleString()}
+                  ₹{total.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">Shipping</span>
                 <span className="font-medium text-emerald-600">
-                  {order.shipping === 0 ? 'Free' : `₹${order.shipping}`}
+                  {order.shipping === 0 ? "Free" : `₹${order.shipping}`}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-slate-200">
                 <span className="font-semibold text-slate-900">Total</span>
                 <span className="font-bold text-emerald-600 text-lg">
-                  ₹{order.total?.toLocaleString()}
+                  ₹{total.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -159,7 +214,9 @@ const OrderDetail = () => {
 
           {/* Timeline */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Order Timeline</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Order Timeline
+            </h2>
 
             <div className="space-y-4">
               {order.timeline.map((event, index) => (
@@ -173,9 +230,7 @@ const OrderDetail = () => {
                     )}
                   </div>
                   <div className="flex-1 pb-8">
-                    <p className="font-medium text-slate-900">
-                      {event.status}
-                    </p>
+                    <p className="font-medium text-slate-900">{event.status}</p>
                     <p className="text-sm text-slate-500 mt-1">
                       {new Date(event.timestamp).toLocaleString()}
                     </p>
@@ -188,7 +243,6 @@ const OrderDetail = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-
           {/* Customer Info */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">
@@ -269,7 +323,6 @@ const OrderDetail = () => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

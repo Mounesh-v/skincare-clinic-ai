@@ -6,7 +6,10 @@ const parseArray = (val) => {
   try {
     return JSON.parse(val);
   } catch {
-    return String(val).split(",").map((s) => s.trim()).filter(Boolean);
+    return String(val)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
 };
 
@@ -61,6 +64,7 @@ export const createVendorProduct = async (req, res) => {
         field: "name",
       });
     }
+
     if (!body.price || body.price === "" || Number(body.price) <= 0) {
       return res.status(400).json({
         success: false,
@@ -69,8 +73,37 @@ export const createVendorProduct = async (req, res) => {
       });
     }
 
+    //  same helper as createProduct
+    const parseArray = (val) => {
+      if (!val) return [];
+      if (Array.isArray(val)) return val.filter(Boolean);
+      try {
+        return JSON.parse(val);
+      } catch {
+        return val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+    };
+
+    const ingredients = parseArray(body.ingredients);
+    const benefits = parseArray(body.benefits);
+    const skinTypes = parseArray(body.skinTypes);
+
+    //  IMAGE FIX (IMPORTANT)
     const images = (() => {
+      // ✅ 1. If files uploaded (FormData)
+      if (req.files && req.files.length > 0) {
+        return req.files.map((file) => ({
+          url: `data:${file.mimetype};base64,${file.buffer.toString("base64")}`,
+          publicId: "base64",
+        }));
+      }
+
+      // ✅ 2. fallback (same as createProduct)
       if (!body.images) return [];
+
       const arr = Array.isArray(body.images)
         ? body.images
         : (() => {
@@ -80,22 +113,13 @@ export const createVendorProduct = async (req, res) => {
               return [body.images];
             }
           })();
+
       return arr
         .map((img) =>
-          typeof img === "string" ? { url: img, publicId: "base64" } : img
+          typeof img === "string" ? { url: img, publicId: "manual" } : img,
         )
         .filter(Boolean);
     })();
-
-    const ingredients = parseArray(body.ingredients);
-    const benefits = parseArray(body.benefits);
-    const skinTypes = parseArray(body.skinTypes);
-    const skinTypesNormalized =
-      skinTypes.length > 0
-        ? skinTypes.map(
-            (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
-          )
-        : ["All"];
 
     const productData = {
       name: body.name.trim(),
@@ -106,16 +130,21 @@ export const createVendorProduct = async (req, res) => {
         ? Number(body.originalPrice)
         : Number(body.price),
       stock: body.stock ? Number(body.stock) : 0,
+
       images,
+      image: images.length > 0 ? images[0].url : "",
+
       ingredients,
       benefits,
-      skinTypes: skinTypesNormalized,
+      skinTypes: skinTypes.length > 0 ? skinTypes : ["All"],
+
       howToUse: body.howToUse || "",
       status: body.status || "Active",
       vendor: req.user.id,
     };
 
     const product = await Product.create(productData);
+
     res.status(201).json({
       success: true,
       product,
@@ -133,6 +162,7 @@ export const createVendorProduct = async (req, res) => {
         errors,
       });
     }
+
     res.status(500).json({
       success: false,
       message: error.message,
@@ -173,7 +203,11 @@ export const updateVendorProduct = async (req, res) => {
       if (body[key] !== undefined) {
         if (key === "price" || key === "originalPrice" || key === "stock") {
           product[key] = Number(body[key]);
-        } else if (key === "ingredients" || key === "benefits" || key === "skinTypes") {
+        } else if (
+          key === "ingredients" ||
+          key === "benefits" ||
+          key === "skinTypes"
+        ) {
           product[key] = parseArray(body[key]);
         } else if (key === "images") {
           const arr = Array.isArray(body.images)
@@ -187,7 +221,7 @@ export const updateVendorProduct = async (req, res) => {
               })();
           product.images = arr
             .map((img) =>
-              typeof img === "string" ? { url: img, publicId: "base64" } : img
+              typeof img === "string" ? { url: img, publicId: "base64" } : img,
             )
             .filter(Boolean);
         } else {
