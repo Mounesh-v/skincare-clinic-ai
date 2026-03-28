@@ -11,11 +11,38 @@ from typing import Dict, Any
 
 
 CONDITION_TO_TYPE = {
-    "blackheads": {"oily": 0.85, "dry": 0.05, "normal": 0.10, "combination": 0.65},
-    "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.20, "combination": 0.65},
-    "acne": {"oily": 0.65, "dry": 0.10, "normal": 0.15, "combination": 0.80},
-    "wrinkles": {"oily": 0.10, "dry": 0.55, "normal": 0.40, "combination": 0.20},
-    "dark_spots": {"oily": 0.05, "dry": 0.70, "normal": 0.50, "combination": 0.15},
+    # Oily indicators — pores, acne, blackheads strongly signal sebum overproduction
+    "blackheads": {"oily": 0.90, "dry": 0.03, "normal": 0.08, "combination": 0.70},
+    "pores":      {"oily": 0.85, "dry": 0.03, "normal": 0.15, "combination": 0.70},
+    "acne":       {"oily": 0.78, "dry": 0.08, "normal": 0.10, "combination": 0.82},
+    # Dry indicators — wrinkles strongly signal low-moisture, rarely indicate oily skin
+    "wrinkles":   {"oily": 0.06, "dry": 0.72, "normal": 0.18, "combination": 0.18},
+    # Dark spots — neutral marker, slightly elevated in dry conditions
+    "dark_spots": {"oily": 0.05, "dry": 0.72, "normal": 0.48, "combination": 0.15},
+}
+
+# Human-readable condition-to-type explanations for XAI output
+_CONDITION_EXPLAINS: dict[str, dict[str, str]] = {
+    "blackheads": {
+        "oily":        "Blackheads ({score:.0%}) — clogged pores signal excess sebum → Oily tendency",
+        "combination": "Blackheads ({score:.0%}) in T-zone area → Combination tendency",
+    },
+    "pores": {
+        "oily":        "Visible pores ({score:.0%}) indicate high sebum production → Oily tendency",
+        "combination": "Enlarged pores ({score:.0%}) concentrated in T-zone → Combination tendency",
+    },
+    "acne": {
+        "oily":        "Active acne ({score:.0%}) linked to excess oil secretion → Oily tendency",
+        "combination": "Acne ({score:.0%}) in oily zones alongside drier cheeks → Combination tendency",
+    },
+    "wrinkles": {
+        "dry":    "High wrinkle index ({score:.0%}) indicates low skin moisture → Dry tendency",
+        "normal": "Mild surface texture ({score:.0%}) — within normal range",
+    },
+    "dark_spots": {
+        "dry":    "Hyperpigmentation ({score:.0%}) commonly worsened by dehydration → Dry tendency",
+        "normal": "Mild dark spots ({score:.0%}) — within normal range",
+    },
 }
 
 

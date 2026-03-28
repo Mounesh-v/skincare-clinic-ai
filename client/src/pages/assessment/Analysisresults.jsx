@@ -274,6 +274,36 @@ const SkinAnalysisResults = ({ assessmentData }) => {
         }))
       : [];
 
+    // ── New XAI fields from backend ────────────────────────────────────────
+    // confidence_level: 'Low' | 'Moderate' | 'Strong'
+    const confidenceLevel = analysis.confidence_level ?? (
+      predictionConfidence === null ? 'Low'
+        : predictionConfidence >= 0.60 ? 'Strong'
+        : predictionConfidence >= 0.40 ? 'Moderate'
+        : 'Low'
+    );
+
+    // top_predictions: [{type, score}, {type, score}]
+    const topPredictions = Array.isArray(analysis.top_predictions)
+      ? analysis.top_predictions.slice(0, 2).map((p) => ({
+          type: p.type ?? '',
+          score: typeof p.score === 'number' ? p.score : Number(p.score ?? 0),
+        }))
+      : Object.entries(
+          analysis.scores ?? {}
+        ).sort(([, a], [, b]) => b - a).slice(0, 2).map(([k, v]) => ({
+          type: k.charAt(0).toUpperCase() + k.slice(1),
+          score: typeof v === 'number' ? v : Number(v ?? 0),
+        }));
+
+    // condition_contributions: [{condition, score, points_to, contribution}]
+    const conditionContributions = Array.isArray(analysis.condition_contributions)
+      ? analysis.condition_contributions
+      : [];
+
+    // enriched_explanation: richer explanation string from backend
+    const enrichedExplanation = analysis.enriched_explanation ?? analysis.explanation ?? null;
+
     // Image analysis data (for feature insights,quality metrics)
     const imageAnalysis = analysis.image_analysis ?? null;
 
@@ -352,6 +382,10 @@ const SkinAnalysisResults = ({ assessmentData }) => {
       predictedSkinTypeConfig,
       predictionScores,
       predictionConfidence,
+      confidenceLevel,
+      topPredictions,
+      conditionContributions,
+      enrichedExplanation,
       severity,
       detectedConditions,
       rootCauses: rootCauses.length ? rootCauses : defaultAnalysis.rootCauses,
@@ -808,6 +842,100 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                             )}
                           </div>
                         </div>
+
+                        {/* Confidence Level Badge + Top-2 Predictions */}
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                          {/* Badge row */}
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700">Prediction Confidence</h4>
+                            {analysisResults.confidenceLevel && (() => {
+                              const lvl = analysisResults.confidenceLevel;
+                              const cfg = {
+                                Strong:   { bg: 'bg-emerald-100', text: 'text-emerald-800', dot: 'bg-emerald-500', icon: '🟢' },
+                                Moderate: { bg: 'bg-amber-100',   text: 'text-amber-800',   dot: 'bg-amber-500',   icon: '🟡' },
+                                Low:      { bg: 'bg-red-100',     text: 'text-red-800',     dot: 'bg-red-500',     icon: '🔴' },
+                              }[lvl] ?? { bg: 'bg-slate-100', text: 'text-slate-700', dot: 'bg-slate-400', icon: '⚪' };
+                              return (
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}>
+                                  <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                                  {cfg.icon} {lvl} Confidence
+                                </span>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Top-2 skin type predictions */}
+                          {analysisResults.topPredictions?.length > 0 && (
+                            <div className="space-y-2">
+                              {analysisResults.topPredictions.map((pred, idx) => (
+                                <div key={pred.type} className="space-y-1">
+                                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                                    <span className="flex items-center gap-1.5">
+                                      <span className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                      {idx === 0 ? '🏆 ' : ''}{pred.type}
+                                    </span>
+                                    <span>{(pred.score * 100).toFixed(1)}%</span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-700 ${idx === 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-slate-300'}`}
+                                      style={{ width: `${pred.score * 100}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Enriched Explanation */}
+                        {analysisResults.enrichedExplanation && (
+                          <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                            <h4 className="text-xs font-bold uppercase tracking-wide text-indigo-700 mb-2 flex items-center gap-1.5">
+                              <span>🧠</span> AI Explanation
+                            </h4>
+                            <p className="text-xs text-indigo-900 leading-relaxed">{analysisResults.enrichedExplanation}</p>
+                          </div>
+                        )}
+
+                        {/* XAI — Condition Contributions */}
+                        {analysisResults.conditionContributions?.length > 0 && (
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700 mb-3 flex items-center gap-2">
+                              <span className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-xs">📊</span>
+                              Why This Classification?
+                            </h4>
+                            <div className="space-y-3">
+                              {analysisResults.conditionContributions.map((contrib) => {
+                                const pct = Math.round(contrib.score * 100);
+                                const pointsColor = {
+                                  Oily:        'text-yellow-700 bg-yellow-50 border-yellow-200',
+                                  Dry:         'text-blue-700 bg-blue-50 border-blue-200',
+                                  Normal:      'text-green-700 bg-green-50 border-green-200',
+                                  Combination: 'text-purple-700 bg-purple-50 border-purple-200',
+                                }[contrib.points_to] ?? 'text-slate-700 bg-slate-50 border-slate-200';
+                                return (
+                                  <div key={contrib.condition} className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-semibold text-slate-800">{contrib.condition}</span>
+                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${pointsColor}`}>
+                                        → {contrib.points_to}
+                                      </span>
+                                    </div>
+                                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-gradient-to-r from-purple-400 to-pink-400 transition-all duration-700"
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-snug">{contrib.contribution}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-3">Each bar shows the detected intensity of that condition.</p>
+                          </div>
+                        )}
 
                         {/* Detected Skin Conditions (top-3 from EfficientNet) */}
                         {analysisResults.detectedConditions && analysisResults.detectedConditions.length > 0 && (
