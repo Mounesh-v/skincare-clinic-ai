@@ -379,7 +379,7 @@ function Layout({ isAuthenticated, user, onLogout, children }) {
   const hideHeaderFooter = location.pathname === "/assessment";
 
   return (
-    <div className="page overflow-x-hidden w-full">
+    <div className="page">
       {!hideHeaderFooter && (
         <Header
           isAuthenticated={isAuthenticated}
@@ -387,7 +387,7 @@ function Layout({ isAuthenticated, user, onLogout, children }) {
           onLogout={onLogout}
         />
       )}
-      <main className="content main-content w-full flex flex-col">{children}</main>
+      <main className="content main-content">{children}</main>
       {!hideHeaderFooter && <Footer />}
     </div>
   );
