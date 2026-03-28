@@ -3,6 +3,7 @@ import axios from "axios";
 import { Eye, Edit, Trash2, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import api from "../../../utils/api";
 
 const OfferList = () => {
   const [offers, setOffers] = useState([]);
@@ -11,7 +12,7 @@ const OfferList = () => {
 
   const fetchOffers = async () => {
     try {
-      const res = await axios.get("http://localhost:5005/api/offers");
+      const res = await api.get("/api/offers");
       setOffers(res.data.data || res.data);
     } catch {
       toast.error("Failed to load offers");
@@ -26,7 +27,7 @@ const OfferList = () => {
     try {
       const token = localStorage.getItem("authToken");
 
-      await axios.delete(`http://localhost:5005/api/offers/${id}`, {
+      await api.delete(`/api/offers/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

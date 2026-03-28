@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import api from "../../../utils/api";
 
 const EditOffer = () => {
   const { state } = useLocation();
@@ -47,7 +48,7 @@ const EditOffer = () => {
     try {
       const token = localStorage.getItem("authToken");
 
-      await axios.put(`http://localhost:5005/api/offers/${form._id}`, form, {
+      await api.put(`/api/offers/${form._id}`, form, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
