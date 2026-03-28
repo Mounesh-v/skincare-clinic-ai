@@ -203,7 +203,7 @@ const Footer = () => {
             </div>
 
             {/* Social Links */}
-            <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 sm:gap-4 w-full">
+            <div className="hidden md:flex flex-wrap items-center justify-end gap-3 sm:gap-4 w-full">
               {socialLinks.map((social) => {
                 const Icon = social.icon;
                 return (
