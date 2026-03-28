@@ -67,7 +67,7 @@ const TrayaStyleHome = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-slate-900 leading-tight">
-                Healthier Skin Starts With Understanding
+                 Healthier Skin Starts With Understanding
                 <span className="text-primary-600"> Your Roots</span>
               </h1>
 
