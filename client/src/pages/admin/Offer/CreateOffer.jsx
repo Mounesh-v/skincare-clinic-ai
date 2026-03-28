@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import api from "../../../utils/api";
 
 const CreateOffer = () => {
   const navigate = useNavigate();
@@ -26,18 +27,24 @@ const CreateOffer = () => {
       [name]: value,
     };
 
-    // Auto discount calculation
-    const price = parseFloat(name === "price" ? value : updatedForm.price);
-    const originalPrice = parseFloat(
-      name === "originalPrice" ? value : updatedForm.originalPrice,
-    );
+    const price = Number(updatedForm.price);
+    const originalPrice = Number(updatedForm.originalPrice);
 
-    if (price && originalPrice && originalPrice > price) {
-      const discountPercent = Math.round(
+    // 🔥 ALWAYS calculate properly
+    if (
+      !isNaN(price) &&
+      !isNaN(originalPrice) &&
+      price > 0 &&
+      originalPrice > 0 &&
+      originalPrice > price
+    ) {
+      const percent = Math.round(
         ((originalPrice - price) / originalPrice) * 100,
       );
 
-      updatedForm.discount = `Save ${discountPercent}%`;
+      updatedForm.discount = `Save ${percent}%`;
+    } else {
+      updatedForm.discount = "";
     }
 
     setForm(updatedForm);
@@ -78,11 +85,12 @@ const CreateOffer = () => {
     try {
       const token = localStorage.getItem("authToken");
 
-      await axios.post("http://localhost:5005/api/offers", form, {
+      await api.post("/api/offers", form, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       toast.success("Offer Created 🚀");
+      navigate("/admin/add-offer");
     } catch {
       toast.error("Failed");
     }
@@ -149,6 +157,7 @@ const CreateOffer = () => {
             name="discount"
             value={form.discount}
             onChange={handleChange}
+            disabled
           />
           <Input
             label="Duration"
