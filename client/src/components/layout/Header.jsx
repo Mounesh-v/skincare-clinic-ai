@@ -528,7 +528,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
       )}
 
       {/* Mobile Bottom Navigation Bar — only visible on small screens (hidden on md+) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[1000] md:hidden bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)]">
+      <nav className="bottom-nav md:hidden bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="flex items-stretch">
           {[
             { to: "/", label: "Home",
