@@ -462,6 +462,86 @@ class SkinAnalyzerService:
         }
         return updated_result, zone_signals
 
+    @staticmethod
+    def _build_xai_fields(
+        skin_type: str,
+        confidence: float,
+        ensemble_scores: Dict[str, float],
+        condition_probs: Dict[str, float],
+    ) -> Dict[str, Any]:
+        """Build structured XAI fields for the API response.
+
+        Returns:
+            Dict with keys: ``confidence_level``, ``top_predictions``,
+            ``condition_contributions``, ``enriched_explanation``.
+        """
+        # ── Confidence level label ────────────────────────────────────────────
+        if confidence >= 0.60:
+            confidence_level = "Strong"
+        elif confidence >= 0.40:
+            confidence_level = "Moderate"
+        else:
+            confidence_level = "Low"
+
+        # ── Top-2 skin type predictions ───────────────────────────────────────
+        sorted_types = sorted(ensemble_scores.items(), key=lambda x: x[1], reverse=True)
+        top_predictions = [
+            {"type": k.capitalize(), "score": round(v, 4)}
+            for k, v in sorted_types[:2]
+        ]
+
+        # ── Condition contributions (XAI) ─────────────────────────────────────
+        # For each detected condition, figure out which skin type it most strongly
+        # points to and produce a human-readable explanation line.
+        from ml.skin_type_inference import CONDITION_TO_TYPE, _CONDITION_EXPLAINS  # type: ignore[attr-defined]
+
+        condition_contributions = []
+        for cond_key, cond_score in sorted(condition_probs.items(), key=lambda x: x[1], reverse=True):
+            weight_map = CONDITION_TO_TYPE.get(cond_key)
+            if weight_map is None:
+                continue
+            # Which skin type does this condition point to most strongly?
+            points_to = max(weight_map, key=weight_map.__getitem__)
+            # Get template explanation; fall back to a generic one
+            explain_map = _CONDITION_EXPLAINS.get(cond_key, {})
+            template = explain_map.get(
+                points_to,
+                f"{cond_key.replace('_', ' ').title()} ({{score:.0%}}) → {points_to.capitalize()} tendency",
+            )
+            try:
+                explanation_text = template.format(score=cond_score)
+            except (KeyError, ValueError):
+                explanation_text = f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%}) → {points_to.capitalize()} tendency"
+
+            condition_contributions.append({
+                "condition": cond_key.replace("_", " ").title(),
+                "score": round(cond_score, 4),
+                "points_to": points_to.capitalize(),
+                "contribution": explanation_text,
+            })
+
+        # ── Enriched explanation ──────────────────────────────────────────────
+        top_conds = condition_contributions[:2]
+        if top_conds:
+            cond_phrases = " ".join(f"{c['contribution']}." for c in top_conds)
+            enriched_explanation = f"{cond_phrases} Overall classification: {skin_type} ({confidence:.0%} confidence — {confidence_level})."
+        else:
+            enriched_explanation = f"Classified as {skin_type} ({confidence:.0%} confidence — {confidence_level})."
+
+        LOGGER.info(
+            "XAI | confidence_level=%s top_predictions=%s contributions=%d",
+            confidence_level,
+            [(p["type"], p["score"]) for p in top_predictions],
+            len(condition_contributions),
+        )
+
+        return {
+            "confidence_level": confidence_level,
+            "top_predictions": top_predictions,
+            "condition_contributions": condition_contributions,
+            "enriched_explanation": enriched_explanation,
+        }
+
     def analyze_request(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
         t0 = time.perf_counter()
         if not isinstance(payload, Mapping):
@@ -515,16 +595,17 @@ class SkinAnalyzerService:
             for entry in prediction.top_predictions
         }
 
-        # Ensemble: ViT (80%) + condition rule-based (20%)
-        # Semaphore ensures only one ViT inference runs at a time (CPU memory safety)
+        # Ensemble: ViT (60%) + condition rule-based (40%)
+        # 60/40 gives the rule-based module enough influence to correctly
+        # classify Combination skin that the ViT cannot output directly.
         t_vit_start = time.perf_counter()
         with self._vit_sem:
             LOGGER.info("Running ViT ensemble skin type inference...")
             skin_type_result = infer_skin_type_ensemble(
                 processed,
                 condition_probs,
-                vit_weight=0.80,
-                rule_weight=0.20,
+                vit_weight=0.60,
+                rule_weight=0.40,
             )
             LOGGER.info(
                 "Ensemble done: %s (%.4f) | scores=%s",
@@ -555,19 +636,26 @@ class SkinAnalyzerService:
         ]
 
         response = {
-            # Ensemble result: ViT 80% + condition 20%
+            # Ensemble result: ViT 60% + condition rule 40%
             "skin_type": skin_type_result["skin_type"],
             "confidence": skin_type_result["confidence"],
             "scores": {k: round(v, 4) for k, v in ensemble_scores.items()},
             "detected_conditions": detected_conditions,
             "explanation": skin_type_result.get(
                 "explanation",
-                "Skin type determined by ViT (80%) and condition-based (20%) ensemble.",
+                "Skin type determined by ViT (60%) and condition-based (40%) ensemble.",
             ),
             "recommendations": plan["recommendations"],
             "condition_top3_used": derived_skin_type["drivers"],
             "source": skin_type_result.get("source", "ensemble"),
             "entropy": round(ensemble_entropy, 4),
+            # ── New structured output fields ──────────────────────────────
+            **self._build_xai_fields(
+                skin_type_result["skin_type"],
+                float(skin_type_result["confidence"]),
+                ensemble_scores,
+                prediction.probabilities,
+            ),
         }
         t_ens_end = time.perf_counter()
         total_end = time.perf_counter()
