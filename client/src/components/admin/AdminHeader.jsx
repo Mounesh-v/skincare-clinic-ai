@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const AdminHeader = ({ sidebarOpen, setSidebarOpen }) => {
+const AdminHeader = ({ isOpen, setOpen }) => {
   const navigate = useNavigate();
   const [openMenu, setOpenMenu] = useState(false);
   const menuRef = useRef(null);
@@ -44,7 +44,7 @@ const AdminHeader = ({ sidebarOpen, setSidebarOpen }) => {
         <div className="flex items-center gap-4">
           {/* Mobile Menu Button */}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => setOpen(!isOpen)}
             className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <Menu className="w-6 h-6" />

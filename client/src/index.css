@@ -95,3 +95,27 @@ html.menu-open {
 .leaflet-popup-content {
   margin: 0;
 }
+
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.inputField {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  outline: none;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.inputField:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+}
