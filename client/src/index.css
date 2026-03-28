@@ -28,6 +28,33 @@ iframe {
   height: auto;
 }
 
+/* ============================================================
+   Android / Touch Compatibility
+   ============================================================ */
+
+/* Eliminate 300ms tap delay on Android Chrome */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scroll lock when fullscreen nav is open.
+   Uses a class on <html> instead of body.style.overflow = 'hidden'
+   because Android WebViews can block touch events when body overflow
+   is set via JavaScript inline styles.  */
+html.menu-open {
+  overflow: hidden;
+  /* Prevent iOS Safari rubber-band scroll behind menu */
+  position: fixed;
+  width: 100%;
+}
+
+
 /* Leaflet Map Styles */
 .leaflet-container {
   font-family: inherit;
