@@ -18,6 +18,17 @@ const UserList = () => {
   const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+
+  useEffect(() => {
+  const handleResize = () => {
+    setIsMobile(window.innerWidth < 640);
+  };
+
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
 
   // const handleDelete = (userId) => {
   //   if (window.confirm("Are you sure you want to delete this user?")) {
@@ -49,7 +60,7 @@ const UserList = () => {
       header: "User",
       accessor: "name",
       render: (value, row) => (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-semibold">
             {value.charAt(0)}
           </div>
@@ -192,9 +203,9 @@ const UserList = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             Users Management
@@ -203,7 +214,7 @@ const UserList = () => {
             Manage all registered users and their activities
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
@@ -222,7 +233,7 @@ const UserList = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -287,7 +298,7 @@ const UserList = () => {
         onRowClick={(row) => navigate(`/admin/users/${row.id}`)}
         searchPlaceholder="Search users by name, email, or phone..."
         actions={(row) => (
-          <>
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -338,7 +349,7 @@ const UserList = () => {
             >
               <Trash2 className="w-4 h-4 text-red-600" />
             </button>
-          </>
+          </div>
         )}
       />
     </div>

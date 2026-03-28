@@ -1,12 +1,12 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
   ClipboardList,
   Package,
   ShoppingCart,
-  Megaphone ,
+  Megaphone,
   BarChart3,
   Settings,
   LogOut,
@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Sparkles,
   Stethoscope,
-} from 'lucide-react';
+  X,BadgePercent  
+} from "lucide-react";
 
 const AdminSidebar = ({ isOpen, setOpen }) => {
   const location = useLocation();
@@ -22,56 +23,61 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
 
   const menuItems = [
     {
-      name: 'Dashboard',
+      name: "Dashboard",
       icon: LayoutDashboard,
-      path: '/admin/dashboard',
+      path: "/admin/dashboard",
     },
     {
-      name: 'Users',
+      name: "Users",
       icon: Users,
-      path: '/admin/users',
+      path: "/admin/users",
     },
     {
-      name: 'Doctors',
+      name: "Doctors",
       icon: Stethoscope,
-      path: '/admin/doctors',
+      path: "/admin/doctors",
     },
     {
-      name: 'Assessments',
+      name: "Assessments",
       icon: ClipboardList,
-      path: '/admin/assessments',
+      path: "/admin/assessments",
     },
     {
-      name: 'Products',
+      name: "Products",
       icon: Package,
-      path: '/admin/products',
+      path: "/admin/products",
     },
     {
-      name: 'Orders',
+      name: "Orders",
       icon: ShoppingCart,
-      path: '/admin/orders',
+      path: "/admin/orders",
     },
     {
-      name: 'Features',
-      icon: Megaphone ,
-      path: '/admin/Features',
+      name: "Features",
+      icon: Megaphone,
+      path: "/admin/Features",
     },
     {
-      name: 'Analytics',
+      name: "Analytics",
       icon: BarChart3,
-      path: '/admin/analytics',
+      path: "/admin/analytics",
     },
     {
-      name: 'Settings',
+      name: "Settings",
       icon: Settings,
-      path: '/admin/settings',
+      path: "/admin/settings",
+    },
+    {
+      name: "Offers",
+      icon: BadgePercent ,
+      path: "/admin/add-offer",
     },
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    navigate('/admin/login');
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminUser");
+    navigate("/admin/login");
   };
 
   return (
@@ -87,11 +93,21 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-screen bg-slate-900 text-white 
-          transition-all duration-300
-          ${isOpen ? 'w-64' : 'w-20'}
-        `}
+    fixed top-0 left-0 z-50 h-screen bg-slate-900 text-white 
+    transition-all duration-300
+    
+    w-64 lg:${isOpen ? "w-64" : "w-20"}
+    
+    ${isOpen ? "translate-x-0" : "-translate-x-full"}
+    lg:translate-x-0
+  `}
       >
+        <button
+          onClick={() => setOpen(false)}
+          className="lg:hidden absolute top-4 right-4 p-2 rounded-md bg-slate-800 hover:bg-slate-700 transition"
+        >
+          <X className="w-5 h-5 text-white" />
+        </button>
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-800">
           {isOpen ? (
@@ -114,7 +130,7 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
         {/* Toggle Button */}
         <button
           onClick={() => setOpen(!isOpen)}
-          className="absolute -right-3 top-20 w-6 h-6 bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-700 transition-colors border border-slate-700"
+          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 bg-slate-800 rounded-full items-center justify-center hover:bg-slate-700 transition-colors border border-slate-700"
         >
           {isOpen ? (
             <ChevronLeft className="w-4 h-4" />
@@ -139,14 +155,14 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
                       transition-all duration-200 
                       ${
                         isActive
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
                       }
-                      ${!isOpen ? 'justify-center' : ''}
+                      ${!isOpen ? "justify-center" : ""}
                     `}
-                    title={!isOpen ? item.name : ''}
+                    title={!isOpen ? item.name : ""}
                   >
-                    <Icon className={isOpen ? 'w-5 h-5' : 'w-6 h-6'} />
+                    <Icon className={isOpen ? "w-5 h-5" : "w-6 h-6"} />
                     {isOpen && (
                       <span className="font-medium text-sm">{item.name}</span>
                     )}
@@ -165,11 +181,11 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
               w-full flex items-center gap-3 px-3 py-2.5 rounded-lg 
               text-slate-300 hover:bg-red-500/10 hover:text-red-400 
               transition-all duration-200 
-              ${!isOpen ? 'justify-center' : ''}
+              ${!isOpen ? "justify-center" : ""}
             `}
-            title={!isOpen ? 'Logout' : ''}
+            title={!isOpen ? "Logout" : ""}
           >
-            <LogOut className={isOpen ? 'w-5 h-5' : 'w-6 h-6'} />
+            <LogOut className={isOpen ? "w-5 h-5" : "w-6 h-6"} />
             {isOpen && <span className="font-medium text-sm">Logout</span>}
           </button>
         </div>

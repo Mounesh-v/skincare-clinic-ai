@@ -78,6 +78,10 @@ import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
 import FeatureList from "./pages/admin/Feature/FeatureList.jsx";
 import MedicalPackages from "./pages/MedicalPackages/MedicalPackages";
+import CreateOffer from "./pages/admin/Offer/CreateOffer";
+import OfferList from "./pages/admin/Offer/OffersList";
+import EditOffer from "./pages/admin/Offer/EditOffer";
+import ViewOffer from "./pages/admin/Offer/ViewOffer";
 
 const ASSESSMENT_STORAGE_KEY = "assessmentResultV2";
 
@@ -254,6 +258,12 @@ function App() {
               element={<ComingSoon title="Analytics & Reports" />}
             />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
+
+            <Route path="add-offer" element={<OfferList />} />
+            <Route path="offers/create" element={<CreateOffer />} />
+            <Route path="offers/edit/:id" element={<EditOffer />} />
+            <Route path="offers/view/:id" element={<ViewOffer />} />
+
 
 
           </Route>
