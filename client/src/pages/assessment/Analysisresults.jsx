@@ -636,36 +636,89 @@ const SkinAnalysisResults = ({ assessmentData }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Hero Section - Analysis Complete */}
-      <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 lg:py-24 text-white overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div
-            className="absolute inset-0"
+  <div className="min-h-screen bg-gradient-to-br from-[#f4f9ec] via-[#eef5e0] to-[#e6f0d4]">
+
+    {/* ── Hero / Analysis Complete Section ── */}
+    <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-[#1a2e0a] py-16 text-white lg:py-24">
+
+        {/* Dot grid background */}
+        <div className="absolute inset-0 opacity-10"
             style={{
+<<<<<<< Updated upstream
               backgroundImage: `radial-gradient(circle, #10b981 1px, transparent 1px)`,
               backgroundSize: "30px 30px",
+=======
+                backgroundImage: `radial-gradient(circle, #97b94f 1px, transparent 1px)`,
+                backgroundSize: '28px 28px',
+>>>>>>> Stashed changes
             }}
-          ></div>
-        </div>
+        />
 
-        {/* Decorative Blur Elements */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl"></div>
+        {/* Brand-colored blur orbs */}
+        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[#97b94f]/20 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-[#7aaa2e]/15 blur-3xl" />
+        <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#b8d96a]/5 blur-3xl" />
 
-        <div className="container-custom relative z-10">
-          <div className="mx-auto max-w-6xl">
-            {/* Header Section */}
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between mb-12">
-              <div className="space-y-6 flex-1">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-white/90">
-                    Personalized Assessment Report
-                  </p>
+        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+
+            {/* ── Top Header Row ── */}
+            <div className="mb-10 flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+
+                {/* Left: Title + Description */}
+                <div className="flex-1 space-y-5">
+
+                    {/* Step badge */}
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c6da8a]/40 bg-[#97b94f]/15 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#b8d96a] backdrop-blur-md">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#97b94f]" />
+                        Personalized Assessment Report
+                    </span>
+
+                    {/* Headline */}
+                    <h1 className="text-4xl font-extrabold leading-tight tracking-tight md:text-5xl lg:text-6xl">
+                        {assessmentData?.lead?.name ? (
+                            <>
+                                <span className="bg-gradient-to-r from-[#97b94f] to-[#b8d96a] bg-clip-text text-transparent">
+                                    {assessmentData.lead.name},
+                                </span>
+                                <br />
+                                <span className="text-white">your skin reboot starts now.</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="bg-gradient-to-r from-[#97b94f] to-[#b8d96a] bg-clip-text text-transparent">Hey,</span>
+                                <br />
+                                <span className="text-white">your skin reboot starts now.</span>
+                            </>
+                        )}
+                    </h1>
+
+                    {/* Subtitle */}
+                    <p className="max-w-xl text-sm leading-relaxed text-white/70 md:text-base">
+                        Our AI analyzed your responses, lifestyle patterns, and skin photo to create a personalized treatment plan.
+                        Expect visible improvements in{' '}
+                        <span className="font-bold text-[#97b94f]">{analysisResults.monthsToResults} months</span>.
+                    </p>
+
+                    {/* Status pills */}
+                    <div className="flex flex-wrap gap-2">
+                        <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm">
+                            <CheckCircle className="h-3.5 w-3.5 text-[#97b94f]" />
+                            {analysisResults.stageLabel}
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm">
+                            <Clock className="h-3.5 w-3.5 text-[#b8d96a]" />
+                            Results in ~{analysisResults.monthsToResults} months
+                        </div>
+                        {confidencePercent != null && (
+                            <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 backdrop-blur-sm">
+                                <Shield className="h-3.5 w-3.5 text-sky-400" />
+                                Model confidence {confidencePercent}%
+                            </div>
+                        )}
+                    </div>
                 </div>
 
+<<<<<<< Updated upstream
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight">
                   {assessmentData?.lead?.name ? (
                     <>
@@ -694,15 +747,46 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                   .
                 </p>
               </div>
+=======
+                {/* Right: Success Rate Card */}
+                <div className="w-full shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 shadow-2xl backdrop-blur-md lg:w-72">
 
-              {/* Success Card */}
-              <div className="w-full lg:w-80 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 p-6 backdrop-blur-md border border-white/20 shadow-2xl">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-white/70">
-                    {analysisResults.stageLabel}
-                  </p>
-                  <Shield className="h-5 w-5 text-emerald-400" />
+                    {/* Card top accent */}
+                    <div className="h-1 w-full bg-gradient-to-r from-[#7aaa2e] via-[#97b94f] to-[#b8d96a]" />
+>>>>>>> Stashed changes
+
+                    <div className="p-5">
+                        <div className="mb-4 flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                                {analysisResults.stageLabel}
+                            </span>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#97b94f]/20">
+                                <Shield className="h-3.5 w-3.5 text-[#97b94f]" />
+                            </div>
+                        </div>
+
+                        {/* Big percent */}
+                        <div className="mb-4 flex items-end gap-2">
+                            <span className="text-6xl font-extrabold leading-none bg-gradient-to-r from-[#97b94f] to-[#b8d96a] bg-clip-text text-transparent">
+                                {successPercent}%
+                            </span>
+                            <span className="mb-1.5 text-xs font-medium text-white/50">success rate</span>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="mb-4 h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-[#7aaa2e] to-[#b8d96a] shadow-lg shadow-[#97b94f]/40 transition-all duration-1000"
+                                style={{ width: `${successPercent}%` }}
+                            />
+                        </div>
+
+                        <p className="text-[11px] leading-relaxed text-white/40">
+                            Based on adherence to recommended routine, nutrition guidelines, and monthly progress check-ins.
+                        </p>
+                    </div>
                 </div>
+<<<<<<< Updated upstream
 
                 <div className="flex items-end gap-3 mb-6">
                   <span className="text-6xl font-bold leading-none bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
@@ -728,17 +812,19 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                   guidelines, and monthly progress check-ins.
                 </p>
               </div>
+=======
+>>>>>>> Stashed changes
             </div>
 
-            {/* Progress Bar Section */}
+            {/* ── Full-width Progress Bar ── */}
             <div className="mb-10">
-              <div className="relative">
-                <div className="h-4 w-full rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 transition-all duration-1000 shadow-lg shadow-emerald-500/50"
-                    style={{ width: `${successPercent}%` }}
-                  />
+                <div className="h-3 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                        className="h-full rounded-full bg-gradient-to-r from-[#7aaa2e] via-[#97b94f] to-[#b8d96a] shadow-lg shadow-[#97b94f]/30 transition-all duration-1000"
+                        style={{ width: `${successPercent}%` }}
+                    />
                 </div>
+<<<<<<< Updated upstream
               </div>
 
               <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium text-white/75">
@@ -860,10 +946,87 @@ const SkinAnalysisResults = ({ assessmentData }) => {
                   routine.
                 </p>
               </div>
+=======
             </div>
-          </div>
+
+            {/* ── Stats Grid ── */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+                {/* Card 1 — Predicted Skin Type */}
+                <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-[#97b94f]/50 hover:shadow-xl hover:shadow-[#97b94f]/20">
+                    <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-[#97b94f]/60 to-transparent" />
+
+                    <div className="mb-4 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                            Predicted Skin Type
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#97b94f]/15">
+                            <svg className="h-4 w-4 text-[#97b94f]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p className="mb-2 text-3xl font-extrabold transition-colors"
+                        style={{ color: analysisResults.predictedSkinTypeConfig.color }}>
+                        {analysisResults.predictedSkinType}
+                    </p>
+                    <p className="text-xs leading-relaxed text-white/60">
+                        {analysisResults.predictedSkinTypeConfig.description}
+                    </p>
+                </div>
+
+                {/* Card 2 — Primary Focus */}
+                <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-[#b8d96a]/50 hover:shadow-xl hover:shadow-[#b8d96a]/20">
+                    <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-[#b8d96a]/60 to-transparent" />
+
+                    <div className="mb-4 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                            Primary Focus
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#b8d96a]/15">
+                            <svg className="h-4 w-4 text-[#b8d96a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p className="mb-2 text-3xl font-extrabold text-white transition-colors group-hover:text-[#b8d96a]">
+                        {primaryFocus}
+                    </p>
+                    <p className="text-xs leading-relaxed text-white/60">
+                        We prioritize the most impactful treatment for faster visible results.
+                    </p>
+                </div>
+
+                {/* Card 3 — Lifestyle Levers */}
+                <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-white/10 to-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-sky-400/50 hover:shadow-xl hover:shadow-sky-500/20 sm:col-span-2 lg:col-span-1">
+                    <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
+
+                    <div className="mb-4 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                            Lifestyle Levers
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-400/15">
+                            <svg className="h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p className="mb-2 text-3xl font-extrabold text-white transition-colors group-hover:text-sky-400">
+                        {lifestyleTips.length} key habits
+                    </p>
+                    <p className="text-xs leading-relaxed text-white/60">
+                        Essential daily rituals to amplify your topical skincare routine.
+                    </p>
+                </div>
+>>>>>>> Stashed changes
+            </div>
+
         </div>
-      </section>
+    </section>
 
       {/* Main Analysis Section */}
       <section className="py-16  ">
