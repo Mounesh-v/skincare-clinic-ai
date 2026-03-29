@@ -415,6 +415,12 @@ class SkinAnalyzerService:
             adjusted_scores["normal"] += 0.05
             LOGGER.debug("Calibration: High brightness but no specular hotspots -> oily -0.05, normal +0.05")
 
+        # Additional protection: If no strong oil signal anywhere
+        if t_shine < _LOW_CHEEK_SHINE_THRESHOLD and cheek_shine < _LOW_CHEEK_SHINE_THRESHOLD and specular_spread < _SPECULAR_SPREAD_THRESHOLD:
+            adjusted_scores["oily"] = max(0.0, adjusted_scores["oily"] - 0.10)
+            adjusted_scores["normal"] += 0.10
+            LOGGER.debug("Calibration: Uniformly low shine with no hotspots -> oily -0.10, normal +0.10")
+
         # Task 6: Beard / texture noise protection
         # High edge density but low cheek shine implies hair/texture, not oil
         _HIGH_EDGE_DENSITY_THRESHOLD = 20.0
