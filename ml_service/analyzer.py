@@ -21,7 +21,8 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import decode_image_payload, detect_face_with_retry, preprocess_array
-from ml.skin_type_vit import infer_skin_type_ensemble, infer_skin_type_vit, preload_vit_model
+from ml.skin_type_vit import infer_skin_type_vit, preload_vit_model
+from ml.skin_type_inference import infer_skin_type
 
 from .recommendations import build_personalized_plan
 
@@ -41,14 +42,6 @@ _MAGIC_SIGNATURES: list[tuple[bytes, str]] = [
 ]
 # Maximum decoded (raw bytes) image size: 8 MB
 _MAX_DECODED_BYTES = 8 * 1024 * 1024
-
-CONDITION_TO_TYPE: Dict[str, Dict[str, float]] = {
-    "blackheads": {"oily": 0.85, "dry": 0.05, "normal": 0.10, "combination": 0.65},
-    "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.20, "combination": 0.65},
-    "acne": {"oily": 0.65, "dry": 0.10, "normal": 0.15, "combination": 0.80},
-    "wrinkles": {"oily": 0.05, "dry": 0.80, "normal": 0.40, "combination": 0.10},
-    "dark_spots": {"oily": 0.05, "dry": 0.70, "normal": 0.50, "combination": 0.15},
-}
 
 global_condition_model: torch.nn.Module | None = None
 global_vit_model: Any = None
@@ -382,85 +375,62 @@ class SkinAnalyzerService:
 
     def _apply_zone_aware_adjustment(
         self,
-        vit_result: Dict[str, Any],
+        vit_scores: Dict[str, float],
         image_rgb: np.ndarray,
-    ) -> Tuple[Dict[str, Any], Dict[str, float | bool]]:
-        vit_scores: Dict[str, float] = {
-            "oily": float(vit_result.get("scores", {}).get("oily", 0.0)),
-            "dry": float(vit_result.get("scores", {}).get("dry", 0.0)),
-            "normal": float(vit_result.get("scores", {}).get("normal", 0.0)),
-        }
+    ) -> Dict[str, float]:
+        """Apply light zone-based calibrations to raw ViT scores."""
         zone_signals = self._extract_zone_signals(image_rgb)
 
         t_shine = float(zone_signals["t_zone_shine"])
         cheek_shine = float(zone_signals["cheek_shine"])
         roughness = float(zone_signals["roughness"])
-        edge_density = float(zone_signals["edge_density"])
-        asymmetry = float(zone_signals["asymmetry"])
-        is_synthetic = bool(zone_signals["is_synthetic"])
+        edge_density = float(zone_signals.get("edge_density", 0.0))
 
-        # Soft nudges: ViT stays primary; adjustments are bounded to +/- 0.15.
-        nudge = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+        adjusted_scores = dict(vit_scores)
 
-        high_t_shine = (t_shine - 175.0) / 80.0
-        high_cheek_shine = (cheek_shine - 170.0) / 80.0
-        low_cheek_shine = (160.0 - cheek_shine) / 80.0
-        low_global_shine = (165.0 - ((t_shine + cheek_shine) / 2.0)) / 80.0
-        high_roughness = (roughness - 120.0) / 260.0
-        low_roughness = (90.0 - roughness) / 180.0
-        balance = (20.0 - abs(asymmetry)) / 40.0
+        # Task 8: Light calibration for combination and normal
+        if t_shine > cheek_shine * 1.2:
+            adjusted_scores["combination"] += 0.05
+            LOGGER.debug("Calibration: T-zone significantly shinier than cheeks -> combination +0.05")
 
-        nudge["oily"] += max(0.0, high_t_shine) * max(0.0, high_cheek_shine) * 0.15
-        nudge["combination"] += max(0.0, high_t_shine) * max(0.0, low_cheek_shine) * 0.15
-        nudge["dry"] += max(0.0, low_global_shine) * max(0.0, high_roughness) * 0.15
+        _LOW_CHEEK_SHINE_THRESHOLD = 165.0
+        _LOW_ROUGHNESS_THRESHOLD = 100.0
+        uniform_texture = cheek_shine < _LOW_CHEEK_SHINE_THRESHOLD
+        low_roughness = roughness < _LOW_ROUGHNESS_THRESHOLD
+        
+        if uniform_texture and low_roughness:
+            adjusted_scores["normal"] += 0.05
+            LOGGER.debug("Calibration: Uniform texture and low roughness -> normal +0.05")
 
-        smooth_balance = max(0.0, balance) * max(0.0, low_roughness) * 0.15
-        nudge["normal"] += smooth_balance
+        # Task 5: Lighting correction guard
+        global_brightness = float(np.mean(image_rgb.astype(np.float32)))
+        top_5_pct = float(np.percentile(image_rgb, 95))
+        top_1_pct = float(np.percentile(image_rgb, 99))
+        specular_spread = top_1_pct - top_5_pct
+        _GLOBAL_BRIGHT_THRESHOLD = 160.0
+        _SPECULAR_SPREAD_THRESHOLD = 15.0
+        
+        if global_brightness > _GLOBAL_BRIGHT_THRESHOLD and specular_spread < _SPECULAR_SPREAD_THRESHOLD:
+            adjusted_scores["oily"] = max(0.0, adjusted_scores["oily"] - 0.05)
+            adjusted_scores["normal"] += 0.05
+            LOGGER.debug("Calibration: High brightness but no specular hotspots -> oily -0.05, normal +0.05")
 
-        # Mild penalty for very high texture noise to keep normal in check.
-        nudge["normal"] -= min(0.08, edge_density * 0.25)
+        # Task 6: Beard / texture noise protection
+        # High edge density but low cheek shine implies hair/texture, not oil
+        _HIGH_EDGE_DENSITY_THRESHOLD = 20.0
+        if edge_density > _HIGH_EDGE_DENSITY_THRESHOLD and cheek_shine < _LOW_CHEEK_SHINE_THRESHOLD:
+            adjusted_scores["oily"] = max(0.0, adjusted_scores["oily"] - 0.05)
+            adjusted_scores["normal"] += 0.05
+            LOGGER.debug("Calibration: High edge density but low shine (beard/noise) -> oily -0.05, normal +0.05")
 
-        for key in nudge:
-            nudge[key] = self._clip_nudge(nudge[key])
-
-        adjusted_scores = {
-            "oily": max(0.0, vit_scores["oily"] + nudge["oily"]),
-            "dry": max(0.0, vit_scores["dry"] + nudge["dry"]),
-            "normal": max(0.0, vit_scores["normal"] + nudge["normal"]),
-            "combination": max(0.0, nudge["combination"]),
-        }
-
+        # Task 4: Normalize after every adjustment
+        # Clamp and normalize
+        adjusted_scores = {k: float(np.clip(v, 0.0, 1.0)) for k, v in adjusted_scores.items()}
         total = sum(adjusted_scores.values())
         if total > 0:
             adjusted_scores = {k: float(v / total) for k, v in adjusted_scores.items()}
 
-        vit_top = max(vit_scores, key=lambda key: vit_scores[key])
-        combination_rule_fired = vit_top == "oily" and asymmetry > 40.0
-        if combination_rule_fired:
-            final_type = "Combination"
-            confidence = float(vit_scores["oily"] * 0.85)
-            explanation = "T-zone appears significantly oilier than cheeks, indicating combination skin pattern."
-        else:
-            final_key = max(adjusted_scores, key=lambda key: adjusted_scores[key])
-            final_type = final_key.title()
-            confidence = float(adjusted_scores[final_key])
-            explanation = str(vit_result.get("explanation", f"Classified as {final_type}."))
-
-        if is_synthetic:
-            adjusted_scores = {k: float(v * 0.70) for k, v in adjusted_scores.items()}
-            confidence *= 0.70
-            confidence = min(confidence, 0.65)
-            explanation = explanation + " Confidence reduced due to filtered/synthetic image characteristics."
-
-        updated_result = {
-            **vit_result,
-            "skin_type": final_type,
-            "confidence": round(float(np.clip(confidence, 0.0, 1.0)), 4),
-            "scores": {k: round(v, 4) for k, v in adjusted_scores.items()},
-            "explanation": explanation,
-            "low_confidence_filtered_image": is_synthetic,
-        }
-        return updated_result, zone_signals
+        return adjusted_scores
 
     @staticmethod
     def _build_xai_fields(
@@ -491,27 +461,22 @@ class SkinAnalyzerService:
         ]
 
         # ── Condition contributions (XAI) ─────────────────────────────────────
-        # For each detected condition, figure out which skin type it most strongly
-        # points to and produce a human-readable explanation line.
-        from ml.skin_type_inference import CONDITION_TO_TYPE, _CONDITION_EXPLAINS  # type: ignore[attr-defined]
+        # For each detected condition, map it to a tendency for XAI output
+        _XAI_MAP = {
+            "blackheads": "oily",
+            "pores": "oily",
+            "acne": "oily",
+            "wrinkles": "dry",
+            "dark_spots": "dry",
+        }
 
         condition_contributions = []
         for cond_key, cond_score in sorted(condition_probs.items(), key=lambda x: x[1], reverse=True):
-            weight_map = CONDITION_TO_TYPE.get(cond_key)
-            if weight_map is None:
+            points_to = _XAI_MAP.get(cond_key)
+            if not points_to:
                 continue
-            # Which skin type does this condition point to most strongly?
-            points_to = max(weight_map, key=weight_map.__getitem__)
-            # Get template explanation; fall back to a generic one
-            explain_map = _CONDITION_EXPLAINS.get(cond_key, {})
-            template = explain_map.get(
-                points_to,
-                f"{cond_key.replace('_', ' ').title()} ({{score:.0%}}) → {points_to.capitalize()} tendency",
-            )
-            try:
-                explanation_text = template.format(score=cond_score)
-            except (KeyError, ValueError):
-                explanation_text = f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%}) → {points_to.capitalize()} tendency"
+            
+            explanation_text = f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%}) → {points_to.capitalize()} tendency"
 
             condition_contributions.append({
                 "condition": cond_key.replace("_", " ").title(),
@@ -595,27 +560,30 @@ class SkinAnalyzerService:
             for entry in prediction.top_predictions
         }
 
-        # Ensemble: ViT (60%) + condition rule-based (40%)
-        # 60/40 gives the rule-based module enough influence to correctly
-        # classify Combination skin that the ViT cannot output directly.
+        # Get raw ViT predictions
         t_vit_start = time.perf_counter()
         with self._vit_sem:
-            LOGGER.info("Running ViT ensemble skin type inference...")
-            skin_type_result = infer_skin_type_ensemble(
-                processed,
-                condition_probs,
-                vit_weight=0.60,
-                rule_weight=0.40,
-            )
-            LOGGER.info(
-                "Ensemble done: %s (%.4f) | scores=%s",
-                skin_type_result.get("skin_type"),
-                skin_type_result.get("confidence", 0.0),
-                skin_type_result.get("scores"),
-            )
+            LOGGER.info("Running ViT skin type inference...")
+            vit_scores = infer_skin_type_vit(processed)
         t_vit_end = time.perf_counter()
-
+        
+        # Apply light zone-based calibrations (+0.05 adjustments)
         t_ens_start = time.perf_counter()
+        adjusted_scores = self._apply_zone_aware_adjustment(vit_scores, processed)
+
+        # Apply strict decision rules to get final skin type classification
+        skin_type_result = infer_skin_type(adjusted_scores)
+        
+        # PART 5: ASYNC INTEGRATION for Production Monitoring
+        from ml.skin_type_monitor import monitor
+        self._cpu_executor.submit(monitor.track_prediction, skin_type_result, processed)
+
+        LOGGER.info(
+            "Inference done: %s (%.4f) | scores=%s",
+            skin_type_result.get("skin_type"),
+            skin_type_result.get("confidence", 0.0),
+            skin_type_result.get("scores"),
+        )
         plan = build_personalized_plan(prediction.label_key, answers)
 
         # Keep condition-based result for the drivers metadata only

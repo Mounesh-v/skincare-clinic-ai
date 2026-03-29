@@ -140,15 +140,10 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
 
     Returns:
         {
-            "skin_type":  "Oily" | "Dry" | "Normal" | "Combination",
-            "confidence": float,          # 0.0 – 1.0
-            "scores": {                   # per-type softmax scores
-                "oily":        float,
-                "dry":         float,
-                "normal":      float,
-                "combination": float,
-            },
-            "explanation": str,
+            "oily":        float,
+            "dry":         float,
+            "normal":      float,
+            "combination": float,
         }
 
     Raises:
@@ -178,7 +173,7 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
         logits = model(**inputs).logits  # shape: (1, num_labels)
 
     # Temperature scaling (T > 1 softens distribution, reduces overconfident "dry" bias)
-    _TEMPERATURE = 1.3
+    _TEMPERATURE = 1.2
     scaled_logits = logits / _TEMPERATURE
     probs = F.softmax(scaled_logits, dim=-1).squeeze(0)  # shape: (num_labels,)
 
@@ -212,112 +207,13 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
             _TEMPERATURE,
         )
 
-        # Low-confidence fallback (raised threshold: 0.40 for clearer signal)
-        if confidence < 0.40:
-            skin_type = "Uncertain - Retake image"
-            explanation = (
-                f"Low confidence ({confidence * 100:.0f}%) — retake in better lighting."
-            )
-        else:
-            skin_type = _DISPLAY.get(best_key, best_key.capitalize())
-            explanation = _EXPLANATIONS.get(best_key, f"Classified as {skin_type}.")
-
-        logger.info("Skin type prediction: %s (%.2f) | scores=%s", skin_type, confidence, scores)
-
     except Exception as exc:
         import logging
         logger = logging.getLogger("ml.skin_type_vit")
         logger.error("ViT Inference failed: %s", exc)
         raise
 
-    return {
-        "skin_type": skin_type,
-        "confidence": round(confidence, 4),
-        "scores": {k: round(v, 4) for k, v in scores.items()},
-        "explanation": explanation,
-    }
+    return {k: round(v, 4) for k, v in scores.items()}
 
 
-# IMPROVEMENT: Ensemble blends the ViT vision signal with rule-based heuristics
-# from skin_type_inference.  Empirically reduces hard-misclassification of
-# "combination" skin (which the ViT model cannot output on its own) and smooths
-# confidence on ambiguous or low-quality images.
-def infer_skin_type_ensemble(
-    image_rgb: "np.ndarray",
-    condition_probs: "dict[str, float]",
-    vit_weight: float = 0.80,
-    rule_weight: float = 0.20,
-) -> "dict":
-    """Blend ViT model scores with rule-based scores from skin_type_inference.
 
-    The ViT model (``dima806/skin_types_image_detection``) predicts oily / dry /
-    normal from the pixel content, while the rule-based module converts EfficientNet
-    condition probabilities (acne, blackheads, pores, wrinkles, dark_spots) into
-    skin-type scores.  The weighted blend produces more stable predictions,
-    especially for ``combination`` skin that the ViT cannot detect directly.
-
-    Args:
-        image_rgb: RGB uint8 numpy array, same format expected by
-            :func:`infer_skin_type_vit`.
-        condition_probs: Dict mapping condition label keys to their EfficientNet
-            probability scores, e.g. ``{"acne": 0.82, "pores": 0.65, ...}``.
-        vit_weight: Relative weight for the ViT model scores (default 0.65).
-        rule_weight: Relative weight for the rule-based scores (default 0.35).
-
-    Returns:
-        Same schema as :func:`infer_skin_type_vit`, with an extra ``"source"``
-        key set to ``\"ensemble\"``::
-
-            {
-                "skin_type":  str,
-                "confidence": float,
-                "scores":     {"oily": float, "dry": float,
-                               "normal": float, "combination": float},
-                "explanation": str,
-                "source":     "ensemble",
-            }
-    """
-    from .skin_type_inference import infer_skin_type
-
-    # --- ViT branch -----------------------------------------------------------
-    vit_result = infer_skin_type_vit(image_rgb)
-    vit_scores: dict = vit_result["scores"]  # {"oily": x, "dry": y, "normal": z}
-
-    # --- Rule-based branch ----------------------------------------------------
-    rule_result = infer_skin_type(condition_probs)
-    rule_scores: dict = rule_result["scores"]  # adds "combination" key
-
-    top_condition = max(condition_probs, key=lambda key: condition_probs[key]) if condition_probs else ""
-    top_confidence = float(condition_probs.get(top_condition, 0.0)) if condition_probs else 0.0
-    if (
-        top_condition == "wrinkles"
-        and top_confidence > 0.85
-        and len(condition_probs) == 1
-    ):
-        rule_weight = 0.10
-        vit_weight = 0.90
-
-    # --- Blend ----------------------------------------------------------------
-    blended: dict = {}
-    for key in ("oily", "dry", "normal", "combination"):
-        blended[key] = (
-            vit_weight * vit_scores.get(key, 0.0)
-            + rule_weight * rule_scores.get(key, 0.0)
-        )
-
-    # Normalise to a valid probability distribution
-    total = sum(blended.values()) or 1.0
-    blended = {k: v / total for k, v in blended.items()}
-
-    best_key = max(blended, key=blended.__getitem__)
-    confidence = blended[best_key]
-
-    return {
-        "skin_type": _DISPLAY.get(best_key, best_key.capitalize()),
-        "confidence": round(confidence, 4),
-        "scores": {k: round(v, 4) for k, v in blended.items()},
-        "explanation": _EXPLANATIONS.get(
-            best_key, f"Ensemble classified as {best_key}."
-        ),
-        "source": "ensemble",
-    }
