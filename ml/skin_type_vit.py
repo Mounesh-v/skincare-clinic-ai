@@ -172,23 +172,39 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
     with torch.no_grad():
         logits = model(**inputs).logits  # shape: (1, num_labels)
 
-    # Temperature scaling (T > 1 softens distribution, reduces overconfident "dry" bias)
-    _TEMPERATURE = 1.2
-    scaled_logits = logits / _TEMPERATURE
-    probs = F.softmax(scaled_logits, dim=-1).squeeze(0)  # shape: (num_labels,)
-
     try:
         # Build id2label from model config
-        id2label: Dict[int, str] = model.config.id2label  # e.g. {0: "dry", 1: "normal", 2: "oily"}
+        id2label: Dict[int, str] = model.config.id2label
 
-        # Map to canonical names and collect scores
-        scores: Dict[str, float] = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+        # Step 1: Extract logits to dict mapped by canonical class names
+        raw_logits = logits.squeeze(0).tolist()
+        logits_dict = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+        
         for idx, raw_label in id2label.items():
             canonical = _LABEL_MAP.get(raw_label.lower(), raw_label.lower())
-            prob_val = float(probs[idx].item())
-            if canonical in scores:
-                scores[canonical] += prob_val
-            # If the model has unexpected labels, they are silently absorbed
+            if canonical in logits_dict:
+                logits_dict[canonical] += raw_logits[idx]
+
+        # Step 2: Apply bias correction (CRITICAL)
+        # We manually tune the raw logits before softmax to natively suppress
+        # the model's heavy bias towards Oily skin.
+        logits_dict["oily"] -= 0.25
+        logits_dict["normal"] += 0.15
+        logits_dict["combination"] += 0.10
+
+        # Step 3: Convert back to list preserving a fixed ordering
+        order = ["oily", "dry", "normal", "combination"]
+        adjusted_logits = [logits_dict[k] for k in order]
+
+        # Step 4: Apply temperature scaling and softmax
+        # Temperature (T=1.2) softens distribution slightly for stable prediction spreads
+        _TEMPERATURE = 1.2
+        scaled_logits = torch.tensor(adjusted_logits) / _TEMPERATURE
+        probs = F.softmax(scaled_logits, dim=-1).tolist()
+
+        # Step 5: Normalize and assign scores
+        total = sum(probs)
+        scores = {k: v / total for k, v in zip(order, probs)}
 
         # Determine winner
         best_key = max(scores, key=scores.__getitem__)
