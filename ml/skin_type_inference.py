@@ -58,6 +58,19 @@ def infer_skin_type(scores: Dict[str, float]) -> Dict[str, Any]:
         if not (normalized["oily"] > 0.35 and normalized["dry"] > 0.25):
             # Demote combination and pick the next best underlying class
             best_type = max((k for k in normalized if k != "combination"), key=normalized.get)
+            confidence = normalized[best_type]
+
+    # Strong NORMAL override rule AFTER all adjustments
+    # Prevents smooth/clear skin from being labeled as oily
+    if normalized["oily"] < 0.55 and normalized["normal"] > 0.15 and normalized["combination"] < 0.40:
+        best_type = "normal"
+        confidence = normalized["normal"]
+
+    # Final safeguard: prevent weak oily from overriding normal
+    if best_type == "oily" and confidence < 0.50:
+        if normalized["normal"] > 0.20:
+            best_type = "normal"
+            confidence = normalized["normal"]
 
     # --- FINAL DECISION PRIORITY ---
     # Order:
@@ -68,7 +81,7 @@ def infer_skin_type(scores: Dict[str, float]) -> Dict[str, Any]:
     # TASK 3: Fix WRONG combination bias 
     if best_type == "oily" and normalized["oily"] > 0.60:
         skin_type = "Oily"
-        explanation = "Strong oily characteristics detected."
+        explanation = "Strong oily characteristics (excess sebum detected)."
         
     elif best_type == "dry" and normalized["dry"] > 0.60:
         skin_type = "Dry"

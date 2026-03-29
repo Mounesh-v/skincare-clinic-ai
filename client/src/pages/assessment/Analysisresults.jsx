@@ -35,7 +35,7 @@ const formatCurrency = (amount) => {
 const SKIN_TYPE_CONFIG = {
   oily: {
     label: "Oily",
-    description: "Your skin produces excess sebum. T-zone appears shiny.",
+    description: "Your skin shows oily characteristics. T-zone may appear shiny.",
     color: "#2196F3",
     tips: [
       "Use oil-free moisturizers",
