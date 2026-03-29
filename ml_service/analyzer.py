@@ -271,11 +271,19 @@ class SkinAnalyzerService:
     def condition_to_skintype(self, top_predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
         top3 = top_predictions[:3]
         raw_scores = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+        condition_to_type: Dict[str, Dict[str, float]] = {
+            "acne": {"oily": 0.70, "dry": 0.05, "normal": 0.15, "combination": 0.10},
+            "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.10, "combination": 0.10},
+            "blackheads": {"oily": 0.70, "dry": 0.05, "normal": 0.15, "combination": 0.10},
+            "wrinkles": {"oily": 0.05, "dry": 0.75, "normal": 0.10, "combination": 0.10},
+            "dark_spots": {"oily": 0.10, "dry": 0.10, "normal": 0.70, "combination": 0.10},
+            "dark spots": {"oily": 0.10, "dry": 0.10, "normal": 0.70, "combination": 0.10},
+        }
 
         for entry in top3:
             label_key = self._normalize_condition_label(str(entry.get("label", "")))
             confidence = float(entry.get("probability", 0.0))
-            weight_map = CONDITION_TO_TYPE.get(label_key)
+            weight_map = condition_to_type.get(label_key)
             if weight_map is None:
                 continue
             for skin_type in raw_scores:
