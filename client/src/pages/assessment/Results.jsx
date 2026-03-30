@@ -50,17 +50,32 @@ const Results = ({ assessmentData }) => {
   const analysis = assessmentData?.analysis || {};
   const image = assessmentData?.image;
 
-  const skinType = String(analysis.skin_type || "Unknown");
-  const skinTypeKey = skinType.toLowerCase().trim();
+  const predictedType = String(analysis.skin_type || "Unknown");
+  const skinType = predictedType;
+  const skinTypeKey = predictedType.toLowerCase().trim();
   const confidence = formatPercent(analysis.confidence);
   const explanation = String(analysis.explanation || "No explanation available.");
   const scores = toScoreRows(analysis.scores);
   const recommendations = toRecommendations(analysis);
+  const top2Gap = Number(analysis.top2_gap);
+
+  const secondaryType = useMemo(() => {
+    if (!scores.length) return "-";
+    const sorted = [...scores].sort((a, b) => b.value - a.value);
+    return sorted[1]?.key ? String(sorted[1].key).replace(/^./, (c) => c.toUpperCase()) : "-";
+  }, [scores]);
 
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
   const doctors = useMemo(() => getTopDoctors(skinTypeKey, 3), [skinTypeKey]);
+
+  useEffect(() => {
+    console.log({
+      backend_type: analysis.skin_type,
+      ui_type: predictedType,
+    });
+  }, [analysis.skin_type, predictedType]);
 
   useEffect(() => {
     let mounted = true;
@@ -106,6 +121,12 @@ const Results = ({ assessmentData }) => {
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Predicted Skin Type</p>
             <h2 className="mt-2 text-5xl font-black text-teal-300">{skinType}</h2>
             <p className="mt-2 text-sm text-slate-300">Model confidence {confidence}</p>
+            <p className="mt-1 text-xs text-slate-400">Secondary signal: {secondaryType}</p>
+            {Number.isFinite(top2Gap) && top2Gap < 0.1 ? (
+              <p className="mt-2 inline-flex rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-200">
+                Mixed / Low Confidence
+              </p>
+            ) : null}
             <p className="mt-4 text-sm leading-relaxed text-slate-200">{explanation}</p>
           </div>
 

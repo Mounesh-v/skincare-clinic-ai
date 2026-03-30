@@ -284,17 +284,20 @@ def infer_skin_type_ensemble(
         if norm_key in canonical_conditions:
             canonical_conditions[norm_key] = float(value)
 
-    # ── Step 2: Rule-based prediction (full pass, no shortcut) ────────────
-    rule_result = infer_skin_type(canonical_conditions, features=features)
+    # ── Step 2: Rule-based prediction (single source of truth) ────────────
+    rule_output = infer_skin_type(canonical_conditions, features=features)
 
     # ── Step 3: ViT prediction ────────────────────────────────
-    vit_result  = infer_skin_type_vit(image_rgb)
-    vit_scores  = vit_result
-    rule_scores = rule_result["scores"]
+    vit_result = infer_skin_type_vit(image_rgb)
+    vit_scores = vit_result
+    rule_scores = rule_output["scores"]
 
     # ── Step 4: Rule-primary decision flow ────────────────────
-    rule_type = max(rule_scores, key=lambda k: float(rule_scores.get(k, 0.0)))
-    rule_conf = float(max(rule_scores.values())) if rule_scores else 0.0
+    # Rule engine decision is authoritative; do not recompute from max(score).
+    rule_type = str(rule_output.get("skin_type", "Normal")).strip().lower()
+    if rule_type not in rule_scores:
+        rule_type = max(rule_scores, key=lambda k: float(rule_scores.get(k, 0.0)))
+    rule_conf = float(rule_scores.get(rule_type, 0.0))
 
     vit_type = max(vit_scores, key=lambda k: float(vit_scores.get(k, 0.0)))
     vit_conf = float(max(vit_scores.values())) if vit_scores else 0.0
@@ -342,6 +345,8 @@ def infer_skin_type_ensemble(
             "rule_type": rule_type,
             "vit_type": vit_type,
             "final_type": skin_type,
+            "rule_conf": round(rule_conf, 4),
+            "vit_conf": round(vit_conf, 4),
         }
     )
 
