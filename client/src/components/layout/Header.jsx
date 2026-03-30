@@ -484,7 +484,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 <>
                   <button
                     onClick={() => navigate("/login")}
-                    className="hidden md:block px-5 py-2 text-slate-700 hover:text-emerald-600"
+                    className="bg-emerald-600 px-5  py-2 text-white rounded-xl  hover:text-emerald-600"
                   >
                     Login
                   </button>
