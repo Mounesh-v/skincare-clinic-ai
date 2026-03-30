@@ -48,16 +48,18 @@ const Results = ({ assessmentData }) => {
   const lead = assessmentData?.lead || {};
   const answers = assessmentData?.answers || {};
   const analysis = assessmentData?.analysis || {};
+  const response = analysis;
   const image = assessmentData?.image;
 
-  const predictedType = String(analysis.skin_type || "Unknown");
+  const predictedTypeRaw = String(response.skin_type || "Unknown");
+  const predictedType = predictedTypeRaw.replace(/^./, (c) => c.toUpperCase());
   const skinType = predictedType;
   const skinTypeKey = predictedType.toLowerCase().trim();
-  const confidence = formatPercent(analysis.confidence);
-  const explanation = String(analysis.explanation || "No explanation available.");
-  const scores = toScoreRows(analysis.scores);
-  const recommendations = toRecommendations(analysis);
-  const top2Gap = Number(analysis.top2_gap);
+  const confidence = formatPercent(response.confidence);
+  const explanation = String(response.explanation || "No explanation available.");
+  const scores = toScoreRows(response.scores);
+  const recommendations = toRecommendations(response);
+  const top2Gap = Number(response.top2_gap);
 
   const secondaryType = useMemo(() => {
     if (!scores.length) return "-";
@@ -72,10 +74,10 @@ const Results = ({ assessmentData }) => {
 
   useEffect(() => {
     console.log({
-      backend_type: analysis.skin_type,
+      backend_type: response.skin_type,
       ui_type: predictedType,
     });
-  }, [analysis.skin_type, predictedType]);
+  }, [response.skin_type, predictedType]);
 
   useEffect(() => {
     let mounted = true;

@@ -293,9 +293,12 @@ def infer_skin_type_ensemble(
     rule_scores = rule_output["scores"]
 
     # ── Step 4: Rule-primary decision flow ────────────────────
-    # Rule engine decision is authoritative; do not recompute from max(score).
-    rule_type = str(rule_output.get("skin_type", "Normal")).strip().lower()
-    if rule_type not in rule_scores:
+    # Always trust rule engine output (case-safe mapping).
+    rule_type_raw = str(rule_output.get("skin_type", "Normal")).strip().lower()
+    if rule_type_raw in rule_scores:
+        rule_type = rule_type_raw
+    else:
+        # Fallback only if rule output is truly invalid for the score map.
         rule_type = max(rule_scores, key=lambda k: float(rule_scores.get(k, 0.0)))
     rule_conf = float(rule_scores.get(rule_type, 0.0))
 
@@ -342,9 +345,11 @@ def infer_skin_type_ensemble(
     logger.info(
         {
             "ensemble_fix": True,
+            "DEBUG_rule_output": rule_output.get("skin_type"),
+            "DEBUG_rule_type": rule_type,
             "rule_type": rule_type,
             "vit_type": vit_type,
-            "final_type": skin_type,
+            "final_type": final_type_key,
             "rule_conf": round(rule_conf, 4),
             "vit_conf": round(vit_conf, 4),
         }
