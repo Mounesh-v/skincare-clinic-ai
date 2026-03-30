@@ -1,0 +1,9 @@
+# Exclude large files from HF Spaces
+client/src/assets/*.jpg
+client/src/assets/*.jpeg
+client/src/assets/*.png
+client/src/assets/*.gif
+ml/models/
+ml/assets/
+ml/data/raw/
+.git/lfs/
