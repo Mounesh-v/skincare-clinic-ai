@@ -1,10 +1,4 @@
-"""
-Skin Type Inference Module
-
-Infers skin type from EfficientNet condition probabilities using priority rules.
-Maps detected conditions (wrinkles, pores, acne, etc) directly to skin types.
-Enforces strict condition-to-type mappings to prevent model bias.
-"""
+"""Rule-based skin type inference from condition probabilities."""
 
 import logging
 from typing import Dict, Any
@@ -45,8 +39,6 @@ def _generate_explanation(skin_type: str, normalized: Dict[str, float]) -> str:
         return "Your skin shows balanced sebum and condition levels — normal skin type."
     
     elif skin_type == "combination":
-        oily_score = normalized.get("pores", 0) + normalized.get("acne", 0)
-        dry_score = normalized.get("wrinkles", 0)
         return f"Mixed characteristics detected: oily zones (pores/acne) and dry areas (wrinkles). Combination skin type."
     
     else:
@@ -58,27 +50,26 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
     Infer skin type from EfficientNet condition probabilities.
     
     Priority order:
-    1. Dominant condition shortcut (>= 0.88 confidence) — bypass all math
-    2. High confidence boost (>= 0.75) — weighted math with amplification  
-    3. Standard weighted scoring
-    4. Combination detection
-    5. Uncertainty fallback
+    1. Dominant condition shortcut (>= 0.88 confidence)
+    2. Weighted scoring for oily/dry/normal/combination
+    3. Confidence + ambiguity checks
     
     Args:
         condition_scores: Dictionary with condition detection probabilities
             Expected keys: acne, pores, wrinkles, blackheads, dark_spots
             Values should be between 0.0 and 1.0
     
-    Returns:
-        Dictionary containing:
-            - skin_type: Predicted skin type (Dry/Oily/Normal/Combination/Uncertain)
-            - confidence: Confidence score (0.0 to 1.0)
-            - scores: Individual scores for each skin type class
-            - detected_conditions: Normalized condition probabilities
-            - explanation: Human-readable explanation
+    Returns schema:
+        {
+            "skin_type": str,
+            "confidence": float,
+            "scores": {"oily": float, "dry": float, "normal": float, "combination": float},
+            "explanation": str,
+            "source": str,
+        }
     """
-    
-    # ── STEP 0: Normalize inputs ─────────────────────────────
+
+    # STEP 0: Normalize inputs and support both dark_spots key styles.
     normalized = {
         "acne":        max(0.0, min(1.0, condition_scores.get("acne",        0.0))),
         "pores":       max(0.0, min(1.0, condition_scores.get("pores",       0.0))),
@@ -88,11 +79,7 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
                            condition_scores.get("dark spots", 0.0)))),
     }
 
-    # ── STEP 1: Dominant condition shortcut ──────────────────
-    # When one condition is extremely dominant (>= 0.88),
-    # bypass all ensemble/math and return directly.
-    # This prevents ViT from overriding clear condition signals.
-    
+    # STEP 1: Dominant condition shortcut.
     CONDITION_TO_SKIN_TYPE = {
         "wrinkles":   "dry",
         "pores":      "oily",
@@ -101,54 +88,51 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
         "dark_spots": "normal",
     }
 
-    dominant_key   = max(normalized, key=normalized.__getitem__)
+    dominant_key = max(normalized, key=normalized.__getitem__)
     dominant_score = normalized[dominant_key]
 
     if dominant_score >= 0.88:
         mapped = CONDITION_TO_SKIN_TYPE.get(dominant_key, "normal")
         shortcut_scores = {
-            "oily":        0.04,
-            "dry":         0.04,
-            "normal":      0.04,
-            "combination": 0.04,
+            "oily": 0.01,
+            "dry": 0.01,
+            "normal": 0.01,
+            "combination": 0.01,
         }
-        shortcut_scores[mapped] = round(dominant_score, 2)
-        # Normalize shortcut scores
-        total = sum(shortcut_scores.values())
-        shortcut_scores = {k: round(v / total, 2) for k, v in shortcut_scores.items()}
+        shortcut_scores[mapped] = dominant_score
+        total = sum(shortcut_scores.values()) or 1.0
+        shortcut_scores = {k: v / total for k, v in shortcut_scores.items()}
+        confidence = shortcut_scores[mapped]
 
         return {
-            "skin_type":           mapped.capitalize(),
-            "confidence":          round(dominant_score, 2),
-            "scores":              shortcut_scores,
-            "detected_conditions": {k: round(v, 2) for k, v in normalized.items()},
-            "explanation":         (
+            "skin_type": mapped.capitalize(),
+            "confidence": round(confidence, 4),
+            "scores": {k: round(v, 4) for k, v in shortcut_scores.items()},
+            "explanation": (
                 f"Dominant condition '{dominant_key.replace('_', ' ')}' "
                 f"({dominant_score:.0%} confidence) strongly indicates "
                 f"{mapped} skin."
             ),
+            "source": "rule_shortcut",
         }
 
-    # ── STEP 2: Calculate OILY score ─────────────────────────
+    # STEP 2: OILY score.
     score_oily = (
         normalized["pores"]      * 0.40 +
         normalized["acne"]       * 0.35 +
         normalized["blackheads"] * 0.25
     )
-    # Boost oily if wrinkles are low (young/oily skin)
     if normalized["wrinkles"] < 0.35:
         score_oily *= 1.15
-    # Suppress oily if wrinkles are high (contradicts oily)
     if normalized["wrinkles"] >= 0.75:
         suppression = max(0.30, 1.0 - (normalized["wrinkles"] - 0.75) * 2.0)
         score_oily *= suppression
     score_oily = min(score_oily, 1.0)
 
-    # ── STEP 3: Calculate DRY score ──────────────────────────
-    # Apply exponential boost when wrinkles are very high
+    # STEP 3: DRY score with wrinkle boost and blackhead suppression.
     wrinkle_val = normalized["wrinkles"]
     if wrinkle_val >= 0.80:
-        wrinkle_component = wrinkle_val ** 0.7  # 0.92^0.7 ≈ 0.944
+        wrinkle_component = wrinkle_val ** 0.7
     elif wrinkle_val >= 0.75:
         wrinkle_component = wrinkle_val ** 0.85
     else:
@@ -159,16 +143,20 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
         (1 - normalized["pores"]) * 0.28 +
         (1 - normalized["acne"])  * 0.17
     )
+    if normalized["blackheads"] >= 0.60:
+        score_dry *= 0.90
     score_dry = min(score_dry, 1.0)
 
-    # ── STEP 4: Calculate NORMAL score ───────────────────────
+    # STEP 4: NORMAL score from balance + low variance.
     balanced_count = sum(
         1 for v in normalized.values()
         if 0.30 <= v <= 0.60
     )
-    score_normal = balanced_count / len(normalized)
+    variance = sum((v - (sum(normalized.values()) / len(normalized))) ** 2 for v in normalized.values()) / len(normalized)
+    variance_factor = max(0.0, 1.0 - min(1.0, variance / 0.08))
+    score_normal = (balanced_count / len(normalized)) * 0.70 + variance_factor * 0.30
 
-    # ── STEP 5: Calculate COMBINATION score ──────────────────
+    # STEP 5: COMBINATION score from mixed oily and dry indicators.
     oily_indicators = (
         normalized["pores"]      * 0.50 +
         normalized["acne"]       * 0.30 +
@@ -177,7 +165,7 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
     dry_indicators = (
         normalized["wrinkles"]            * 0.50 +
         (1 - normalized["pores"])         * 0.30 +
-        normalized["dark_spots"]          * 0.20
+        (1 - normalized["blackheads"])    * 0.20
     )
 
     is_combination = all([
@@ -196,7 +184,7 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
     else:
         score_combination = 0.0
 
-    # ── STEP 6: Collect and decide ───────────────────────────
+    # STEP 6: Collect, dampen weak-signal inputs, normalize to 1.0.
     all_scores = {
         "oily":        score_oily,
         "dry":         score_dry,
@@ -204,41 +192,43 @@ def infer_skin_type(condition_scores: Dict[str, float]) -> Dict[str, Any]:
         "combination": score_combination,
     }
 
-    # Apply dampening when all input conditions are weak
-    # If max input < 0.50, scale all output scores proportionally
     max_input_score = max(normalized.values())
     if max_input_score < 0.50:
         dampening_factor = max_input_score
         all_scores = {k: v * dampening_factor for k, v in all_scores.items()}
 
+    all_scores = {k: max(0.0, v) for k, v in all_scores.items()}
+    total_score = sum(all_scores.values()) or 1.0
+    all_scores = {k: v / total_score for k, v in all_scores.items()}
+
     sorted_scores = sorted(all_scores.values(), reverse=True)
-    max_type      = max(all_scores, key=all_scores.__getitem__)
-    max_score     = all_scores[max_type]
-    second_score  = sorted_scores[1] if len(sorted_scores) > 1 else 0.0
+    max_type = max(all_scores, key=all_scores.__getitem__)
+    max_score = all_scores[max_type]
+    second_score = sorted_scores[1] if len(sorted_scores) > 1 else 0.0
 
     if max_score < 0.40:
-        skin_type   = "Uncertain - Retake image"
+        skin_type = "Uncertain - Retake image"
         explanation = (
             f"Low confidence across all types (max: {max_score:.2f}). "
             f"Please retake image in better lighting."
         )
-    elif (max_score - second_score) < 0.15:
-        top_two   = sorted(all_scores.items(), key=lambda x: x[1], reverse=True)[:2]
+    elif (max_score - second_score) < 0.30:
+        top_two = sorted(all_scores.items(), key=lambda x: x[1], reverse=True)[:2]
         skin_type = "Mixed characteristics"
         explanation = (
             f"Similar scores for {top_two[0][0]} ({top_two[0][1]:.2f}) "
             f"and {top_two[1][0]} ({top_two[1][1]:.2f})"
         )
     else:
-        skin_type   = max_type.capitalize()
+        skin_type = max_type.capitalize()
         explanation = _generate_explanation(max_type, normalized)
 
     return {
-        "skin_type":           skin_type,
-        "confidence":          round(max_score, 2),
-        "scores":              {k: round(v, 2) for k, v in all_scores.items()},
-        "detected_conditions": {k: round(v, 2) for k, v in normalized.items()},
-        "explanation":         explanation,
+        "skin_type": skin_type,
+        "confidence": round(max_score, 4),
+        "scores": {k: round(v, 4) for k, v in all_scores.items()},
+        "explanation": explanation,
+        "source": "ensemble(rule=1.00/vit=0.00)",
     }
 
 

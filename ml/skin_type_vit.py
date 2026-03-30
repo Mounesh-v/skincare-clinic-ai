@@ -176,9 +176,10 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
         # Build id2label from model config
         id2label: Dict[int, str] = model.config.id2label
 
-        # Step 1: Extract logits to dict mapped by canonical class names
+        # Step 1: Extract logits to dict mapped by canonical class names.
+        # ViT output is limited to oily/dry/normal.
         raw_logits = logits.squeeze(0).tolist()
-        logits_dict = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
+        logits_dict = {"oily": 0.0, "dry": 0.0, "normal": 0.0}
         
         for idx, raw_label in id2label.items():
             canonical = _LABEL_MAP.get(raw_label.lower(), raw_label.lower())
@@ -190,10 +191,9 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
         # the model's heavy bias towards Oily skin.
         logits_dict["oily"] -= 0.25
         logits_dict["normal"] += 0.15
-        logits_dict["combination"] += 0.10
 
         # Step 3: Convert back to list preserving a fixed ordering
-        order = ["oily", "dry", "normal", "combination"]
+        order = ["oily", "dry", "normal"]
         adjusted_logits = [logits_dict[k] for k in order]
 
         # Step 4: Apply temperature scaling and softmax
@@ -271,15 +271,29 @@ def infer_skin_type_ensemble(
 
     from .skin_type_inference import infer_skin_type
 
-    # ── Step 1: Get dominant EfficientNet condition ───────────
-    max_conf = max(condition_probs.values()) if condition_probs else 0.0
-    max_key  = max(condition_probs, key=lambda k: condition_probs.get(k, 0.0)) if condition_probs else ""
+    # ── Step 1: Canonicalize condition keys and handle dark spots variants ──
+    canonical_conditions: dict[str, float] = {
+        "acne": 0.0,
+        "pores": 0.0,
+        "wrinkles": 0.0,
+        "blackheads": 0.0,
+        "dark_spots": 0.0,
+    }
+    for key, value in (condition_probs or {}).items():
+        norm_key = str(key).strip().lower().replace(" ", "_")
+        if norm_key == "darkspots":
+            norm_key = "dark_spots"
+        if norm_key in canonical_conditions:
+            canonical_conditions[norm_key] = float(value)
+
+    max_conf = max(canonical_conditions.values()) if canonical_conditions else 0.0
+    max_key  = max(canonical_conditions, key=lambda k: canonical_conditions.get(k, 0.0)) if canonical_conditions else ""
 
     # ── Step 2: Rule-based prediction ────────────────────────
-    rule_result = infer_skin_type(condition_probs)
+    rule_result = infer_skin_type(canonical_conditions)
 
-    # ── Step 3: If dominant shortcut triggered, skip ViT ─────
-    if rule_result["confidence"] >= 0.88:
+    # ── Step 3: If dominant condition is very strong, skip ViT ──
+    if max_conf >= 0.88:
         logger.info(
             "Ensemble: rule_shortcut triggered | condition=%s (%.2f) → %s",
             max_key, max_conf, rule_result["skin_type"],
