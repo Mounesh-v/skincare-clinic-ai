@@ -32,6 +32,37 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
   const location = useLocation();
   const profileRef = useRef(null);
 
+  // hand gesture navigation
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchEndX, setTouchEndX] = useState(0);
+
+  const handleTouchStart = (e) => {
+    const x = e.touches[0].clientX;
+
+    // only detect swipe from left 30px
+    if (x < 30) {
+      setTouchStartX(x);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEndX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    const distance = touchEndX - touchStartX;
+
+    // 👉 swipe right → open
+    if (distance > 70) {
+      setFullscreenMenuOpen(true);
+    }
+
+    // 👉 swipe left → close
+    if (distance < -70) {
+      setFullscreenMenuOpen(false);
+    }
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -163,6 +194,236 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
               </Link>
             </div>
 
+            {/* Fullscreen Menu in Mobile */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div
+                className={`md:hidden fixed top-0 left-0 z-[999] h-full w-full bg-cover bg-center shadow-xl overflow-y-auto transform transition-transform duration-500 ease-in-out ${
+                  fullscreenMenuOpen ? "translate-x-0" : "-translate-x-full"
+                }`}
+                style={{ backgroundImage: `url(${ctaBg})` }}
+              >
+                {/* Header */}
+                <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 border-b">
+                  {/* Left: Logo + Title */}
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+                      <span className="text-xl">🌿</span>
+                    </div>
+
+                    <span className="text-xl font-bold text-emerald-700">
+                      SkinCare AI
+                    </span>
+                  </div>
+
+                  {/* Right: Close Button */}
+                  <button
+                    onClick={() => setFullscreenMenuOpen(false)}
+                    className="p-2 rounded-lg hover:bg-white/60 transition"
+                  >
+                    <X className="h-6 w-6 text-slate-700" />
+                  </button>
+                </div>
+
+                {/* Menu Grid Layout */}
+                <div className="flex flex-col gap-8 p-4 space-y-8 pb-24">
+                  {/* WHAT WE DO Section */}
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-emerald-500 pb-2">
+                      WHAT WE DO
+                    </h2>
+                    <p className="text-slate-600 mb-6 text-sm leading-relaxed">
+                      We help you take control of your skin health in a
+                      personalised, and scientific way.
+                    </p>
+                    <div className="space-y-3">
+                      {menuSections.whatWeDo.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setFullscreenMenuOpen(false)}
+                            className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-emerald-50 transition-all duration-200 group shadow-sm"
+                          >
+                            <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                              <Icon className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <span className="text-slate-700 font-medium group-hover:text-emerald-600 transition-colors">
+                              {item.name}
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-emerald-600 transition-colors" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div className="mt-8 space-y-3">
+                      <button
+                        onClick={() => {
+                          navigate("/assessment");
+                          setFullscreenMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-lg"
+                      >
+                        Start Assessment
+                      </button>
+
+                      {/* Only show Log In button if NOT logged in */}
+                      {!name && (
+                        <button
+                          onClick={() => {
+                            navigate("/login");
+                            setFullscreenMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:border-emerald-600 hover:text-emerald-600 transition-colors"
+                        >
+                          Log In
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* HOW WE DO IT Section */}
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-teal-500 pb-2">
+                      HOW WE DO IT
+                    </h2>
+                    <div className="space-y-3">
+                      {menuSections.howWeDoIt.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setFullscreenMenuOpen(false)}
+                            className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-teal-50 transition-all duration-200 group shadow-sm"
+                          >
+                            <div className="p-2 bg-teal-100 rounded-lg group-hover:bg-teal-200 transition-colors">
+                              <Icon className="h-5 w-5 text-teal-600" />
+                            </div>
+                            <span className="text-slate-700 font-medium group-hover:text-teal-600 transition-colors">
+                              {item.name}
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-teal-600 transition-colors" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    {/* Featured Products Section */}
+                    <div className="mt-4 sm:mt-6 sm:mt-8 p-3 sm:p-4 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
+                      <h3 className="font-bold text-slate-900 mb-3">
+                        🎯 Featured Products
+                      </h3>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Discover our doctor-approved skincare solutions
+                      </p>
+                      <button
+                        onClick={() => {
+                          navigate("/products");
+                          setFullscreenMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-2 bg-white text-teal-600 font-medium rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        View Products
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* WHO WE ARE Section */}
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-purple-500 pb-2">
+                      WHO WE ARE
+                    </h2>
+                    <div className="space-y-3">
+                      {menuSections.whoWeAre.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setFullscreenMenuOpen(false)}
+                            className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-purple-50 transition-all duration-200 group shadow-sm"
+                          >
+                            <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                              <Icon className="h-5 w-5 text-purple-600" />
+                            </div>
+                            <span className="text-slate-700 font-medium group-hover:text-purple-600 transition-colors">
+                              {item.name}
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-slate-400 ml-auto group-hover:text-purple-600 transition-colors" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+
+                    {/* GET IN TOUCH Section */}
+                    <div className="mt-8 p-6 bg-white/60 backdrop-blur-sm rounded-lg shadow-lg border border-white/50">
+                      <h3 className="text-lg font-bold text-slate-900 mb-4">
+                        GET IN TOUCH
+                      </h3>
+                      <div className="space-y-3">
+                        <a
+                          href="tel:+911234567890"
+                          className="flex items-center gap-3 text-slate-600 hover:text-emerald-600 transition-colors"
+                        >
+                          <Phone className="h-5 w-5" />
+                          <span className="text-sm">+91 123 456 7890</span>
+                        </a>
+
+                        <a
+                          href="mailto:hello@skincare.ai"
+                          className="flex items-center gap-3 text-slate-600 hover:text-emerald-600 transition-colors"
+                        >
+                          <Mail className="h-5 w-5" />
+                          <span className="text-sm">hello@skincare.ai</span>
+                        </a>
+
+                        <div className="flex items-center gap-3 text-slate-600">
+                          <MapPin className="h-5 w-5" />
+                          <span className="text-sm">Mumbai, India</span>
+                        </div>
+                      </div>
+
+                      {/* Social Media */}
+                      <div className="flex items-center gap-4 mt-6 sm:mt-8">
+                        <a
+                          href="https://instagram.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 bg-white/80 rounded-full hover:bg-emerald-100 transition-colors shadow-sm"
+                        >
+                          <span className="text-xl">📷</span>
+                        </a>
+
+                        <a
+                          href="https://facebook.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 bg-white/80 rounded-full hover:bg-emerald-100 transition-colors shadow-sm"
+                        >
+                          <span className="text-xl">📘</span>
+                        </a>
+
+                        <a
+                          href="https://whatsapp.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 bg-white/80 rounded-full hover:bg-emerald-100 transition-colors shadow-sm"
+                        >
+                          <span className="text-xl">💬</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Right Side - Auth or Profile */}
             <div className="flex items-center gap-4">
               {name ? (
@@ -193,7 +454,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                         </p>
                       </div>
 
-                      <button
+                      {/* <button
                         onClick={() => navigate("/dashboard")}
                         className="w-full flex items-center gap-3 px-4 py-2 hover:bg-slate-100"
                       >
@@ -207,7 +468,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                       >
                         <UserCircle className="h-4 w-4" />
                         Profile
-                      </button>
+                      </button> */}
 
                       <button
                         onClick={() => {
@@ -265,7 +526,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
 
       {/* Fullscreen Dropdown Menu Overlay */}
       {fullscreenMenuOpen && (
-        <div className="fixed inset-0 z-40 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto hidden md:block">
           {/* Background Image */}
           <div
             className="absolute inset-0 bg-cover bg-center sm:bg-top md:bg-center bg-repeat"
@@ -529,6 +790,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
       )}
 
       {/* Mobile Bottom Navigation Bar — only visible on small screens (hidden on md+) */}
+      {/* {!fullscreenMenuOpen && ( */}
       <nav className="bottom-nav md:hidden bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="flex items-stretch">
           {[
@@ -652,6 +914,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
           })}
         </div>
       </nav>
+      {/* )} */}
     </>
   );
 };
