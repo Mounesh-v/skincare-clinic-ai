@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libgles2 \
     libegl1 \
     libxrender1 \
+        libxcb1 \
     git \
     git-lfs \
     && rm -rf /var/lib/apt/lists/*
