@@ -585,8 +585,8 @@ class SkinAnalyzerService:
         t_ens_start = time.perf_counter()
         adjusted_scores = self._apply_zone_aware_adjustment(vit_scores, processed)
 
-        # Apply strict decision rules to get final skin type classification
-        skin_type_result = infer_skin_type(adjusted_scores)
+        # Apply strict decision rules using EfficientNet condition probabilities (not ViT scores)
+        skin_type_result = infer_skin_type(condition_probs)
         
         # PART 5: ASYNC INTEGRATION for Production Monitoring
         from ml.skin_type_monitor import monitor
