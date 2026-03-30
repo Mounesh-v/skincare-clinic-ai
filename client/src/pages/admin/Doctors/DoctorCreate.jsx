@@ -190,10 +190,21 @@ const DoctorCreate = () => {
       let res;
 
       if (isEditMode) {
-        res = await api.put(`/api/doctors/${id}`, payload);
+        res = await api.put(`/api/doctors/${id}`, payload, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        });
         toast.success("Doctor updated successfully!");
       } else {
-        res = await api.post("/api/doctors", payload);
+        res = await api.post("/api/doctors", payload, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        });
+        console.log("doctor details", res.data);
         toast.success("Doctor created successfully!");
       }
 
@@ -205,8 +216,6 @@ const DoctorCreate = () => {
       setLoading(false);
     }
   };
-
-
 
   return (
     <div className="space-y-6">
@@ -412,10 +421,11 @@ const DoctorCreate = () => {
                   key={lang}
                   type="button"
                   onClick={() => toggleArrayItem("languages", lang)}
-                  className={`px-3 py-1.5 rounded text-sm ${formData.languages.includes(lang)
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    formData.languages.includes(lang)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 hover:bg-slate-200"
-                    }`}
+                  }`}
                 >
                   {lang}
                 </button>
@@ -431,10 +441,11 @@ const DoctorCreate = () => {
                   key={day}
                   type="button"
                   onClick={() => toggleArrayItem("availability", day)}
-                  className={`px-3 py-1.5 rounded text-sm ${formData.availability.includes(day)
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    formData.availability.includes(day)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 hover:bg-slate-200"
-                    }`}
+                  }`}
                 >
                   {day}
                 </button>
@@ -480,10 +491,11 @@ const DoctorCreate = () => {
                   key={type}
                   type="button"
                   onClick={() => toggleArrayItem("consultationType", type)}
-                  className={`px-3 py-1.5 rounded text-sm ${formData.consultationType.includes(type)
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    formData.consultationType.includes(type)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 hover:bg-slate-200"
-                    }`}
+                  }`}
                 >
                   {type}
                 </button>
