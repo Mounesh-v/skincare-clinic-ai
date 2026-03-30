@@ -21,6 +21,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import api from "../utils/api.js";
+import DoctorAd from "./DoctorAd.jsx";
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -164,6 +165,7 @@ const FindDoctors = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <DoctorAd/>
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4">

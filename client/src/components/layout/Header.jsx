@@ -134,7 +134,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 py-1 border-b border-slate-50 ">
+      <header className="sticky top-0 z-[1000] bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 py-1 border-b border-slate-50 ">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -150,12 +150,11 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 SkinCare AI
               </span>
             </Link>
-
             {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center gap-8">
               <button
                 onClick={() => setFullscreenMenuOpen(true)}
-                className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
+                className="text-slate-700 cursor-pointer hover:text-emerald-600 font-medium transition-colors duration-200"
               >
                 Explore
               </button>
@@ -202,7 +201,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 style={{ backgroundImage: `url(${ctaBg})` }}
               >
                 {/* Header */}
-                <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 border-b">
+                <div className="sticky top-0  z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 border-b">
                   {/* Left: Logo + Title */}
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
@@ -498,7 +497,6 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 </>
               )}
 
-              
               {/* Hamburger — hidden on lg+ (desktop uses top nav links) */}
               <button
                 className="lg:hidden p-2 rounded-lg hover:bg-slate-100 touch-manipulation"
@@ -536,13 +534,14 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
             {/* Close Button */}
             <button
               onClick={() => setFullscreenMenuOpen(false)}
-              className="absolute top-6 right-6 p-2 hover:bg-slate-100/80 rounded-lg transition-colors backdrop-blur-sm"
+              className="absolute top-20 right-6 p-2 hover:bg-slate-100/80 rounded-lg transition-colors backdrop-blur-sm"
             >
               <X className="h-6 w-6 text-slate-700" />
             </button>
 
             {/* Menu Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-6 sm:mt-8">
+              
               {/* WHAT WE DO Section */}
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-emerald-500 pb-2">
@@ -652,6 +651,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-purple-500 pb-2">
                   WHO WE ARE
                 </h2>
+
                 <div className="space-y-3">
                   {menuSections.whoWeAre.map((item) => {
                     const Icon = item.icon;
