@@ -37,12 +37,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
   const [touchEndX, setTouchEndX] = useState(0);
 
   const handleTouchStart = (e) => {
-    const x = e.touches[0].clientX;
-
-    // only detect swipe from left 30px
-    if (x < 30) {
-      setTouchStartX(x);
-    }
+    setTouchStartX(e.touches[0].clientX);
   };
 
   const handleTouchMove = (e) => {
