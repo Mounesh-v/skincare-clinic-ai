@@ -30,7 +30,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 // Public Pages
 import TrayaStyleHome from './pages/home';
 import StartAssessment from './pages/assessment/StartAssessment.jsx';
-import AnalysisResults from './pages/assessment/Analysisresults.jsx';
+import AnalysisResults from './pages/assessment/Results.jsx';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetail from './pages/ProductDetail';
 import CheckoutPage from './pages/CheckoutPage';
