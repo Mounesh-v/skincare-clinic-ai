@@ -118,7 +118,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
               onClick={() => setFullscreenMenuOpen(false)}
             >
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center  shadow-md group-hover:shadow-lg transition-shadow">
-                <span className="text-2xl">🌿</span>
+                <span className="text-xl sm:text-2xl">🌿</span>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                 SkinCare AI
@@ -161,7 +161,6 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
               >
                 Contact
               </Link>
-              
             </div>
 
             {/* Right Side - Auth or Profile */}
@@ -248,7 +247,10 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 className="lg:hidden p-2 rounded-lg hover:bg-slate-100 touch-manipulation"
                 style={{ touchAction: "manipulation" }}
                 onClick={() => {
-                  console.log("[Nav] hamburger clicked, was:", fullscreenMenuOpen);
+                  console.log(
+                    "[Nav] hamburger clicked, was:",
+                    fullscreenMenuOpen,
+                  );
                   setFullscreenMenuOpen(!fullscreenMenuOpen);
                 }}
                 aria-label={fullscreenMenuOpen ? "Close menu" : "Open menu"}
@@ -266,14 +268,14 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
         <div className="fixed inset-0 z-40 overflow-y-auto">
           {/* Background Image */}
           <div
-            className="absolute inset-0 bg-cover bg-center sm:bg-top md:bg-center bg-no-repeat"
+            className="absolute inset-0 bg-cover bg-center sm:bg-top md:bg-center bg-repeat"
             style={{ backgroundImage: `url(${ctaBg})` }}
           >
             {/* Overlay for readability */}
-            <div className="absolute inset-0 bg-white/35 backdrop-sm"></div>
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 relative z-10 space-y-6 sm:space-y-10">
             {/* Close Button */}
             <button
               onClick={() => setFullscreenMenuOpen(false)}
@@ -283,10 +285,10 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
             </button>
 
             {/* Menu Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-6 sm:mt-8">
               {/* WHAT WE DO Section */}
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-emerald-500 pb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-emerald-500 pb-2">
                   WHAT WE DO
                 </h2>
                 <p className="text-slate-600 mb-6 text-sm leading-relaxed">
@@ -301,7 +303,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                         key={item.path}
                         to={item.path}
                         onClick={() => setFullscreenMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-emerald-50 transition-all duration-200 group shadow-sm"
+                        className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-emerald-50 transition-all duration-200 group shadow-sm"
                       >
                         <div className="p-2 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
                           <Icon className="h-5 w-5 text-emerald-600" />
@@ -344,7 +346,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
 
               {/* HOW WE DO IT Section */}
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-teal-500 pb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-teal-500 pb-2">
                   HOW WE DO IT
                 </h2>
                 <div className="space-y-3">
@@ -355,7 +357,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                         key={item.path}
                         to={item.path}
                         onClick={() => setFullscreenMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-teal-50 transition-all duration-200 group shadow-sm"
+                        className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-teal-50 transition-all duration-200 group shadow-sm"
                       >
                         <div className="p-2 bg-teal-100 rounded-lg group-hover:bg-teal-200 transition-colors">
                           <Icon className="h-5 w-5 text-teal-600" />
@@ -368,9 +370,8 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                     );
                   })}
                 </div>
-
                 {/* Featured Products Section */}
-                <div className="mt-8 p-6 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
+                <div className="mt-4 sm:mt-6 sm:mt-8 p-3 sm:p-4 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
                   <h3 className="font-bold text-slate-900 mb-3">
                     🎯 Featured Products
                   </h3>
@@ -391,7 +392,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
 
               {/* WHO WE ARE Section */}
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-6 border-b-2 border-purple-500 pb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-6 border-b-2 border-purple-500 pb-2">
                   WHO WE ARE
                 </h2>
                 <div className="space-y-3">
@@ -402,7 +403,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                         key={item.path}
                         to={item.path}
                         onClick={() => setFullscreenMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-purple-50 transition-all duration-200 group shadow-sm"
+                        className="flex items-center gap-3 p-3 sm:p-4 rounded-lg bg-white/60 backdrop-blur-sm hover:bg-purple-50 transition-all duration-200 group shadow-sm"
                       >
                         <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
                           <Icon className="h-5 w-5 text-purple-600" />
@@ -445,7 +446,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                   </div>
 
                   {/* Social Media */}
-                  <div className="flex items-center gap-4 mt-6">
+                  <div className="flex items-center gap-4 mt-6 sm:mt-8">
                     <a
                       href="https://instagram.com"
                       target="_blank"
@@ -531,20 +532,100 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
       <nav className="bottom-nav md:hidden bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
         <div className="flex items-stretch">
           {[
-            { to: "/", label: "Home",
-              icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            {
+              to: "/",
+              label: "Home",
+              icon: (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                  />
+                </svg>
+              ),
             },
-            { to: "/assessment", label: "Scan",
-              icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+            {
+              to: "/assessment",
+              label: "Scan",
+              icon: (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
+                </svg>
+              ),
             },
-            { to: "/products", label: "Products",
-              icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+            {
+              to: "/products",
+              label: "Products",
+              icon: (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  />
+                </svg>
+              ),
             },
-            { to: "/find-doctors", label: "Doctors",
-              icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            {
+              to: "/find-doctors",
+              label: "Doctors",
+              icon: (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              ),
             },
-            { to: "/contact", label: "Contact",
-              icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+            {
+              to: "/contact",
+              label: "Contact",
+              icon: (
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
+                </svg>
+              ),
             },
           ].map(({ to, icon, label }) => {
             // useLocation() updates correctly on React SPA navigation
@@ -560,7 +641,9 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                     : "text-slate-500 hover:text-emerald-600 hover:bg-slate-50"
                 }`}
               >
-                <span className={`transition-transform duration-150 ${isActive ? "scale-110" : ""}`}>
+                <span
+                  className={`transition-transform duration-150 ${isActive ? "scale-110" : ""}`}
+                >
                   {icon}
                 </span>
                 <span>{label}</span>
