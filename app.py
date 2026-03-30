@@ -23,17 +23,24 @@ LOGGER = logging.getLogger(__name__)
 # Lazy global model reference (populated inside lifespan)
 # ---------------------------------------------------------------------------
 _analyzer = None
+_startup_error: str | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load models once at startup, cleanly shut down on exit."""
-    global _analyzer
+    global _analyzer, _startup_error
     LOGGER.info("Starting up — loading ML models...")
-    from ml_service.analyzer import SkinAnalyzerService  # noqa: PLC0415 (import inside lifespan)
-    _analyzer = SkinAnalyzerService()
-    _analyzer.load_models()
-    LOGGER.info("ML models ready.")
+    try:
+        from ml_service.analyzer import SkinAnalyzerService  # noqa: PLC0415 (import inside lifespan)
+        _analyzer = SkinAnalyzerService()
+        _analyzer.load_models()
+        _startup_error = None
+        LOGGER.info("ML models ready.")
+    except Exception as exc:  # noqa: BLE001
+        _analyzer = None
+        _startup_error = str(exc)
+        LOGGER.exception("Startup completed without loaded models")
     yield
     LOGGER.info("Shutting down.")
 
@@ -82,6 +89,7 @@ def health_check():
     return {
         "status": "ok",
         "model_loaded": _analyzer is not None,
+        "startup_error": _startup_error,
     }
 
 
