@@ -21,8 +21,7 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import decode_image_payload, detect_face_with_retry, preprocess_array
-from ml.skin_type_vit import infer_skin_type_vit, preload_vit_model
-from ml.skin_type_inference import infer_skin_type
+from ml.skin_type_vit import infer_skin_type_ensemble, infer_skin_type_vit, preload_vit_model
 
 from .recommendations import build_personalized_plan
 
@@ -574,19 +573,13 @@ class SkinAnalyzerService:
             for entry in prediction.top_predictions
         }
 
-        # Get raw ViT predictions
+        # Run adaptive ensemble (ViT + condition-rule inference)
         t_vit_start = time.perf_counter()
         with self._vit_sem:
-            LOGGER.info("Running ViT skin type inference...")
-            vit_scores = infer_skin_type_vit(processed)
+            LOGGER.info("Running adaptive skin type ensemble...")
+            skin_type_result = infer_skin_type_ensemble(processed, condition_probs)
         t_vit_end = time.perf_counter()
-        
-        # Apply light zone-based calibrations (+0.05 adjustments)
-        t_ens_start = time.perf_counter()
-        adjusted_scores = self._apply_zone_aware_adjustment(vit_scores, processed)
-
-        # Apply strict decision rules using EfficientNet condition probabilities (not ViT scores)
-        skin_type_result = infer_skin_type(condition_probs)
+        t_ens_start = t_vit_start
         
         # PART 5: ASYNC INTEGRATION for Production Monitoring
         from ml.skin_type_monitor import monitor
