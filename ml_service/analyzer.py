@@ -480,7 +480,8 @@ class SkinAnalyzerService:
             "pores": "oily",
             "acne": "oily",
             "wrinkles": "dry",
-            "dark_spots": "dry",
+            "dark_spots": "normal",
+            "dark spots": "normal",
         }
 
         condition_contributions = []
@@ -569,8 +570,8 @@ class SkinAnalyzerService:
         
         # Build condition probabilities dict for ensemble input (EfficientNet per-class probs)
         condition_probs: Dict[str, float] = {
-            entry["label"]: float(entry["probability"])
-            for entry in prediction.top_predictions
+            self._normalize_condition_label(label): float(prob)
+            for label, prob in prediction.probabilities.items()
         }
 
         # Run adaptive ensemble (ViT + condition-rule inference)
@@ -592,9 +593,6 @@ class SkinAnalyzerService:
             skin_type_result.get("scores"),
         )
         plan = build_personalized_plan(prediction.label_key, answers)
-
-        # Keep condition-based result for the drivers metadata only
-        derived_skin_type = self.condition_to_skintype(prediction.top_predictions)
 
         ensemble_scores = skin_type_result.get("scores", {})
         ensemble_entropy = -float(
@@ -621,7 +619,13 @@ class SkinAnalyzerService:
                 "Skin type determined by ViT (60%) and condition-based (40%) ensemble.",
             ),
             "recommendations": plan["recommendations"],
-            "condition_top3_used": derived_skin_type["drivers"],
+            "condition_top3_used": [
+                {
+                    "condition": str(item.get("label", "")),
+                    "confidence": float(item.get("probability", 0.0)),
+                }
+                for item in prediction.top_predictions
+            ],
             "source": skin_type_result.get("source", "ensemble"),
             "entropy": round(ensemble_entropy, 4),
             # ── New structured output fields ──────────────────────────────
