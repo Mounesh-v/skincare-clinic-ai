@@ -221,6 +221,26 @@ const normalizeImageForUpload = async (file) => {
 };
 
 const StartAssessment = ({ onComplete }) => {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [lead, setLead] = useState(INITIAL_LEAD);
+  const [answers, setAnswers] = useState(INITIAL_ANSWERS);
+  const [imageData, setImageData] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Shared metadata used by lifestyle-step UIs.
+  const lifestyleFields = [
+    { key: "sleep", title: "Sleep Routine", subtitle: "How many hours do you typically sleep per night?", icon: "😴", step: 1 },
+    { key: "stress", title: "Stress Levels", subtitle: "How would you describe your daily stress?", icon: "🧘", step: 2 },
+    { key: "water", title: "Water Intake", subtitle: "How much water do you drink daily?", icon: "💧", step: 3 },
+    { key: "diet", title: "Diet Quality", subtitle: "How would you rate your eating habits?", icon: "🥗", step: 4 },
+  ];
+
   const progress = Math.round((stepIndex / (STEPS.length - 1)) * 100);
 
   const stepIsValid = useMemo(() => {

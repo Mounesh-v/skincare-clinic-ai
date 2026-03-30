@@ -21,8 +21,7 @@ import torch
 from ml.config import CONFIG
 from ml.model_utils import inference_model, load_class_map, to_tensor
 from ml.preprocessing import decode_image_payload, detect_face_with_retry, preprocess_array
-from ml.skin_type_vit import infer_skin_type_vit, preload_vit_model
-from ml.skin_type_inference import infer_skin_type
+from ml.skin_type_vit import infer_skin_type_ensemble, infer_skin_type_vit, preload_vit_model
 
 from .recommendations import build_personalized_plan
 
@@ -481,7 +480,8 @@ class SkinAnalyzerService:
             "pores": "oily",
             "acne": "oily",
             "wrinkles": "dry",
-            "dark_spots": "dry",
+            "dark_spots": "normal",
+            "dark spots": "normal",
         }
 
         condition_contributions = []
@@ -570,23 +570,17 @@ class SkinAnalyzerService:
         
         # Build condition probabilities dict for ensemble input (EfficientNet per-class probs)
         condition_probs: Dict[str, float] = {
-            entry["label"]: float(entry["probability"])
-            for entry in prediction.top_predictions
+            self._normalize_condition_label(label): float(prob)
+            for label, prob in prediction.probabilities.items()
         }
 
-        # Get raw ViT predictions
+        # Run adaptive ensemble (ViT + condition-rule inference)
         t_vit_start = time.perf_counter()
         with self._vit_sem:
-            LOGGER.info("Running ViT skin type inference...")
-            vit_scores = infer_skin_type_vit(processed)
+            LOGGER.info("Running adaptive skin type ensemble...")
+            skin_type_result = infer_skin_type_ensemble(processed, condition_probs)
         t_vit_end = time.perf_counter()
-        
-        # Apply light zone-based calibrations (+0.05 adjustments)
-        t_ens_start = time.perf_counter()
-        adjusted_scores = self._apply_zone_aware_adjustment(vit_scores, processed)
-
-        # Apply strict decision rules to get final skin type classification
-        skin_type_result = infer_skin_type(adjusted_scores)
+        t_ens_start = t_vit_start
         
         # PART 5: ASYNC INTEGRATION for Production Monitoring
         from ml.skin_type_monitor import monitor
@@ -599,9 +593,6 @@ class SkinAnalyzerService:
             skin_type_result.get("scores"),
         )
         plan = build_personalized_plan(prediction.label_key, answers)
-
-        # Keep condition-based result for the drivers metadata only
-        derived_skin_type = self.condition_to_skintype(prediction.top_predictions)
 
         ensemble_scores = skin_type_result.get("scores", {})
         ensemble_entropy = -float(
@@ -628,7 +619,13 @@ class SkinAnalyzerService:
                 "Skin type determined by ViT (60%) and condition-based (40%) ensemble.",
             ),
             "recommendations": plan["recommendations"],
-            "condition_top3_used": derived_skin_type["drivers"],
+            "condition_top3_used": [
+                {
+                    "condition": str(item.get("label", "")),
+                    "confidence": float(item.get("probability", 0.0)),
+                }
+                for item in prediction.top_predictions
+            ],
             "source": skin_type_result.get("source", "ensemble"),
             "entropy": round(ensemble_entropy, 4),
             # ── New structured output fields ──────────────────────────────
