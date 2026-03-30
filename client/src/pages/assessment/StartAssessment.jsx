@@ -221,6 +221,18 @@ const normalizeImageForUpload = async (file) => {
 };
 
 const StartAssessment = ({ onComplete }) => {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [lead, setLead] = useState(INITIAL_LEAD);
+  const [answers, setAnswers] = useState(INITIAL_ANSWERS);
+  const [imageData, setImageData] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [analysisStageIndex, setAnalysisStageIndex] = useState(0);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
   const progress = Math.round((stepIndex / (STEPS.length - 1)) * 100);
 
   const stepIsValid = useMemo(() => {
