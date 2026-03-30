@@ -423,7 +423,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
             <div className="flex items-center gap-4">
               {name ? (
                 // ===== LOGGED IN VIEW =====
-                <div className="hidden md:block relative" ref={profileRef}>
+                <div className="relative" ref={profileRef}>
                   <button
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                     className="flex items-center gap-2 px-3 py-2 hover:bg-slate-100 rounded-lg transition-all"
@@ -498,6 +498,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 </>
               )}
 
+              
               {/* Hamburger — hidden on lg+ (desktop uses top nav links) */}
               <button
                 className="lg:hidden p-2 rounded-lg hover:bg-slate-100 touch-manipulation"
