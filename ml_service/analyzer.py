@@ -268,53 +268,23 @@ class SkinAnalyzerService:
         return label.strip().lower().replace(" ", "_")
 
     def condition_to_skintype(self, top_predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
-        top3 = top_predictions[:3]
-        raw_scores = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
-        condition_to_type: Dict[str, Dict[str, float]] = {
-            "acne": {"oily": 0.70, "dry": 0.05, "normal": 0.15, "combination": 0.10},
-            "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.10, "combination": 0.10},
-            "blackheads": {"oily": 0.70, "dry": 0.05, "normal": 0.15, "combination": 0.10},
-            "wrinkles": {"oily": 0.05, "dry": 0.75, "normal": 0.10, "combination": 0.10},
-            "dark_spots": {"oily": 0.10, "dry": 0.10, "normal": 0.70, "combination": 0.10},
-            "dark spots": {"oily": 0.10, "dry": 0.10, "normal": 0.70, "combination": 0.10},
-        }
+        from ml.skin_type_inference import infer_skin_type
 
+        top3 = top_predictions[:3]
+        condition_scores: Dict[str, float] = {}
         for entry in top3:
             label_key = self._normalize_condition_label(str(entry.get("label", "")))
-            confidence = float(entry.get("probability", 0.0))
-            weight_map = condition_to_type.get(label_key)
-            if weight_map is None:
-                continue
-            for skin_type in raw_scores:
-                raw_scores[skin_type] += confidence * float(weight_map[skin_type])
+            condition_scores[label_key] = float(entry.get("probability", 0.0))
 
-        total = sum(raw_scores.values())
-        if total <= 0:
-            normalized_scores = {"oily": 0.34, "dry": 0.22, "normal": 0.22, "combination": 0.22}
-        else:
-            normalized_scores = {key: value / total for key, value in raw_scores.items()}
-
-        top_condition_key = self._normalize_condition_label(str(top3[0].get("label", ""))) if top3 else ""
-        oily_score = normalized_scores["oily"]
-        dry_score = normalized_scores["dry"]
-
-        if (oily_score > 0.60 and dry_score > 0.25) or (top_condition_key == "acne" and oily_score > 0.55):
-            final_type_key = "combination"
-        else:
-            final_type_key = max(normalized_scores, key=lambda key: normalized_scores[key])
-
-        return {
-            "skin_type": final_type_key.title(),
-            "confidence": round(float(np.clip(normalized_scores[final_type_key], 0.0, 1.0)), 4),
-            "scores": {k: round(float(v), 4) for k, v in normalized_scores.items()},
-            "drivers": [
-                {
-                    "condition": str(item.get("label", "")),
-                    "confidence": float(item.get("probability", 0.0)),
-                }
-                for item in top3
-            ],
-        }
+        result = infer_skin_type(condition_scores)
+        result["drivers"] = [
+            {
+                "condition": str(item.get("label", "")),
+                "confidence": float(item.get("probability", 0.0)),
+            }
+            for item in top3
+        ]
+        return result
 
     @staticmethod
     def _zone_metrics(zone: np.ndarray) -> Dict[str, float]:
@@ -574,11 +544,28 @@ class SkinAnalyzerService:
             for label, prob in prediction.probabilities.items()
         }
 
+        # Feature signals for strict rule engine (shine, texture, lighting, dryness proxies).
+        zone_signals = self._extract_zone_signals(processed)
+        global_brightness = float(np.mean(processed.astype(np.float32)))
+        p95 = float(np.percentile(processed, 95))
+        p99 = float(np.percentile(processed, 99))
+        specular_spread = p99 - p95
+
+        feature_signals: Dict[str, float | bool] = {
+            "edge_density_high": float(zone_signals.get("edge_density", 0.0)) > 20.0,
+            "brightness_high": global_brightness > 160.0,
+            "specular_highlight": specular_spread >= 15.0,
+            "t_zone_shine_high": float(zone_signals.get("t_zone_shine", 0.0)) > 175.0,
+            "cheek_shine_high": float(zone_signals.get("cheek_shine", 0.0)) > 165.0,
+            "dryness_index": float(zone_signals.get("roughness", 0.0)) / 255.0,
+            "texture_rough": float(zone_signals.get("roughness", 0.0)) > 110.0,
+        }
+
         # Run adaptive ensemble (ViT + condition-rule inference)
         t_vit_start = time.perf_counter()
         with self._vit_sem:
             LOGGER.info("Running adaptive skin type ensemble...")
-            skin_type_result = infer_skin_type_ensemble(processed, condition_probs)
+            skin_type_result = infer_skin_type_ensemble(processed, condition_probs, features=feature_signals)
         t_vit_end = time.perf_counter()
         t_ens_start = t_vit_start
         
