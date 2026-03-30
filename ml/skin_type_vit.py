@@ -292,42 +292,21 @@ def infer_skin_type_ensemble(
     vit_scores = vit_result
     rule_scores = rule_output["scores"]
 
-    # ── Step 4: Rule-primary decision flow ────────────────────
-    # Always trust rule engine output (case-safe mapping).
+    # ── Step 4: Rule engine is the ABSOLUTE source of truth ───────────────
     rule_type_raw = str(rule_output.get("skin_type", "Normal")).strip().lower()
     if rule_type_raw in rule_scores:
         rule_type = rule_type_raw
     else:
-        # Fallback only if rule output is truly invalid for the score map.
-        rule_type = max(rule_scores, key=lambda k: float(rule_scores.get(k, 0.0)))
+        rule_type = "normal"
     rule_conf = float(rule_scores.get(rule_type, 0.0))
 
     vit_type = max(vit_scores, key=lambda k: float(vit_scores.get(k, 0.0)))
     vit_conf = float(max(vit_scores.values())) if vit_scores else 0.0
 
-    # Protect rule-engine decision: ViT is support, not override.
-    if rule_conf >= 0.55:
-        final_type_key = rule_type
-        final_conf = rule_conf
-    elif rule_type == vit_type:
-        final_type_key = rule_type
-        final_conf = max(rule_conf, vit_conf)
-    else:
-        final_type_key = rule_type
-        final_conf = rule_conf
-
+    # RULE ENGINE IS ABSOLUTE SOURCE OF TRUTH — no blending, no ViT override.
+    final_type_key = rule_type
+    final_conf = rule_conf
     final_scores = {k: float(rule_scores.get(k, 0.0)) for k in ("oily", "dry", "normal", "combination")}
-
-    # Optional weighted blend only when model confidences are close.
-    if abs(rule_conf - vit_conf) < 0.10:
-        final_scores = {
-            k: 0.8 * float(rule_scores.get(k, 0.0)) + 0.2 * float(vit_scores.get(k, 0.0))
-            for k in final_scores
-        }
-        total = sum(final_scores.values()) or 1.0
-        final_scores = {k: float(v) / total for k, v in final_scores.items()}
-        final_type_key = max(final_scores, key=lambda k: final_scores[k])
-        final_conf = float(final_scores[final_type_key])
 
     # ── Step 5: Build response ────────────────────────────────
     if final_conf < 0.30:
@@ -344,9 +323,7 @@ def infer_skin_type_ensemble(
 
     logger.info(
         {
-            "ensemble_fix": True,
-            "DEBUG_rule_output": rule_output.get("skin_type"),
-            "DEBUG_rule_type": rule_type,
+            "FINAL_LOCK": True,
             "rule_type": rule_type,
             "vit_type": vit_type,
             "final_type": final_type_key,
