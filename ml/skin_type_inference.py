@@ -53,10 +53,11 @@ def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, A
             + normalized_conditions["blackheads"] * 0.25
         ),
         "dry": (
-            # Fix 1: reduce wrinkle dominance to avoid false dry bias.
-            normalized_conditions["wrinkles"] * 0.35
-            + (1.0 - normalized_conditions["pores"]) * 0.40
-            + (1.0 - normalized_conditions["acne"]) * 0.25
+            # Dry = actual dry-skin features only.
+            # Removed: (1-pores)*0.40 + (1-acne)*0.25 — absence of oily is NOT evidence of dry.
+            # That inflated dry score for every Normal/aging person and caused the Normal→Dry bug.
+            normalized_conditions["wrinkles"] * 0.60
+            + normalized_conditions["dark_spots"] * 0.40
         ),
         "normal": (
             (1.0 - normalized_conditions["acne"]) * 0.25
@@ -75,8 +76,9 @@ def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, A
 
     # Step 3: safe signal adjustments.
     if normalized_conditions.get("wrinkles", 0.0) > 0.7:
-        scores["dry"] += 0.05
-        scores["normal"] += 0.05
+        # Wrinkles alone = aging signal, not dry. Dry score already weighted in formula.
+        # Only mild normal boost (aging people can still be normal skin).
+        scores["normal"] += 0.03
 
     if feature_flags.get("edge_density_high", False):
         scores["oily"] -= 0.10
@@ -89,35 +91,36 @@ def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, A
     scores = _normalize_scores(scores)
 
     # Step 4: strong-signal override (top priority).
+    # Thresholds lowered to match the tighter new dry formula (no longer inflated by absence-of-oily).
     final_type = ""
-    if scores["oily"] > 0.70:
+    if scores["oily"] > 0.55:
         final_type = "Oily"
-    elif scores["dry"] > 0.70:
+    elif scores["dry"] > 0.50:
         final_type = "Dry"
 
-    # Step 5: strict ordered final decision rules.
+    # Step 5: secondary decision rules (feature-flag validated).
     if not final_type:
         if (
-            scores["oily"] > 0.65
-            and bool(feature_flags.get("t_zone_shine_high", False))
-            and bool(feature_flags.get("cheek_shine_high", False))
+            scores["oily"] > 0.48
+            and (
+                bool(feature_flags.get("t_zone_shine_high", False))
+                or bool(feature_flags.get("cheek_shine_high", False))
+            )
         ):
             final_type = "Oily"
         elif (
-            scores["dry"] > 0.60
+            scores["dry"] > 0.40
             and float(feature_flags.get("dryness_index", 0.0)) > CONFIG.dryness_threshold
             and bool(feature_flags.get("texture_rough", False))
         ):
             final_type = "Dry"
         else:
-            # Fix 2: require validated feature evidence for mixed-type signals.
             oily_signal = (
-                scores["oily"] > 0.30
+                scores["oily"] > 0.22
                 and feature_flags.get("t_zone_shine_high", False)
             )
-
             dry_signal = (
-                scores["dry"] > 0.25
+                scores["dry"] > 0.18
                 and feature_flags.get("texture_rough", False)
             )
             if oily_signal and dry_signal:
@@ -126,15 +129,15 @@ def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, A
                 final_type = "Normal"
 
     # Step 6: confidence stability gate.
+    # Removed: top2_gap < 0.08 → max(scores) — that silently flipped Normal→Dry when gap was tiny.
+    # Rule-engine decision from Steps 4-5 is already deterministic; no score-based flip needed.
     sorted_scores = sorted(scores.values(), reverse=True)
     max_score = sorted_scores[0]
     top2_gap = sorted_scores[0] - sorted_scores[1] if len(sorted_scores) > 1 else sorted_scores[0]
-    if max_score < 0.45:
-        final_type = "Normal"
-    elif top2_gap < 0.08:
-        # Fix 3: only resolve close margins when confidence itself is weak.
-        if max_score < 0.60:
-            final_type = max(scores, key=lambda k: scores[k]).capitalize()
+    # Only force Normal on low confidence when no feature-validated type was decided.
+    # Oily/Dry/Combination decisions from Steps 4-5 are already feature-backed; don't downgrade them.
+    if max_score < 0.45 and final_type == "Normal":
+        final_type = "Normal"  # already Normal — no change needed
 
     # Step 7: final fallback safety.
     if final_type not in ["Oily", "Dry", "Combination", "Normal"]:

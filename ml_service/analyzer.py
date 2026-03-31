@@ -270,9 +270,10 @@ class SkinAnalyzerService:
     def condition_to_skintype(self, top_predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
         from ml.skin_type_inference import infer_skin_type
 
-        top3 = top_predictions[:3]
+        # Use ALL predictions (not just top-3) so low-scoring conditions like
+        # dark_spots and blackheads are included in the dry/combination formulas.
         condition_scores: Dict[str, float] = {}
-        for entry in top3:
+        for entry in top_predictions:
             label_key = self._normalize_condition_label(str(entry.get("label", "")))
             condition_scores[label_key] = float(entry.get("probability", 0.0))
 
@@ -282,7 +283,7 @@ class SkinAnalyzerService:
                 "condition": str(item.get("label", "")),
                 "confidence": float(item.get("probability", 0.0)),
             }
-            for item in top3
+            for item in top_predictions[:5]
         ]
         return result
 

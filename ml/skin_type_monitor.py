@@ -115,7 +115,6 @@ def evaluate_batch(images: List[np.ndarray]) -> Dict[str, Any]:
     Used for offline evaluation and testing.
     """
     from ml.skin_type_vit import infer_skin_type_vit
-    from ml.skin_type_inference import infer_skin_type
     
     distribution = {"oily": 0, "dry": 0, "normal": 0, "combination": 0}
     total_conf = 0.0
@@ -125,19 +124,22 @@ def evaluate_batch(images: List[np.ndarray]) -> Dict[str, Any]:
         return {}
         
     for image in images:
-        # 1. ViT Model inference directly
+        # ViT returns {oily, dry, normal} probability scores directly.
+        # Do NOT pass these into infer_skin_type() — that function expects
+        # condition keys (acne, pores, wrinkles, …), not skin-type probabilities.
         vit_scores = infer_skin_type_vit(image)
-        # 2. Strict rules
-        result = infer_skin_type(vit_scores)
-        
-        parsed_type = result["skin_type"].lower()
+
+        # Derive type and confidence directly from ViT scores.
+        best_key = max(vit_scores, key=lambda k: float(vit_scores.get(k, 0.0)))
+        confidence = float(vit_scores[best_key])
+
+        parsed_type = best_key.lower()
         if parsed_type in distribution:
             distribution[parsed_type] += 1
-            
-        total_conf += result["confidence"]
-        
-        scores = result["scores"]
-        entropy = -sum(p * np.log(p + 1e-9) for p in scores.values())
+
+        total_conf += confidence
+
+        entropy = -sum(p * np.log(p + 1e-9) for p in vit_scores.values())
         total_entropy += entropy
         
     N = len(images)
