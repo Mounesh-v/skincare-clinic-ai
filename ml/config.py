@@ -32,6 +32,7 @@ class SkinConfig:
     quality_min_brightness: float = 0.2
     quality_max_brightness: float = 0.9
     quality_min_blur_score: float = 100.0
+    dryness_threshold: float = float(os.getenv("SKINCARE_DRYNESS_THRESHOLD", "0.58"))
     canonical_labels: Sequence[str] = ("acne", "blackheads", "dark spots", "pores", "wrinkles")
     display_labels: Dict[str, str] = None  # type: ignore[assignment]
     mediapipe_model_selection: int = int(os.getenv("SKINCARE_MP_MODEL_SELECTION", "1"))

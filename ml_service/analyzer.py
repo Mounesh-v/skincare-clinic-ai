@@ -145,7 +145,7 @@ class SkinAnalyzerService:
                 f"Decoded image exceeds {_MAX_DECODED_BYTES // (1024*1024)} MB limit."
             )
 
-        # Magic-byte verification — reject files that don't match a known image signature
+        # Magic-byte verification ΓÇö reject files that don't match a known image signature
         matched_sig = any(raw[:len(sig)] == sig for sig, _ in _MAGIC_SIGNATURES)
         # Special-case WebP: RIFF....WEBP
         if not matched_sig:
@@ -188,11 +188,11 @@ class SkinAnalyzerService:
             probability,
             [(entry["label"], round(entry["probability"], 3)) for entry in top_predictions],
         )
-        # Entropy log — detect constant-confidence bias
+        # Entropy log ΓÇö detect constant-confidence bias
         entropy = -float(sum(p * np.log2(p) for p in probs if p > 1e-9))
         if entropy < 0.01:
             LOGGER.warning(
-                "BIAS ALERT: Near-zero entropy (%.4f) for prediction %s — model may be overfit or input degenerate.",
+                "BIAS ALERT: Near-zero entropy (%.4f) for prediction %s ΓÇö model may be overfit or input degenerate.",
                 entropy, label_name,
             )
         else:
@@ -268,53 +268,24 @@ class SkinAnalyzerService:
         return label.strip().lower().replace(" ", "_")
 
     def condition_to_skintype(self, top_predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
-        top3 = top_predictions[:3]
-        raw_scores = {"oily": 0.0, "dry": 0.0, "normal": 0.0, "combination": 0.0}
-        condition_to_type: Dict[str, Dict[str, float]] = {
-            "acne": {"oily": 0.70, "dry": 0.05, "normal": 0.15, "combination": 0.10},
-            "pores": {"oily": 0.75, "dry": 0.05, "normal": 0.10, "combination": 0.10},
-            "blackheads": {"oily": 0.70, "dry": 0.05, "normal": 0.15, "combination": 0.10},
-            "wrinkles": {"oily": 0.05, "dry": 0.75, "normal": 0.10, "combination": 0.10},
-            "dark_spots": {"oily": 0.10, "dry": 0.10, "normal": 0.70, "combination": 0.10},
-            "dark spots": {"oily": 0.10, "dry": 0.10, "normal": 0.70, "combination": 0.10},
-        }
+        from ml.skin_type_inference import infer_skin_type
 
-        for entry in top3:
+        # Use ALL predictions (not just top-3) so low-scoring conditions like
+        # dark_spots and blackheads are included in the dry/combination formulas.
+        condition_scores: Dict[str, float] = {}
+        for entry in top_predictions:
             label_key = self._normalize_condition_label(str(entry.get("label", "")))
-            confidence = float(entry.get("probability", 0.0))
-            weight_map = condition_to_type.get(label_key)
-            if weight_map is None:
-                continue
-            for skin_type in raw_scores:
-                raw_scores[skin_type] += confidence * float(weight_map[skin_type])
+            condition_scores[label_key] = float(entry.get("probability", 0.0))
 
-        total = sum(raw_scores.values())
-        if total <= 0:
-            normalized_scores = {"oily": 0.34, "dry": 0.22, "normal": 0.22, "combination": 0.22}
-        else:
-            normalized_scores = {key: value / total for key, value in raw_scores.items()}
-
-        top_condition_key = self._normalize_condition_label(str(top3[0].get("label", ""))) if top3 else ""
-        oily_score = normalized_scores["oily"]
-        dry_score = normalized_scores["dry"]
-
-        if (oily_score > 0.60 and dry_score > 0.25) or (top_condition_key == "acne" and oily_score > 0.55):
-            final_type_key = "combination"
-        else:
-            final_type_key = max(normalized_scores, key=lambda key: normalized_scores[key])
-
-        return {
-            "skin_type": final_type_key.title(),
-            "confidence": round(float(np.clip(normalized_scores[final_type_key], 0.0, 1.0)), 4),
-            "scores": {k: round(float(v), 4) for k, v in normalized_scores.items()},
-            "drivers": [
-                {
-                    "condition": str(item.get("label", "")),
-                    "confidence": float(item.get("probability", 0.0)),
-                }
-                for item in top3
-            ],
-        }
+        result = infer_skin_type(condition_scores)
+        result["drivers"] = [
+            {
+                "condition": str(item.get("label", "")),
+                "confidence": float(item.get("probability", 0.0)),
+            }
+            for item in top_predictions[:5]
+        ]
+        return result
 
     @staticmethod
     def _zone_metrics(zone: np.ndarray) -> Dict[str, float]:
@@ -458,7 +429,7 @@ class SkinAnalyzerService:
             Dict with keys: ``confidence_level``, ``top_predictions``,
             ``condition_contributions``, ``enriched_explanation``.
         """
-        # ── Confidence level label ────────────────────────────────────────────
+        # ΓöÇΓöÇ Confidence level label ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         if confidence >= 0.60:
             confidence_level = "Strong"
         elif confidence >= 0.40:
@@ -466,22 +437,22 @@ class SkinAnalyzerService:
         else:
             confidence_level = "Low"
 
-        # ── Top-2 skin type predictions ───────────────────────────────────────
+        # ΓöÇΓöÇ Top-2 skin type predictions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         sorted_types = sorted(ensemble_scores.items(), key=lambda x: x[1], reverse=True)
         top_predictions = [
             {"type": k.capitalize(), "score": round(v, 4)}
             for k, v in sorted_types[:2]
         ]
 
-        # ── Condition contributions (XAI) ─────────────────────────────────────
+        # ΓöÇΓöÇ Condition contributions (XAI) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         # For each detected condition, map it to a tendency for XAI output
         _XAI_MAP = {
             "blackheads": "oily",
             "pores": "oily",
             "acne": "oily",
             "wrinkles": "dry",
-            "dark_spots": "normal",
-            "dark spots": "normal",
+            "dark_spots": "dry",   # dark spots = dehydration/hyperpigmentation → dry indicator
+            "dark spots": "dry",
         }
 
         condition_contributions = []
@@ -490,7 +461,7 @@ class SkinAnalyzerService:
             if not points_to:
                 continue
             
-            explanation_text = f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%}) → {points_to.capitalize()} tendency"
+            explanation_text = f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%}) ΓåÆ {points_to.capitalize()} tendency"
 
             condition_contributions.append({
                 "condition": cond_key.replace("_", " ").title(),
@@ -499,13 +470,13 @@ class SkinAnalyzerService:
                 "contribution": explanation_text,
             })
 
-        # ── Enriched explanation ──────────────────────────────────────────────
+        # ΓöÇΓöÇ Enriched explanation ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
         top_conds = condition_contributions[:2]
         if top_conds:
             cond_phrases = " ".join(f"{c['contribution']}." for c in top_conds)
-            enriched_explanation = f"{cond_phrases} Overall classification: {skin_type} ({confidence:.0%} confidence — {confidence_level})."
+            enriched_explanation = f"{cond_phrases} Overall classification: {skin_type} ({confidence:.0%} confidence ΓÇö {confidence_level})."
         else:
-            enriched_explanation = f"Classified as {skin_type} ({confidence:.0%} confidence — {confidence_level})."
+            enriched_explanation = f"Classified as {skin_type} ({confidence:.0%} confidence ΓÇö {confidence_level})."
 
         LOGGER.info(
             "XAI | confidence_level=%s top_predictions=%s contributions=%d",
@@ -554,7 +525,7 @@ class SkinAnalyzerService:
         ).result()
         t_pre_end = time.perf_counter()
 
-        # Hard face-score guard — catches slipthrough from 50%-threshold retry
+        # Hard face-score guard ΓÇö catches slipthrough from 50%-threshold retry
         if face_score < 0.35:
             raise ValueError(
                 f"Face confidence too low ({face_score:.2f}). "
@@ -574,11 +545,28 @@ class SkinAnalyzerService:
             for label, prob in prediction.probabilities.items()
         }
 
+        # Feature signals for strict rule engine (shine, texture, lighting, dryness proxies).
+        zone_signals = self._extract_zone_signals(processed)
+        global_brightness = float(np.mean(processed.astype(np.float32)))
+        p95 = float(np.percentile(processed, 95))
+        p99 = float(np.percentile(processed, 99))
+        specular_spread = p99 - p95
+
+        feature_signals: Dict[str, float | bool] = {
+            "edge_density_high": float(zone_signals.get("edge_density", 0.0)) > 20.0,
+            "brightness_high": global_brightness > 160.0,
+            "specular_highlight": specular_spread >= 15.0,
+            "t_zone_shine_high": float(zone_signals.get("t_zone_shine", 0.0)) > 175.0,
+            "cheek_shine_high": float(zone_signals.get("cheek_shine", 0.0)) > 165.0,
+            "dryness_index": float(zone_signals.get("roughness", 0.0)) / 255.0,
+            "texture_rough": float(zone_signals.get("roughness", 0.0)) > 110.0,
+        }
+
         # Run adaptive ensemble (ViT + condition-rule inference)
         t_vit_start = time.perf_counter()
         with self._vit_sem:
             LOGGER.info("Running adaptive skin type ensemble...")
-            skin_type_result = infer_skin_type_ensemble(processed, condition_probs)
+            skin_type_result = infer_skin_type_ensemble(processed, condition_probs, features=feature_signals)
         t_vit_end = time.perf_counter()
         t_ens_start = t_vit_start
         
@@ -608,15 +596,26 @@ class SkinAnalyzerService:
             for entry in prediction.top_predictions
         ]
 
+        sorted_ensemble = sorted(ensemble_scores.items(), key=lambda x: x[1], reverse=True)
+        top2_gap = round(sorted_ensemble[0][1] - sorted_ensemble[1][1], 4) if len(sorted_ensemble) > 1 else 1.0
+
+        xai = self._build_xai_fields(
+            skin_type_result["skin_type"],
+            float(skin_type_result["confidence"]),
+            ensemble_scores,
+            prediction.probabilities,
+        )
+
         response = {
-            # Ensemble result: ViT 60% + condition rule 40%
             "skin_type": skin_type_result["skin_type"],
             "confidence": skin_type_result["confidence"],
             "scores": {k: round(v, 4) for k, v in ensemble_scores.items()},
+            "top2_gap": top2_gap,
             "detected_conditions": detected_conditions,
-            "explanation": skin_type_result.get(
+            # Use enriched_explanation when available (includes condition context + confidence label)
+            "explanation": xai.get("enriched_explanation") or skin_type_result.get(
                 "explanation",
-                "Skin type determined by ViT (60%) and condition-based (40%) ensemble.",
+                "Skin type determined by rule engine (condition-primary) and ViT ensemble.",
             ),
             "recommendations": plan["recommendations"],
             "condition_top3_used": [
@@ -626,15 +625,9 @@ class SkinAnalyzerService:
                 }
                 for item in prediction.top_predictions
             ],
-            "source": skin_type_result.get("source", "ensemble"),
+            "source": skin_type_result.get("source", "ensemble(rule_primary)"),
             "entropy": round(ensemble_entropy, 4),
-            # ── New structured output fields ──────────────────────────────
-            **self._build_xai_fields(
-                skin_type_result["skin_type"],
-                float(skin_type_result["confidence"]),
-                ensemble_scores,
-                prediction.probabilities,
-            ),
+            **xai,
         }
         t_ens_end = time.perf_counter()
         total_end = time.perf_counter()

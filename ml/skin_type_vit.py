@@ -235,6 +235,7 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
 def infer_skin_type_ensemble(
     image_rgb: "np.ndarray",
     condition_probs: "dict[str, float]",
+    features: "dict[str, float | bool] | None" = None,
     vit_weight: float = 0.65,
     rule_weight: float = 0.35,
 ) -> "dict":
@@ -242,19 +243,16 @@ def infer_skin_type_ensemble(
     Ensemble blend of ViT model + rule-based skin type inference.
 
     Adaptive weighting strategy:
-    - EfficientNet confidence >= 0.88 → rule_shortcut, skip ViT entirely
     - EfficientNet confidence >= 0.75 → rule_weight=0.80, vit_weight=0.20
     - EfficientNet confidence >= 0.60 → rule_weight=0.65, vit_weight=0.35
     - EfficientNet confidence >= 0.50 → rule_weight=0.50, vit_weight=0.50
     - EfficientNet confidence <  0.50 → rule_weight=0.35, vit_weight=0.65
-
-    This ensures high-confidence EfficientNet predictions
-    are never overridden by ViT.
     
     Args:
         image_rgb: np.ndarray of shape (224, 224, 3), dtype uint8 or float32
         condition_probs: Dictionary with EfficientNet condition probabilities
             Expected keys: acne, pores, wrinkles, blackheads, dark_spots
+        features: Optional calibrated feature flags/metrics for rule engine
         vit_weight: Default ViT weight (used when EfficientNet confidence < 0.50)
         rule_weight: Default rule weight (used when EfficientNet confidence < 0.50)
     
@@ -264,7 +262,7 @@ def infer_skin_type_ensemble(
             - confidence: Confidence score (0.0 to 1.0)
             - scores: Blended scores for each type
             - explanation: Human-readable explanation
-            - source: Indicates whether shortcut or ensemble was used
+            - source: Ensemble weighting source marker
     """
     import logging
     logger = logging.getLogger("ml.skin_type_vit")
@@ -286,89 +284,67 @@ def infer_skin_type_ensemble(
         if norm_key in canonical_conditions:
             canonical_conditions[norm_key] = float(value)
 
-    max_conf = max(canonical_conditions.values()) if canonical_conditions else 0.0
-    max_key  = max(canonical_conditions, key=lambda k: canonical_conditions.get(k, 0.0)) if canonical_conditions else ""
+    # ── Step 2: Rule-based prediction (single source of truth) ────────────
+    rule_output = infer_skin_type(canonical_conditions, features=features)
 
-    # ── Step 2: Rule-based prediction ────────────────────────
-    rule_result = infer_skin_type(canonical_conditions)
+    # ── Step 3: ViT prediction ────────────────────────────────
+    vit_result = infer_skin_type_vit(image_rgb)
+    vit_scores = vit_result
+    rule_scores = rule_output["scores"]
 
-    # ── Step 3: If dominant condition is very strong, skip ViT ──
-    if max_conf >= 0.88:
-        logger.info(
-            "Ensemble: rule_shortcut triggered | condition=%s (%.2f) → %s",
-            max_key, max_conf, rule_result["skin_type"],
-        )
-        return {
-            "skin_type":   rule_result["skin_type"],
-            "confidence":  round(rule_result["confidence"], 4),
-            "scores":      {k: round(v, 4) for k, v in rule_result["scores"].items()},
-            "explanation": rule_result["explanation"],
-            "source":      "rule_shortcut",
-        }
-
-    # ── Step 4: Adaptive weights based on EfficientNet conf ──
-    if max_conf >= 0.75:
-        eff_vit  = 0.20
-        eff_rule = 0.80
-    elif max_conf >= 0.60:
-        eff_vit  = 0.35
-        eff_rule = 0.65
-    elif max_conf >= 0.50:
-        eff_vit  = 0.50
-        eff_rule = 0.50
+    # ── Step 4: Rule engine is the ABSOLUTE source of truth ───────────────
+    rule_type_raw = str(rule_output.get("skin_type", "Normal")).strip().lower()
+    if rule_type_raw in rule_scores:
+        rule_type = rule_type_raw
     else:
-        eff_vit  = vit_weight   # default 0.65
-        eff_rule = rule_weight  # default 0.35
+        rule_type = "normal"
+    rule_conf = float(rule_scores.get(rule_type, 0.0))
 
-    # ── Step 5: ViT prediction ────────────────────────────────
-    vit_result  = infer_skin_type_vit(image_rgb)
-    vit_scores  = vit_result
-    rule_scores = rule_result["scores"]
+    vit_type = max(vit_scores, key=lambda k: float(vit_scores.get(k, 0.0)))
+    vit_conf = float(max(vit_scores.values())) if vit_scores else 0.0
 
-    # ── Step 6: Blend ─────────────────────────────────────────
-    blended: dict[str, float] = {}
-    for key in ("oily", "dry", "normal"):
-        blended[key] = (
-            eff_vit  * vit_scores.get(key, 0.0)
-            + eff_rule * rule_scores.get(key, 0.0)
-        )
-    blended["combination"] = rule_scores.get("combination", 0.0) * eff_rule
+    # RULE ENGINE IS ABSOLUTE SOURCE OF TRUTH — no blending, no ViT override.
+    final_type_key = rule_type
+    final_conf = rule_conf
+    final_scores = {k: float(rule_scores.get(k, 0.0)) for k in ("oily", "dry", "normal", "combination")}
 
-    # ── Step 7: Normalise ─────────────────────────────────────
-    total   = sum(blended.values()) or 1.0
-    blended = {k: v / total for k, v in blended.items()}
-
-    best_key   = max(blended, key=blended.__getitem__)
-    confidence = blended[best_key]
-
-    # ── Step 8: Build response ────────────────────────────────
-    if confidence < 0.30:
+    # ── Step 5: Build response ────────────────────────────────
+    if final_conf < 0.30:
         skin_type   = "Uncertain - Retake image"
         explanation = (
-            f"Low ensemble confidence ({confidence*100:.0f}%) "
+            f"Low ensemble confidence ({final_conf*100:.0f}%) "
             f"— retake in better lighting."
         )
     else:
-        skin_type   = _DISPLAY.get(best_key, best_key.capitalize())
+        skin_type   = _DISPLAY.get(final_type_key, final_type_key.capitalize())
         explanation = _EXPLANATIONS.get(
-            best_key, f"Ensemble classified as {skin_type}."
+            final_type_key, f"Ensemble classified as {skin_type}."
         )
 
     logger.info(
-        "Ensemble done: %s (%.4f) | weights=vit:%.2f/rule:%.2f "
-        "| dominant_condition=%s(%.2f) | scores=%s",
-        skin_type, confidence,
-        eff_vit, eff_rule,
-        max_key, max_conf,
-        {k: round(v, 2) for k, v in blended.items()},
+        {
+            "FINAL_LOCK": True,
+            "rule_type": rule_type,
+            "vit_type": vit_type,
+            "final_type": final_type_key,
+            "rule_conf": round(rule_conf, 4),
+            "vit_conf": round(vit_conf, 4),
+        }
+    )
+
+    logger.info(
+        "Ensemble done: %s (%.4f) | scores=%s",
+        skin_type,
+        final_conf,
+        {k: round(v, 2) for k, v in final_scores.items()},
     )
 
     return {
         "skin_type":   skin_type,
-        "confidence":  round(confidence, 4),
-        "scores":      {k: round(v, 4) for k, v in blended.items()},
+        "confidence":  round(final_conf, 4),
+        "scores":      {k: round(v, 4) for k, v in final_scores.items()},
         "explanation": explanation,
-        "source":      f"ensemble(vit={eff_vit:.2f}/rule={eff_rule:.2f})",
+        "source":      "ensemble(rule_primary)",
     }
 
 
