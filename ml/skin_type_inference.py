@@ -102,6 +102,7 @@ def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, A
     if not final_type:
         if (
             scores["oily"] > 0.48
+            and (scores["normal"] - scores["oily"]) < 0.12
             and (
                 bool(feature_flags.get("t_zone_shine_high", False))
                 or bool(feature_flags.get("cheek_shine_high", False))
@@ -110,6 +111,10 @@ def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, A
             final_type = "Oily"
         elif (
             scores["dry"] > 0.40
+            # Feature flags may confirm Dry only when the gap vs Normal is within 0.12.
+            # If Normal leads by >0.12 the score evidence is too clear to override.
+            # (Imran Farhat case: dry=0.41, normal=0.58, gap=0.17 → correctly stays Normal)
+            and (scores["normal"] - scores["dry"]) < 0.12
             and float(feature_flags.get("dryness_index", 0.0)) > CONFIG.dryness_threshold
             and bool(feature_flags.get("texture_rough", False))
         ):

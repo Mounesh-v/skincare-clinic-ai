@@ -101,6 +101,16 @@ run_rule(
     expect="Combination",
 )
 
+# Case 6: REAL CASE — Imran Farhat photo (wrinkles 0.93, no dark_spots)
+# Rule engine gave Dry (0.41) despite Normal (0.58) being higher — gap was 0.17, should stay Normal
+run_rule(
+    "Real case: wrinkles=0.93 only (Imran Farhat) — expect Normal",
+    conditions={"acne": 0.0, "pores": 0.018, "wrinkles": 0.926, "blackheads": 0.021, "dark_spots": 0.0},
+    features={"t_zone_shine_high": False, "cheek_shine_high": False,
+              "texture_rough": True, "dryness_index": 0.65},
+    expect="Normal",
+)
+
 print("\n" + "=" * 64)
 print("  ENSEMBLE TESTS (requires ViT model on disk)")
 print("=" * 64)
