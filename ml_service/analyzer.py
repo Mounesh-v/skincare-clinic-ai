@@ -451,8 +451,8 @@ class SkinAnalyzerService:
             "pores": "oily",
             "acne": "oily",
             "wrinkles": "dry",
-            "dark_spots": "normal",
-            "dark spots": "normal",
+            "dark_spots": "dry",   # dark spots = dehydration/hyperpigmentation → dry indicator
+            "dark spots": "dry",
         }
 
         condition_contributions = []
@@ -596,15 +596,26 @@ class SkinAnalyzerService:
             for entry in prediction.top_predictions
         ]
 
+        sorted_ensemble = sorted(ensemble_scores.items(), key=lambda x: x[1], reverse=True)
+        top2_gap = round(sorted_ensemble[0][1] - sorted_ensemble[1][1], 4) if len(sorted_ensemble) > 1 else 1.0
+
+        xai = self._build_xai_fields(
+            skin_type_result["skin_type"],
+            float(skin_type_result["confidence"]),
+            ensemble_scores,
+            prediction.probabilities,
+        )
+
         response = {
-            # Ensemble result: ViT 60% + condition rule 40%
             "skin_type": skin_type_result["skin_type"],
             "confidence": skin_type_result["confidence"],
             "scores": {k: round(v, 4) for k, v in ensemble_scores.items()},
+            "top2_gap": top2_gap,
             "detected_conditions": detected_conditions,
-            "explanation": skin_type_result.get(
+            # Use enriched_explanation when available (includes condition context + confidence label)
+            "explanation": xai.get("enriched_explanation") or skin_type_result.get(
                 "explanation",
-                "Skin type determined by ViT (60%) and condition-based (40%) ensemble.",
+                "Skin type determined by rule engine (condition-primary) and ViT ensemble.",
             ),
             "recommendations": plan["recommendations"],
             "condition_top3_used": [
@@ -614,15 +625,9 @@ class SkinAnalyzerService:
                 }
                 for item in prediction.top_predictions
             ],
-            "source": skin_type_result.get("source", "ensemble"),
+            "source": skin_type_result.get("source", "ensemble(rule_primary)"),
             "entropy": round(ensemble_entropy, 4),
-            # ΓöÇΓöÇ New structured output fields ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-            **self._build_xai_fields(
-                skin_type_result["skin_type"],
-                float(skin_type_result["confidence"]),
-                ensemble_scores,
-                prediction.probabilities,
-            ),
+            **xai,
         }
         t_ens_end = time.perf_counter()
         total_end = time.perf_counter()

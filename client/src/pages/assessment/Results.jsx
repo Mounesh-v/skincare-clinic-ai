@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import productService from "../../services/productService";
 import { getTopDoctors } from "../../data/doctors";
@@ -56,7 +56,8 @@ const Results = ({ assessmentData }) => {
   const skinType = predictedType;
   const skinTypeKey = predictedType.toLowerCase().trim();
   const confidence = formatPercent(response.confidence);
-  const explanation = String(response.explanation || "No explanation available.");
+  const confidenceLevel = String(response.confidence_level || "");
+  const explanation = String(response.enriched_explanation || response.explanation || "No explanation available.");
   const scores = toScoreRows(response.scores);
   const recommendations = toRecommendations(response);
   const top2Gap = Number(response.top2_gap);
@@ -64,8 +65,10 @@ const Results = ({ assessmentData }) => {
   const secondaryType = useMemo(() => {
     if (!scores.length) return "-";
     const sorted = [...scores].sort((a, b) => b.value - a.value);
-    return sorted[1]?.key ? String(sorted[1].key).replace(/^./, (c) => c.toUpperCase()) : "-";
-  }, [scores]);
+    const second = sorted[1]?.key ? String(sorted[1].key).replace(/^./, (c) => c.toUpperCase()) : "-";
+    // Don't show secondary when it's the same as the primary (redundant)
+    return second.toLowerCase() === skinTypeKey ? "-" : second;
+  }, [scores, skinTypeKey]);
 
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -122,8 +125,17 @@ const Results = ({ assessmentData }) => {
           <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-6">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Predicted Skin Type</p>
             <h2 className="mt-2 text-5xl font-black text-teal-300">{skinType}</h2>
-            <p className="mt-2 text-sm text-slate-300">Model confidence {confidence}</p>
-            <p className="mt-1 text-xs text-slate-400">Secondary signal: {secondaryType}</p>
+            <p className="mt-2 text-sm text-slate-300">
+              Model confidence {confidence}
+              {confidenceLevel ? (
+                <span className={`ml-2 text-xs font-semibold ${confidenceLevel === "Strong" ? "text-teal-300" : confidenceLevel === "Moderate" ? "text-amber-300" : "text-rose-300"}`}>
+                  ({confidenceLevel})
+                </span>
+              ) : null}
+            </p>
+            {secondaryType !== "-" && (
+              <p className="mt-1 text-xs text-slate-400">Secondary signal: {secondaryType}</p>
+            )}
             {Number.isFinite(top2Gap) && top2Gap < 0.1 ? (
               <p className="mt-2 inline-flex rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-200">
                 Mixed / Low Confidence
