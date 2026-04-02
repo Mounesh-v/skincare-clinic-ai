@@ -18,7 +18,7 @@ import {
   MapPin,
 } from "lucide-react";
 
-import ctaBg from "../../assets/hero2.jpg";
+import ctaBg from "../../assets/hero2.jpeg";
 
 import { getInitial, getUser } from "../../utils/auth";
 
@@ -309,7 +309,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                       })}
                     </div>
                     {/* Featured Products Section */}
-                    <div className="mt-4 sm:mt-6 sm:mt-8 p-3 sm:p-4 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
+                    <div className="mt-2 sm:mt-6  p-3 sm:p-4 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
                       <h3 className="font-bold text-slate-900 mb-3">
                         🎯 Featured Products
                       </h3>

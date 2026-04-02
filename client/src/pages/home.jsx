@@ -34,12 +34,12 @@ function HomePage() {
   );
 }
 
-import heroImage from "../assets/heroImage.jpg";
-import beforeImage from "../assets/beforeImage.jpg";
+import heroImage from "../assets/heroImage.jpeg";
+import beforeImage from "../assets/beforeImage.jpeg";
 import afterImage from "../assets/afterImage.jpg";
-import bgPattern from "../assets/hero2.jpg";
-import beforeImage2 from "../assets/beforeImage2.jpg";
-import afterImage2 from "../assets/afterImage2.jpg";
+import bgPattern from "../assets/hero2.jpeg";
+import beforeImage2 from "../assets/beforeImage2.jpeg";
+import afterImage2 from "../assets/afterImage2.jpeg";
 // At the top of your file
 import ctaBg from "../assets/hero3.jpg";
 
@@ -443,7 +443,7 @@ const TrayaStyleHome = () => {
                   <img
                     src={afterImage2}
                     alt="After 60 days treatment"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full -my-12 object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback to emoji if image fails
                       e.target.style.display = "none";
