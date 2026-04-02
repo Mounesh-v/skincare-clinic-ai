@@ -292,23 +292,61 @@ def infer_skin_type_ensemble(
     vit_scores = vit_result
     rule_scores = rule_output["scores"]
 
-    # ── Step 4: Rule engine is the ABSOLUTE source of truth ───────────────
+    # ── Step 4: Resolve rule_type and confidences ────────────────────────
     rule_type_raw = str(rule_output.get("skin_type", "Normal")).strip().lower()
-    if rule_type_raw in rule_scores:
-        rule_type = rule_type_raw
-    else:
-        rule_type = "normal"
+    rule_type = rule_type_raw if rule_type_raw in rule_scores else "normal"
     rule_conf = float(rule_scores.get(rule_type, 0.0))
 
     vit_type = max(vit_scores, key=lambda k: float(vit_scores.get(k, 0.0)))
     vit_conf = float(max(vit_scores.values())) if vit_scores else 0.0
 
-    # RULE ENGINE IS ABSOLUTE SOURCE OF TRUTH — no blending, no ViT override.
-    final_type_key = rule_type
-    final_conf = rule_conf
-    final_scores = {k: float(rule_scores.get(k, 0.0)) for k in ("oily", "dry", "normal", "combination")}
+    # ── Step 4a: FINAL_LOCK when rule engine is confident (≥ 0.70) ────────
+    # Below that threshold, blend ViT + rule scores weighted by their
+    # respective confidences so ViT can correct low-confidence Normal bias.
+    _LOCK_THRESHOLD = 0.70
 
-    # ── Step 5: Build response ────────────────────────────────
+    if rule_conf >= _LOCK_THRESHOLD:
+        # Rule engine wins outright — high-confidence lock.
+        final_type_key = rule_type
+        final_conf     = rule_conf
+        final_scores   = {k: float(rule_scores.get(k, 0.0)) for k in ("oily", "dry", "normal", "combination")}
+        blend_active   = False
+        w_rule, w_vit  = 1.0, 0.0
+
+    else:
+        # Confidence-weighted blend: each model votes in proportion to how
+        # confident it is.  ViT outputs oily/dry/normal only; combination
+        # inherits its weight exclusively from the rule engine.
+        total_weight = rule_conf + vit_conf
+        if total_weight < 1e-6:
+            # Both near-zero — fall back to rule engine output as-is.
+            final_type_key = rule_type
+            final_conf     = rule_conf
+            final_scores   = {k: float(rule_scores.get(k, 0.0)) for k in ("oily", "dry", "normal", "combination")}
+            blend_active   = False
+            w_rule, w_vit  = 1.0, 0.0
+        else:
+            w_rule = rule_conf / total_weight
+            w_vit  = vit_conf  / total_weight
+
+            blended: dict[str, float] = {}
+            for k in ("oily", "dry", "normal", "combination"):
+                r_s = float(rule_scores.get(k, 0.0))
+                # ViT has no "combination" label — treat its contribution as 0
+                v_s = float(vit_scores.get(k, 0.0))
+                blended[k] = w_rule * r_s + w_vit * v_s
+
+            # Re-normalise so scores still sum to 1.0
+            total_blended = sum(blended.values())
+            if total_blended > 0:
+                blended = {k: v / total_blended for k, v in blended.items()}
+
+            final_type_key = max(blended, key=blended.__getitem__)
+            final_conf     = float(blended[final_type_key])
+            final_scores   = blended
+            blend_active   = True
+
+    # ── Step 5: Build response ────────────────────────────────────────────
     if final_conf < 0.30:
         skin_type   = "Uncertain - Retake image"
         explanation = (
@@ -323,20 +361,24 @@ def infer_skin_type_ensemble(
 
     logger.info(
         {
-            "FINAL_LOCK": True,
-            "rule_type": rule_type,
-            "vit_type": vit_type,
-            "final_type": final_type_key,
-            "rule_conf": round(rule_conf, 4),
-            "vit_conf": round(vit_conf, 4),
+            "FINAL_LOCK":   not blend_active,
+            "blend_active": blend_active,
+            "rule_type":    rule_type,
+            "vit_type":     vit_type,
+            "final_type":   final_type_key,
+            "rule_conf":    round(rule_conf, 4),
+            "vit_conf":     round(vit_conf, 4),
+            "w_rule":       round(w_rule, 3),
+            "w_vit":        round(w_vit, 3),
         }
     )
 
     logger.info(
-        "Ensemble done: %s (%.4f) | scores=%s",
+        "Ensemble done: %s (%.4f) | scores=%s | source=%s",
         skin_type,
         final_conf,
         {k: round(v, 2) for k, v in final_scores.items()},
+        "rule_lock" if not blend_active else "conf_blend",
     )
 
     return {
@@ -344,7 +386,7 @@ def infer_skin_type_ensemble(
         "confidence":  round(final_conf, 4),
         "scores":      {k: round(v, 4) for k, v in final_scores.items()},
         "explanation": explanation,
-        "source":      "ensemble(rule_primary)",
+        "source":      "ensemble(rule_lock)" if not blend_active else "ensemble(conf_blend)",
     }
 
 
