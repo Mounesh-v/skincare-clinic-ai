@@ -17,6 +17,7 @@ ml/data/
 # Model weights (too large for git)
 ml/models/*.pt
 ml/models/*.pth
+ml/assets/*.task
 
 # IDE
 .vscode/

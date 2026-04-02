@@ -562,11 +562,32 @@ class SkinAnalyzerService:
             "texture_rough": float(zone_signals.get("roughness", 0.0)) > 110.0,
         }
 
+        # ── Beard detection + zone masking (pre-processing before ViT) ─────────
+        # Runs AFTER face crop and EfficientNet, BEFORE passing image to ViT.
+        # Only the ViT input image is modified — condition_probs and
+        # feature_signals remain computed from the full face crop.
+        from ml.beard_masking import apply_zone_mask, detect_beard
+
+        beard_info = detect_beard(processed)
+        bearded: bool = bool(beard_info.get("bearded", False))
+        if bearded:
+            vit_input, zones_used = apply_zone_mask(processed)
+        else:
+            vit_input, zones_used = processed, ["full_face"]
+
+        LOGGER.info(
+            "Beard detected: %s | zones_used: %s | beard_score: %.3f | method: %s",
+            bearded,
+            zones_used,
+            float(beard_info.get("beard_score", 0.0)),
+            beard_info.get("method", "unknown"),
+        )
+
         # Run adaptive ensemble (ViT + condition-rule inference)
         t_vit_start = time.perf_counter()
         with self._vit_sem:
             LOGGER.info("Running adaptive skin type ensemble...")
-            skin_type_result = infer_skin_type_ensemble(processed, condition_probs, features=feature_signals)
+            skin_type_result = infer_skin_type_ensemble(vit_input, condition_probs, features=feature_signals)
         t_vit_end = time.perf_counter()
         t_ens_start = t_vit_start
         
