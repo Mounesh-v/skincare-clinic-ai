@@ -115,6 +115,15 @@ const cleanText = (text) =>
     .replace(/\s{2,}/g, " ")
     .trim();
 
+// Age-aware display label mapping — only affects rendered text, not scores/logic
+const applyAgeLabelMap = (text, age) => {
+  const n = parseInt(age || "0", 10);
+  if (n > 0 && n < 35) {
+    return String(text).replace(/\bwrinkles?\b/gi, "Fine Lines / Texture");
+  }
+  return String(text);
+};
+
 // Convert enriched explanation paragraph into bullet array + summary line
 const parseExplanationBullets = (text) => {
   const clean = cleanText(text);
@@ -165,6 +174,7 @@ const Results = ({ assessmentData }) => {
   const analysis = assessmentData?.analysis || {};
   const response = analysis;
   const image = assessmentData?.image;
+  const userAge = lead.age || answers.age || "";
 
   // ── response fields — DO NOT recompute skin_type from scores ──────────────
   const predictedTypeRaw = String(response.skin_type || "Unknown");
@@ -408,17 +418,17 @@ const Results = ({ assessmentData }) => {
                 {explanationBullets.map((bullet, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm text-slate-200">
                     <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
-                    <span className="leading-relaxed">{cleanText(bullet)}</span>
+                    <span className="leading-relaxed">{applyAgeLabelMap(cleanText(bullet), userAge)}</span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-sm leading-relaxed text-slate-200">{cleanText(explanation)}</p>
+              <p className="text-sm leading-relaxed text-slate-200">{applyAgeLabelMap(cleanText(explanation), userAge)}</p>
             )}
             {explanationSummary && (
               <div className="mt-4 border-t border-slate-700/60 pt-3">
                 <p className="text-xs font-semibold text-teal-300">
-                  {cleanText(explanationSummary)}
+                  {applyAgeLabelMap(cleanText(explanationSummary), userAge)}
                 </p>
               </div>
             )}
