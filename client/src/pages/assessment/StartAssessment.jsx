@@ -468,15 +468,11 @@ const StartAssessment = ({ onComplete }) => {
   // About You
   const renderAboutStep = () => {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-br from-[#f4f9ec] via-[#eef5e0] to-[#e6f0d4] px-4 py-8 sm:py-12">
-        <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
+        <div className="mx-auto w-full max-w-2xl">
           {/* Header */}
           <div className="mb-8 space-y-3 text-center sm:mb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c6da8a] bg-gradient-to-r from-[#e8f4c8] to-[#d6eca0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#4f7a1a] shadow-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#7aaa2e] animate-pulse" />
-              Step 1 of 3
-            </span>
-            <h2 className="mt-3 bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl lg:text-4xl">
+            <h2 className="bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl">
               Tell us about yourself
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
@@ -529,7 +525,8 @@ const StartAssessment = ({ onComplete }) => {
                     value={lead.name}
                     onChange={(e) => handleLeadChange("name", e.target.value)}
                     placeholder="John Doe"
-                    className="w-full rounded-xl border-2 border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-[#c5d98a] hover:bg-white focus:border-[#97b94f] focus:bg-white focus:ring-4 focus:ring-[#97b94f]/15"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-slate-50/80 px-4 py-3 text-base font-medium text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-[#c5d98a] hover:bg-white focus:border-[#97b94f] focus:bg-white focus:ring-4 focus:ring-[#97b94f]/15"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                     required
                   />
                 </label>
@@ -546,7 +543,8 @@ const StartAssessment = ({ onComplete }) => {
                     value={lead.age}
                     onChange={(e) => handleLeadChange("age", e.target.value)}
                     placeholder="24"
-                    className="w-full rounded-xl border-2 border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-[#c5d98a] hover:bg-white focus:border-[#97b94f] focus:bg-white focus:ring-4 focus:ring-[#97b94f]/15"
+                    className="w-full rounded-xl border-2 border-slate-200 bg-slate-50/80 px-4 py-3 text-base font-medium text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-[#c5d98a] hover:bg-white focus:border-[#97b94f] focus:bg-white focus:ring-4 focus:ring-[#97b94f]/15"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                     required
                   />
                 </label>
@@ -581,7 +579,8 @@ const StartAssessment = ({ onComplete }) => {
                         handleLeadChange("phone", e.target.value)
                       }
                       placeholder="+91 98765 43210"
-                      className="w-full rounded-xl border-2 border-slate-200 bg-slate-50/80 py-3 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-[#c5d98a] hover:bg-white focus:border-[#97b94f] focus:bg-white focus:ring-4 focus:ring-[#97b94f]/15"
+                      className="w-full rounded-xl border-2 border-slate-200 bg-slate-50/80 py-3 pl-11 pr-4 text-base font-medium text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-300 hover:border-[#c5d98a] hover:bg-white focus:border-[#97b94f] focus:bg-white focus:ring-4 focus:ring-[#97b94f]/15"
+                      style={{ WebkitTapHighlightColor: 'transparent' }}
                       required
                     />
                   </div>
@@ -658,7 +657,8 @@ const StartAssessment = ({ onComplete }) => {
                         type="button"
                         key={option.value}
                         onClick={() => handleLeadChange("gender", option.value)}
-                        className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-3 py-4 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 ${
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                        className={`relative flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-3 py-4 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 min-h-[64px] active:scale-[0.97] ${
                           isSelected
                             ? `bg-gradient-to-br ${option.color} ${option.border} ${option.text} shadow-md ring-2 ${option.ring}`
                             : "border-slate-200 bg-slate-50/80 text-slate-400 hover:border-slate-300 hover:bg-white hover:text-slate-600 hover:shadow-sm"
@@ -730,16 +730,12 @@ const StartAssessment = ({ onComplete }) => {
   //renderSkinStep
   const renderSkinStep = () => {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-br from-[#f4f9ec] via-[#eef5e0] to-[#e6f0d4] px-4 py-8 sm:py-12">
-        <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
+        <div className="mx-auto w-full max-w-2xl">
           {/* Header */}
           <div className="mb-8 space-y-3 text-center sm:mb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c6da8a] bg-gradient-to-r from-[#e8f4c8] to-[#d6eca0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#4f7a1a] shadow-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#7aaa2e] animate-pulse" />
-              Step 2 of 3
-            </span>
-            <h2 className="mt-3 bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl lg:text-4xl">
-              Let's decode your skin
+            <h2 className="bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl">
+              Let&apos;s decode your skin
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
               Understanding your skin profile helps us recommend treatments
@@ -777,8 +773,8 @@ const StartAssessment = ({ onComplete }) => {
                   </span>
                 </div>
 
-                {/* Concern Options Grid */}
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {/* Concern Options - flex-wrap pills (no truncation) */}
+                <div className="flex flex-wrap gap-2">
                   {CONCERN_OPTIONS.map((option) => {
                     const isSelected = answers.main_concern === option.value;
                     return (
@@ -788,28 +784,19 @@ const StartAssessment = ({ onComplete }) => {
                         onClick={() =>
                           handleAnswerChange("main_concern", option.value)
                         }
-                        className={`group relative overflow-hidden rounded-xl border-2 px-4 py-3.5 text-center text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#97b94f]/30 ${
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                        className={`inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap min-h-[44px] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#97b94f]/30 active:scale-[0.97] ${
                           isSelected
                             ? "border-[#97b94f] bg-gradient-to-br from-[#f0f7e0] to-[#e4f0cc] text-[#3d6010] shadow-md shadow-[#97b94f]/15 ring-2 ring-[#97b94f]/20"
-                            : "border-slate-200 bg-slate-50/80 text-slate-600 hover:border-[#c5d98a] hover:bg-[#fafdf4] hover:text-slate-800 hover:shadow-sm"
+                            : "border-slate-200 bg-slate-50/80 text-slate-600 hover:border-[#c5d98a] hover:bg-[#fafdf4] hover:text-slate-800"
                         }`}
                       >
                         {isSelected && (
-                          <span className="absolute right-2 top-2">
-                            <svg
-                              className="h-3.5 w-3.5 text-[#97b94f]"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </span>
+                          <svg className="h-3.5 w-3.5 flex-shrink-0 text-[#97b94f]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
                         )}
-                        <span className="relative z-10">{option.label}</span>
+                        <span>{option.label}</span>
                       </button>
                     );
                   })}
@@ -856,9 +843,9 @@ const StartAssessment = ({ onComplete }) => {
                     const dotCount =
                       option.value === "none"
                         ? 1
-                        : option.value === "mild"
+                        : option.value === "fragrance"
                           ? 2
-                          : option.value === "moderate"
+                          : option.value === "sun"
                             ? 3
                             : 4;
 
@@ -887,7 +874,8 @@ const StartAssessment = ({ onComplete }) => {
                         onClick={() =>
                           handleAnswerChange("sensitivity", option.value)
                         }
-                        className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 px-3 py-5 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 ${
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                        className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 px-3 py-5 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 min-h-[80px] active:scale-[0.97] ${
                           isSelected
                             ? `${selectedStyle} shadow-md ring-2`
                             : "border-slate-200 bg-slate-50/80 text-slate-500 hover:border-slate-300 hover:bg-white hover:shadow-sm hover:text-slate-700"
@@ -1042,15 +1030,11 @@ const StartAssessment = ({ onComplete }) => {
     ];
 
     return (
-      <div className="min-h-screen w-full bg-gradient-to-br from-[#f4f9ec] via-[#eef5e0] to-[#e6f0d4] px-4 py-8 sm:py-12">
-        <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
+        <div className="mx-auto w-full max-w-2xl">
           {/* ── Header ── */}
           <div className="mb-8 space-y-3 text-center sm:mb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c6da8a] bg-gradient-to-r from-[#e8f4c8] to-[#d6eca0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#4f7a1a] shadow-sm">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#7aaa2e]" />
-              Step 3 of 3
-            </span>
-            <h2 className="mt-3 bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl lg:text-4xl">
+            <h2 className="bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl">
               Your lifestyle, decoded
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
@@ -1132,10 +1116,12 @@ const StartAssessment = ({ onComplete }) => {
                                     boxShadow: `0 4px 14px ${field.selectedRing}`,
                                     outline: `2px solid ${field.selectedRing}`,
                                     outlineOffset: "1px",
+                                    touchAction: 'manipulation',
+                                    WebkitTapHighlightColor: 'transparent',
                                   }
-                                : {}
+                                : { touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }
                             }
-                            className={`group relative overflow-hidden rounded-xl border-2 px-4 py-3.5 text-left text-xs font-semibold transition-all duration-200 focus:outline-none ${
+                            className={`group relative overflow-hidden rounded-xl border-2 px-4 py-3.5 text-left text-sm font-semibold transition-all duration-200 focus:outline-none min-h-[52px] active:scale-[0.97] ${
                               isSelected
                                 ? "border-transparent"
                                 : "border-slate-200 bg-slate-50/80 text-slate-600 hover:border-[#c5d98a] hover:bg-[#fafdf4] hover:text-slate-800 hover:shadow-sm"
@@ -1306,16 +1292,12 @@ const StartAssessment = ({ onComplete }) => {
 
   const renderScanStep = () => {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-br from-[#f4f9ec] via-[#eef5e0] to-[#e6f0d4] px-4 py-8 sm:py-12">
-        <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
+        <div className="mx-auto w-full max-w-2xl">
           {/* ── Header ── */}
           <div className="mb-8 space-y-3 text-center sm:mb-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c6da8a] bg-gradient-to-r from-[#e8f4c8] to-[#d6eca0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#4f7a1a] shadow-sm">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#7aaa2e]" />
-              Skin Scan
-            </span>
-            <h2 className="mt-3 bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl lg:text-4xl">
-              Capture your skin's story
+            <h2 className="bg-gradient-to-br from-slate-800 via-slate-700 to-[#4a6e1a] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl">
+              Capture your skin&apos;s story
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
               Our AI examines tone, texture, and unique characteristics to
@@ -1479,7 +1461,10 @@ const StartAssessment = ({ onComplete }) => {
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2">
                   {/* Upload */}
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed border-[#97b94f] bg-[#f9fcf3] px-4 py-2.5 text-xs font-bold text-[#4f7a1a] shadow-sm transition-all duration-200 hover:border-[#7aaa2e] hover:bg-[#f0f7e0] hover:shadow-md">
+                  <label
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed border-[#97b94f] bg-[#f9fcf3] px-4 py-3 text-sm font-bold text-[#4f7a1a] shadow-sm transition-all duration-200 hover:border-[#7aaa2e] hover:bg-[#f0f7e0] hover:shadow-md active:scale-[0.97] min-h-[44px]"
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  >
                     <Upload className="h-4 w-4" />
                     Upload Photo
                     <input
@@ -1494,7 +1479,8 @@ const StartAssessment = ({ onComplete }) => {
                   <Button
                     variant="secondary"
                     onClick={cameraActive ? stopCamera : startCamera}
-                    className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-xs font-bold shadow-sm transition-all duration-200 ${
+                    style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                    className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-bold shadow-sm transition-all duration-200 min-h-[44px] active:scale-[0.97] ${
                       cameraActive
                         ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
                         : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md"
@@ -1509,7 +1495,8 @@ const StartAssessment = ({ onComplete }) => {
                     <Button
                       variant="ghost"
                       onClick={() => setImageData(null)}
-                      className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-500 shadow-sm transition-all duration-200 hover:bg-slate-50 hover:shadow-md"
+                      style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                      className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-500 shadow-sm transition-all duration-200 hover:bg-slate-50 hover:shadow-md min-h-[44px] active:scale-[0.97]"
                     >
                       <RefreshCcw className="h-4 w-4" />
                       Reset
@@ -1544,7 +1531,8 @@ const StartAssessment = ({ onComplete }) => {
                       <Button
                         variant="primary"
                         onClick={capturePhoto}
-                        className="w-full rounded-xl bg-gradient-to-r from-[#97b94f] to-[#7aaa2e] py-3.5 text-xs font-bold uppercase tracking-widest text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:from-[#88aa3f] hover:to-[#6a9a1e]"
+                        style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                        className="w-full rounded-xl bg-gradient-to-r from-[#97b94f] to-[#7aaa2e] py-3.5 text-sm font-bold uppercase tracking-widest text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:from-[#88aa3f] hover:to-[#6a9a1e] min-h-[44px] active:scale-[0.98]"
                       >
                         <span className="flex items-center justify-center gap-2">
                           <Camera className="h-4 w-4" />
@@ -2398,7 +2386,7 @@ const StartAssessment = ({ onComplete }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f4]">
+    <div className="min-h-screen overflow-x-hidden bg-[#f5f6f4]">
       <header className="sticky top-0 z-50 border-b border-emerald-100 bg-gradient-to-br from-white via-teal-50 to-emerald-100 py-1 shadow-sm">
         <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 sm:h-16 items-center justify-between">
@@ -2418,7 +2406,8 @@ const StartAssessment = ({ onComplete }) => {
             {/* Exit Button */}
             <a
               href="/"
-              className="group flex items-center gap-2 rounded-lg border-2 border-emerald-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-md sm:px-4"
+              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              className="group flex items-center gap-2 rounded-lg border-2 border-emerald-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-md min-h-[44px] active:scale-[0.97] sm:px-4"
             >
               <svg
                 className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90"
@@ -2439,42 +2428,73 @@ const StartAssessment = ({ onComplete }) => {
         </nav>
       </header>
 
-      <section className="mx-auto max-w-5xl px-0 sm:px-6 py-0 sm:py-12">
+      <section className="mx-auto w-full max-w-4xl px-0 sm:px-6 py-0 sm:py-12">
         <div className="rounded-none sm:rounded-3xl border-0 sm:border border-[#e5e7eb] bg-white sm:shadow-sm overflow-hidden min-h-screen sm:min-h-[auto]">
-          <div className="border-b border-[#e5e7eb] bg-[#f7f8f9] px-4 sm:px-8 py-4 sm:py-6">
-            {/* Scrollable flexible container on mobile for steps */}
-            <div className="flex overflow-x-auto hide-scrollbar gap-2 sm:gap-3 pb-2 sm:pb-0">
+          <div className="border-b border-[#e5e7eb] bg-[#f7f8f9] px-5 sm:px-8 py-4 sm:py-5">
+            {/* Mobile: current step pill + counter */}
+            <div className="flex items-center justify-between md:hidden">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#97b94f] text-sm font-bold text-white shadow-sm">
+                  {stepIndex + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-slate-800 leading-tight">{STEPS[stepIndex].label}</p>
+                  <p className="text-[11px] text-slate-400 leading-tight">{STEPS[stepIndex].subtitle}</p>
+                </div>
+              </div>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                {stepIndex + 1} / {STEPS.length}
+              </span>
+            </div>
+
+            {/* Desktop: full horizontal steps with connecting lines */}
+            <div className="hidden md:flex items-center justify-center">
               {STEPS.map((step, index) => {
                 const isActive = index === stepIndex;
                 const isCompleted = index < stepIndex;
                 return (
-                  <div
-                    key={step.id}
-                    className={`whitespace-nowrap flex-shrink-0 rounded-2xl px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold transition ${
-                      isActive
-                        ? "bg-[#97b94f] text-white"
-                        : isCompleted
-                          ? "bg-[#d9dfc3] text-slate-700"
-                          : "bg-[#eaedf3] text-slate-600"
-                    }`}
-                  >
-                    {step.label}
-                  </div>
+                  <React.Fragment key={step.id}>
+                    <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                        isCompleted
+                          ? "bg-[#97b94f] text-white shadow-sm"
+                          : isActive
+                            ? "bg-[#97b94f] text-white shadow-md ring-4 ring-[#97b94f]/20"
+                            : "bg-[#e5e7eb] text-slate-400"
+                      }`}>
+                        {isCompleted ? (
+                          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          index + 1
+                        )}
+                      </div>
+                      <span className={`text-[10px] font-semibold whitespace-nowrap transition-colors duration-300 ${
+                        isActive ? "text-[#5a7a1a]" : isCompleted ? "text-slate-500" : "text-slate-400"
+                      }`}>{step.label}</span>
+                    </div>
+                    {index < STEPS.length - 1 && (
+                      <div
+                        className="mx-1 mt-[-14px] h-px flex-1 transition-all duration-500"
+                        style={{ background: index < stepIndex ? '#97b94f' : '#e5e7eb' }}
+                      />
+                    )}
+                  </React.Fragment>
                 );
               })}
             </div>
-            <div className="mt-5 h-2 w-full rounded-full bg-[#e2e6eb]">
+
+            {/* Progress bar */}
+            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[#e2e6eb]">
               <div
-                className="h-full rounded-full bg-[#97b94f] transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-[#7aaa2e] to-[#97b94f] transition-all duration-700 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="mt-1 text-right text-xs font-semibold text-slate-500">
-              {progress}%
-            </div>
           </div>
 
-          <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10">
+          <div className="px-5 sm:px-10 md:px-10 py-6 sm:py-8 md:py-10">
             <Card className="border-0 shadow-none">
               <CardBody className="p-0">
                 {stepIndex === 0 && renderAboutStep()}
@@ -2486,7 +2506,10 @@ const StartAssessment = ({ onComplete }) => {
             </Card>
           </div>
 
-          <div className="flex flex-col gap-4 border-t border-[#e5e7eb] bg-[#f7f8f9] px-4 sm:px-8 py-4 sm:py-6 md:flex-row md:items-center md:justify-between">
+          <div
+            className="flex flex-col gap-4 border-t border-[#e5e7eb] bg-[#f7f8f9] px-4 sm:px-8 py-4 sm:py-6 md:flex-row md:items-center md:justify-between"
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
             <div className="text-sm text-slate-500 text-center md:text-left">
               Step {stepIndex + 1} of {STEPS.length} ·{" "}
               {STEPS[stepIndex].subtitle}
@@ -2498,7 +2521,8 @@ const StartAssessment = ({ onComplete }) => {
                 disabled={stepIndex === 0 || submitting}
                 icon={ArrowLeft}
                 iconPosition="left"
-                className="w-full sm:w-auto justify-center text-slate-600 hover:bg-[#e5e7eb]"
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                className="w-full sm:w-auto justify-center text-slate-600 hover:bg-[#e5e7eb] min-h-[44px] active:scale-[0.97]"
               >
                 Back
               </Button>
@@ -2509,7 +2533,8 @@ const StartAssessment = ({ onComplete }) => {
                   disabled={!stepIsValid || submitting}
                   icon={ArrowRight}
                   iconPosition="right"
-                  className="w-full sm:w-auto justify-center bg-[#5d5f63] uppercase tracking-wide hover:bg-[#4d4f52]"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  className="w-full sm:w-auto justify-center bg-[#5d5f63] uppercase tracking-wide hover:bg-[#4d4f52] min-h-[44px] active:scale-[0.97]"
                 >
                   Next
                 </Button>
@@ -2520,7 +2545,8 @@ const StartAssessment = ({ onComplete }) => {
                   disabled={submitting}
                   icon={ArrowRight}
                   iconPosition="right"
-                  className="w-full sm:w-auto justify-center bg-[#5d5f63] uppercase tracking-wide hover:bg-[#4d4f52]"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+                  className="w-full sm:w-auto justify-center bg-[#5d5f63] uppercase tracking-wide hover:bg-[#4d4f52] min-h-[44px] active:scale-[0.97]"
                 >
                   Get Analysis & Match Doctors
                 </Button>
