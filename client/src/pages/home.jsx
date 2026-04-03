@@ -135,7 +135,7 @@ const TrayaStyleHome = () => {
               {/* Main Image Container */}
 
               <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/20">
-                <div className="aspect-[4/5] bg-gradient-to-br from-primary-400 to-secondary-100">
+                <div className="h-[350px] md:h-[450px] lg:h-[550px] bg-gradient-to-br from-primary-400 to-secondary-100">
                   <img
                     src="/images/heroImage.jpg"
                     alt="Start Your Journey"
