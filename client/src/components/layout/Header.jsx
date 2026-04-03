@@ -18,7 +18,6 @@ import {
   MapPin,
 } from "lucide-react";
 
-// import ctaBg from "../../assets/hero2.jpeg";
 
 import { getInitial, getUser } from "../../utils/auth";
 

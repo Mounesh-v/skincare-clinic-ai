@@ -16,7 +16,6 @@ import toast from "react-hot-toast";
 import api from "../../utils/api.js";
 
 // Import your background image
-// import signupBg from "../../assets/signup-bg.jpg";
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5005').replace(/\/api\/?$/, '');
 
