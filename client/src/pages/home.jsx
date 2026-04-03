@@ -34,7 +34,7 @@ function HomePage() {
   );
 }
 
-import heroImage from "../assets/heroImage.jpeg";
+// import heroImage from "../assets/heroImage.jpeg";
 import beforeImage from "../assets/beforeImage.jpeg";
 import afterImage from "../assets/afterImage.jpg";
 import bgPattern from "../assets/hero2.jpeg";
@@ -67,7 +67,7 @@ const TrayaStyleHome = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-slate-900 leading-tight">
-                 Healthier Skin Starts With Understanding
+                Healthier Skin Starts With Understanding
                 <span className="text-primary-600"> Your Roots</span>
               </h1>
 
@@ -144,7 +144,7 @@ const TrayaStyleHome = () => {
               <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/20">
                 <div className="aspect-[4/5] bg-gradient-to-br from-primary-400 to-secondary-100">
                   <img
-                    src={heroImage}
+                    src="/images/heroImage.jpeg"
                     alt="Start Your Journey"
                     className="w-full h-full object-cover"
                   />
@@ -290,8 +290,6 @@ const TrayaStyleHome = () => {
           </div>
         </div>
       </section>
-
-      
 
       <SpecialOffersBanner />
 
