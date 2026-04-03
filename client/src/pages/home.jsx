@@ -37,7 +37,7 @@ function HomePage() {
 import heroImage from "../assets/heroImage.jpeg";
 import beforeImage from "../assets/beforeImage.jpeg";
 import afterImage from "../assets/afterImage.jpg";
-const bgPattern= "/hero2.jpeg";
+import bgPattern from "../assets/hero2.jpeg";
 import beforeImage2 from "../assets/beforeImage2.jpeg";
 import afterImage2 from "../assets/afterImage2.jpeg";
 // At the top of your file
