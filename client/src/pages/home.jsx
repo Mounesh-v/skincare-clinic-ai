@@ -35,13 +35,13 @@ function HomePage() {
 }
 
 // import heroImage from "../assets/heroImage.jpeg";
-import beforeImage from "../assets/beforeImage.jpeg";
-import afterImage from "../assets/afterImage.jpg";
-import bgPattern from "../assets/hero2.jpeg";
-import beforeImage2 from "../assets/beforeImage2.jpeg";
-import afterImage2 from "../assets/afterImage2.jpeg";
+// import beforeImage from "../assets/beforeImage.jpeg";
+// import afterImage from "../assets/afterImage.jpg";
+// import bgPattern from "../assets/hero2.jpeg";
+// import beforeImage2 from "../assets/beforeImage2.jpeg";
+// import afterImage2 from "../assets/afterImage2.jpeg";
 // At the top of your file
-import ctaBg from "../assets/hero3.jpg";
+// import ctaBg from "../assets/hero3.jpg";
 
 import { ClipboardList, Brain, UserCheck } from "lucide-react";
 
@@ -303,7 +303,7 @@ const TrayaStyleHome = () => {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: `url(${bgPattern})`,
+              backgroundImage: `url('/images/hero2.jpeg')`,
             }}
           ></div>
         </div>
@@ -333,7 +333,7 @@ const TrayaStyleHome = () => {
                 {/* BEFORE Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src={beforeImage}
+                    src="/images/beforeImage.jpeg"
                     alt="Before treatment"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -360,7 +360,7 @@ const TrayaStyleHome = () => {
                 {/* AFTER Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src={afterImage}
+                    src="/images/afterImage2.jpg"
                     alt="After 60 days treatment"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -412,7 +412,7 @@ const TrayaStyleHome = () => {
                 {/* BEFORE Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src={beforeImage2}
+                    src="/images/beforeImage2.jpeg"
                     alt="Before treatment"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -439,7 +439,7 @@ const TrayaStyleHome = () => {
                 {/* AFTER Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src={afterImage2}
+                    src="/images/afterImage2.jpeg"
                     alt="After 60 days treatment"
                     className="w-full h-full -my-12 object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -516,7 +516,7 @@ const TrayaStyleHome = () => {
         {/* Single Background Image for both sections */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${ctaBg})` }}
+          style={{ backgroundImage: `url('/images/hero2.jpeg')` }}
         ></div>
 
         {/* Guarantee Section */}
