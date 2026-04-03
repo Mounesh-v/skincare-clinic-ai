@@ -260,11 +260,13 @@ const Results = ({ assessmentData }) => {
   const doctors = useMemo(() => getTopDoctors(skinTypeKey, 3), [skinTypeKey]);
 
   // ── bar animation trigger ─────────────────────────────────────────────────
+  // Reset on every new assessmentData so bars animate in fresh for each scan.
   const [barsVisible, setBarsVisible] = useState(false);
   useEffect(() => {
+    setBarsVisible(false);
     const t = setTimeout(() => setBarsVisible(true), 250);
     return () => clearTimeout(t);
-  }, []);
+  }, [assessmentData]);
 
   useEffect(() => {
     console.log({ backend_type: response.skin_type, ui_type: predictedType });

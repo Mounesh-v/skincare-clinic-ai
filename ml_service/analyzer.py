@@ -401,7 +401,7 @@ class SkinAnalyzerService:
 
         # Task 6: Beard / texture noise protection
         # High edge density but low cheek shine implies hair/texture, not oil
-        _HIGH_EDGE_DENSITY_THRESHOLD = 20.0
+        _HIGH_EDGE_DENSITY_THRESHOLD = 0.20  # edge_density is a fraction (0-1)
         if edge_density > _HIGH_EDGE_DENSITY_THRESHOLD and cheek_shine < _LOW_CHEEK_SHINE_THRESHOLD:
             adjusted_scores["oily"] = max(0.0, adjusted_scores["oily"] - 0.05)
             adjusted_scores["normal"] += 0.05
@@ -553,7 +553,9 @@ class SkinAnalyzerService:
         specular_spread = p99 - p95
 
         feature_signals: Dict[str, float | bool] = {
-            "edge_density_high": float(zone_signals.get("edge_density", 0.0)) > 20.0,
+            # edge_density is a fraction (0-1): sum(edge_pixels) / total_pixels.
+            # Threshold must be in the same unit — 0.20 = 20 % of pixels are edges.
+            "edge_density_high": float(zone_signals.get("edge_density", 0.0)) > 0.20,
             "brightness_high": global_brightness > 160.0,
             "specular_highlight": specular_spread >= 15.0,
             "t_zone_shine_high": float(zone_signals.get("t_zone_shine", 0.0)) > 175.0,

@@ -289,7 +289,58 @@ def infer_skin_type_ensemble(
 
     # ── Step 3: ViT prediction ────────────────────────────────
     vit_result = infer_skin_type_vit(image_rgb)
-    vit_scores = vit_result
+
+    # Apply zone-aware calibrations to the raw ViT scores using the feature
+    # signals extracted in analyzer.py.  This mirrors the logic that was
+    # previously defined in SkinAnalyzerService._apply_zone_aware_adjustment
+    # but could never fire because ViT runs inside this function.
+    # Calibration only fires when feature signals are provided; it has no
+    # effect on the FINAL_LOCK path because vit_scores are not used there.
+    if features:
+        _cal = dict(vit_result)
+        _t_high  = bool(features.get("t_zone_shine_high",  False))
+        _c_high  = bool(features.get("cheek_shine_high",   False))
+        _b_high  = bool(features.get("brightness_high",    False))
+        _spec    = bool(features.get("specular_highlight", False))
+        _e_high  = bool(features.get("edge_density_high",  False))
+        _rough   = bool(features.get("texture_rough",      False))
+
+        # T-zone significantly shinier than cheeks → mixed-zone (combination) signal
+        if _t_high and not _c_high:
+            _cal["combination"] = _cal.get("combination", 0.0) + 0.05
+
+        # No shine signal anywhere → image is not showing oil, correct oily bias
+        if not _t_high and not _c_high and not _spec:
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.10)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.10
+        elif _b_high and not _spec:
+            # Bright image but no specular hotspots → good lighting, not shine
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+
+        # High edge density + low shine → beard/texture noise, not sebum
+        if _e_high and not _c_high:
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+
+        # Smooth, low-roughness face → normal skin tendency
+        if not _rough and not _t_high:
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+
+        _cal_total = sum(max(0.0, v) for v in _cal.values())
+        vit_scores = (
+            {k: float(max(0.0, v) / _cal_total) for k, v in _cal.items()}
+            if _cal_total > 0
+            else dict(vit_result)
+        )
+        logger.debug(
+            "ViT zone-calibration | before=%s | after=%s",
+            {k: round(v, 3) for k, v in vit_result.items()},
+            {k: round(v, 3) for k, v in vit_scores.items()},
+        )
+    else:
+        vit_scores = dict(vit_result)
+
     rule_scores = rule_output["scores"]
 
     # ── Step 4: Resolve rule_type and confidences ────────────────────────
