@@ -359,17 +359,44 @@ def infer_skin_type_ensemble(
             final_type_key, f"Ensemble classified as {skin_type}."
         )
 
+    # ── Step 5b: Post-ensemble combination override ───────────────────────
+    # Runs AFTER all rule-engine and ViT logic is complete.
+    # If final scores carry both a meaningful oil signal (> 10%) AND a
+    # meaningful dryness signal (> 35%) simultaneously, the mixed-zone
+    # pattern warrants a Combination classification regardless of what the
+    # individual models voted for.
+    # Rule engine thresholds, FINAL_LOCK, ViT weights, rule_conf, vit_conf,
+    # and EfficientNet outputs are NOT modified by this step.
+    _COMBO_OIL_MIN   = 0.10   # oil score must exceed this
+    _COMBO_DRY_MIN   = 0.35   # dry score must exceed this
+    combination_override = False
+
+    _oil_score = float(final_scores.get("oily", 0.0))
+    _dry_score = float(final_scores.get("dry",  0.0))
+
+    if _oil_score > _COMBO_OIL_MIN and _dry_score > _COMBO_DRY_MIN:
+        combination_override = True
+        final_type_key = "combination"
+        skin_type      = _DISPLAY.get("combination", "Combination")
+        explanation    = _EXPLANATIONS.get("combination", "Mixed oily and dry zones detected.")
+        logger.info(
+            "Combination override triggered | oil: %.4f | dryness: %.4f",
+            _oil_score,
+            _dry_score,
+        )
+
     logger.info(
         {
-            "FINAL_LOCK":   not blend_active,
-            "blend_active": blend_active,
-            "rule_type":    rule_type,
-            "vit_type":     vit_type,
-            "final_type":   final_type_key,
-            "rule_conf":    round(rule_conf, 4),
-            "vit_conf":     round(vit_conf, 4),
-            "w_rule":       round(w_rule, 3),
-            "w_vit":        round(w_vit, 3),
+            "FINAL_LOCK":            not blend_active,
+            "blend_active":          blend_active,
+            "combination_override":  combination_override,
+            "rule_type":             rule_type,
+            "vit_type":              vit_type,
+            "final_type":            final_type_key,
+            "rule_conf":             round(rule_conf, 4),
+            "vit_conf":              round(vit_conf, 4),
+            "w_rule":                round(w_rule, 3),
+            "w_vit":                 round(w_vit, 3),
         }
     )
 
@@ -381,12 +408,16 @@ def infer_skin_type_ensemble(
         "rule_lock" if not blend_active else "conf_blend",
     )
 
+    _source = "ensemble(rule_lock)" if not blend_active else "ensemble(conf_blend)"
+    if combination_override:
+        _source = "ensemble(combination_override)"
+
     return {
         "skin_type":   skin_type,
         "confidence":  round(final_conf, 4),
         "scores":      {k: round(v, 4) for k, v in final_scores.items()},
         "explanation": explanation,
-        "source":      "ensemble(rule_lock)" if not blend_active else "ensemble(conf_blend)",
+        "source":      _source,
     }
 
 
