@@ -113,7 +113,7 @@ const Signup = () => {
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('/images/signup-bg.jpg')` }}
+          style={{ backgroundImage: `url('/images/hero2.jpeg')` }}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/50 to-teal-400/40 backdrop-blur-[2px]"></div>
         </div>

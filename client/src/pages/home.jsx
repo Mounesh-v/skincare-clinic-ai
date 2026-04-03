@@ -353,7 +353,7 @@ const TrayaStyleHome = () => {
                 {/* AFTER Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src="/images/afterImage2.jpg"
+                    src="/images/afterImage2.jpeg"
                     alt="After 60 days treatment"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
