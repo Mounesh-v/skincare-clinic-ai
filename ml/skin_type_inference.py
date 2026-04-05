@@ -1,172 +1,161 @@
 """Production rule engine for skin type inference from condition probabilities."""
 
+from __future__ import annotations
+
 import logging
 from typing import Any, Dict, Mapping
 
-from .config import CONFIG
-
 logger = logging.getLogger(__name__)
 
-
-def _normalize_scores(scores: Dict[str, float], fallback_key: str = "normal") -> Dict[str, float]:
-    clamped = {k: max(0.0, min(1.0, float(v))) for k, v in scores.items()}
-    total = sum(clamped.values())
-    if total <= 0.0:
-        return {k: (1.0 if k == fallback_key else 0.0) for k in clamped}
-    return {k: v / total for k, v in clamped.items()}
+# Minimum signal strength required to classify as Oily or Dry.
+# Below this, both signals are too weak → Normal.
+_OIL_MIN  = 0.20
+_DRY_MIN  = 0.20
 
 
-def _generate_explanation(final_type: str, features: Mapping[str, Any], top2_gap: float, max_score: float) -> str:
-    if final_type == "Oily":
-        return "High oily probability aligned with strong T-zone and cheek shine signals."
-    if final_type == "Dry":
-        return "Dry prediction confirmed by high dry score, dryness index, and rough texture."
-    if final_type == "Combination":
-        return "Mixed oily and balanced/dry signals indicate combination skin."
-    if max_score < 0.45:
-        return "Prediction stabilized to Normal due to low confidence."
-    if features.get("edge_density_high", False):
-        return "Normal selected after beard/edge-density correction reduced oily bias."
-    return "Normal selected from balanced multi-signal evaluation."
+def infer_skin_type(
+    condition_scores: Dict[str, float],
+    features: Mapping[str, Any] | None = None,  # kept for interface compatibility
+) -> Dict[str, Any]:
+    """Infer skin type from EfficientNet condition probabilities.
 
+    Weights are clinically grounded:
+      Oil     = acne × 0.40  + pores × 0.40 + blackheads × 0.20
+      Dryness = wrinkles × 0.65 + dark_spots × 0.35
 
-def infer_skin_type(condition_scores: Dict[str, float], features: Mapping[str, Any] | None = None) -> Dict[str, Any]:
-    """Infer skin type with a strict, full-pass, no-shortcut decision engine."""
-    feature_flags: Mapping[str, Any] = features or {}
+    Decision (in priority order):
+      oil > 0.35 AND dryness > 0.35  →  Combination
+      oil > dryness AND oil ≥ 0.20   →  Oily
+      dryness > oil AND dry ≥ 0.20   →  Dry
+      otherwise                       →  Normal
+    """
+    acne = max(0.0, min(1.0, float(condition_scores.get("acne", 0.0))))
+    pores = max(0.0, min(1.0, float(condition_scores.get("pores", 0.0))))
+    blackheads = max(0.0, min(1.0, float(condition_scores.get("blackheads", 0.0))))
+    wrinkles = max(0.0, min(1.0, float(condition_scores.get("wrinkles", 0.0))))
+    dark_spots = max(
+        0.0,
+        min(1.0, float(condition_scores.get("dark_spots", condition_scores.get("dark spots", 0.0)))),
+    )
 
-    normalized_conditions = {
-        "acne": max(0.0, min(1.0, float(condition_scores.get("acne", 0.0)))),
-        "pores": max(0.0, min(1.0, float(condition_scores.get("pores", 0.0)))),
-        "wrinkles": max(0.0, min(1.0, float(condition_scores.get("wrinkles", 0.0)))),
-        "blackheads": max(0.0, min(1.0, float(condition_scores.get("blackheads", 0.0)))),
-        "dark_spots": max(
-            0.0,
-            min(1.0, float(condition_scores.get("dark_spots", condition_scores.get("dark spots", 0.0)))),
-        ),
-    }
+    # ── Primary signals ───────────────────────────────────────────────────────
+    oil     = acne * 0.40 + pores * 0.40 + blackheads * 0.20
+    dryness = wrinkles * 0.65 + dark_spots * 0.35
 
-    # Base truth from model probabilities (soft aggregation, no direct condition->type mapping).
-    base_scores = {
-        "oily": (
-            normalized_conditions["pores"] * 0.40
-            + normalized_conditions["acne"] * 0.35
-            + normalized_conditions["blackheads"] * 0.25
-        ),
-        "dry": (
-            # Dry = actual dry-skin features only.
-            # Removed: (1-pores)*0.40 + (1-acne)*0.25 ΓÇö absence of oily is NOT evidence of dry.
-            # That inflated dry score for every Normal/aging person and caused the NormalΓåÆDry bug.
-            normalized_conditions["wrinkles"] * 0.60
-            + normalized_conditions["dark_spots"] * 0.40
-        ),
-        "normal": (
-            (1.0 - normalized_conditions["acne"]) * 0.25
-            + (1.0 - normalized_conditions["pores"]) * 0.25
-            + (1.0 - normalized_conditions["blackheads"]) * 0.25
-            + (1.0 - normalized_conditions["wrinkles"]) * 0.25
-        ),
-        "combination": (
-            min(normalized_conditions["pores"], normalized_conditions["wrinkles"]) * 0.6
-            + min(normalized_conditions["acne"], normalized_conditions["dark_spots"]) * 0.4
-        ),
-    }
+    # Mixed-zone: clinically meaningful (non-zero) for combination skin
+    mixed_zone = min(oil, dryness)
 
-    # Step 2: normalize to 1.0.
-    scores = _normalize_scores(base_scores)
+    # ── Classification ────────────────────────────────────────────────────────
+    if oil > 0.35 and dryness > 0.35:
+        skin_type = "Combination"
+    elif oil > dryness and oil >= _OIL_MIN:
+        skin_type = "Oily"
+    elif dryness > oil and dryness >= _DRY_MIN:
+        skin_type = "Dry"
+    else:
+        skin_type = "Normal"
 
-    # Step 3: safe signal adjustments.
-    if normalized_conditions.get("wrinkles", 0.0) > 0.7:
-        # Wrinkles alone = aging signal, not dry. Dry score already weighted in formula.
-        # Only mild normal boost (aging people can still be normal skin).
-        scores["normal"] += 0.03
+    # ── Confidence (signal-strength stabilised) ───────────────────────────────
+    if skin_type == "Combination":
+        conf_raw = (oil + dryness) / 2.0
+    else:
+        conf_raw = abs(oil - dryness)
 
-    if feature_flags.get("edge_density_high", False):
-        scores["oily"] -= 0.10
-        scores["normal"] += 0.10
+    confidence = max(0.0, min(1.0, 0.6 * conf_raw + 0.4 * max(oil, dryness)))
 
-    if feature_flags.get("brightness_high", False) and not feature_flags.get("specular_highlight", False):
-        scores["oily"] -= 0.05
+    # ── Ensemble-compatible scores (must sum to 1) ────────────────────────────
+    # Scores are constructed so the winning skin type carries the largest
+    # relative weight, enabling correct rule_conf weighting in the ensemble.
+    skin_key = skin_type.lower()
+    if skin_key == "combination":
+        avg = (oil + dryness) * 0.5
+        raw_scores: Dict[str, float] = {
+            "oily":        oil * 0.5,
+            "dry":         dryness * 0.5,
+            "combination": avg,
+            "normal":      max(0.0, 1.0 - avg),
+        }
+    elif skin_key == "oily":
+        raw_scores = {
+            "oily":        oil,
+            "dry":         dryness,
+            "combination": 0.0,
+            "normal":      max(0.0, 1.0 - oil),
+        }
+    elif skin_key == "dry":
+        raw_scores = {
+            "oily":        oil,
+            "dry":         dryness,
+            "combination": 0.0,
+            "normal":      max(0.0, 1.0 - dryness),
+        }
+    else:  # normal
+        raw_scores = {
+            "oily":        oil,
+            "dry":         dryness,
+            "combination": 0.0,
+            "normal":      max(0.0, 1.0 - max(oil, dryness)),
+        }
 
-    # Clamp then re-normalize again.
-    scores = _normalize_scores(scores)
+    total = sum(raw_scores.values())
+    scores: Dict[str, float] = (
+        {k: round(v / total, 4) for k, v in raw_scores.items()}
+        if total > 0
+        else {"oily": 0.0, "dry": 0.0, "normal": 1.0, "combination": 0.0}
+    )
 
-    # Step 4: strong-signal override (top priority).
-    # Thresholds lowered to match the tighter new dry formula (no longer inflated by absence-of-oily).
-    final_type = ""
-    if scores["oily"] > 0.55:
-        final_type = "Oily"
-    elif scores["dry"] > 0.50:
-        final_type = "Dry"
+    # ── Dermatologist-style explanation ───────────────────────────────────────
+    oil_pct = round(oil * 100)
+    dry_pct = round(dryness * 100)
 
-    # Step 5: secondary decision rules (feature-flag validated).
-    if not final_type:
-        if (
-            scores["oily"] > 0.48
-            and (scores["normal"] - scores["oily"]) < 0.12
-            and (
-                bool(feature_flags.get("t_zone_shine_high", False))
-                or bool(feature_flags.get("cheek_shine_high", False))
-            )
-        ):
-            final_type = "Oily"
-        elif (
-            scores["dry"] > 0.40
-            # Feature flags may confirm Dry only when the gap vs Normal is within 0.12.
-            # If Normal leads by >0.12 the score evidence is too clear to override.
-            # (Imran Farhat case: dry=0.41, normal=0.58, gap=0.17 → correctly stays Normal)
-            and (scores["normal"] - scores["dry"]) < 0.12
-            and float(feature_flags.get("dryness_index", 0.0)) > CONFIG.dryness_threshold
-            and bool(feature_flags.get("texture_rough", False))
-        ):
-            final_type = "Dry"
-        else:
-            oily_signal = (
-                scores["oily"] > 0.22
-                and feature_flags.get("t_zone_shine_high", False)
-            )
-            dry_signal = (
-                scores["dry"] > 0.18
-                and feature_flags.get("texture_rough", False)
-            )
-            if oily_signal and dry_signal:
-                final_type = "Combination"
-            else:
-                final_type = "Normal"
-
-    # Step 6: confidence stability gate.
-    # Removed: top2_gap < 0.08 ΓåÆ max(scores) ΓÇö that silently flipped NormalΓåÆDry when gap was tiny.
-    # Rule-engine decision from Steps 4-5 is already deterministic; no score-based flip needed.
-    sorted_scores = sorted(scores.values(), reverse=True)
-    max_score = sorted_scores[0]
-    top2_gap = sorted_scores[0] - sorted_scores[1] if len(sorted_scores) > 1 else sorted_scores[0]
-    # Only force Normal on low confidence when no feature-validated type was decided.
-    # Oily/Dry/Combination decisions from Steps 4-5 are already feature-backed; don't downgrade them.
-    if max_score < 0.45 and final_type == "Normal":
-        final_type = "Normal"  # already Normal ΓÇö no change needed
-
-    # Step 7: final fallback safety.
-    if final_type not in ["Oily", "Dry", "Combination", "Normal"]:
-        final_type = max(scores, key=lambda score_key: scores[score_key]).capitalize()
+    if skin_type == "Combination":
+        explanation = (
+            f"Elevated pore and acne signals ({oil_pct}% oil index) indicate oiliness in the T-zone, "
+            f"while wrinkle and dark-spot signals ({dry_pct}% dryness index) indicate dryness in the "
+            f"cheeks \u2192 combination skin."
+        )
+    elif skin_type == "Oily":
+        explanation = (
+            f"Strong acne and pore signals drive a high oil index ({oil_pct}%), "
+            f"with low dryness ({dry_pct}%) confirming excess sebum across the face \u2192 oily skin."
+        )
+    elif skin_type == "Dry":
+        explanation = (
+            f"Wrinkle and dark-spot signals produce a high dryness index ({dry_pct}%), "
+            f"while the oil index is low ({oil_pct}%), indicating impaired barrier function "
+            f"\u2192 dry skin."
+        )
+    else:
+        explanation = (
+            f"Both oil ({oil_pct}%) and dryness ({dry_pct}%) signals are low and balanced, "
+            f"reflecting a well-regulated sebum-barrier equilibrium \u2192 normal skin."
+        )
 
     logger.info(
         {
-            "decision_path": "rule_engine_v2",
-            "final_type": final_type,
-            "scores": {k: round(v, 4) for k, v in scores.items()},
-            "top2_gap": round(top2_gap, 4),
-            "max_score": round(max_score, 4),
+            "decision_path": "rule_engine_v3",
+            "skin_type": skin_type,
+            "oil": round(oil, 4),
+            "dryness": round(dryness, 4),
+            "mixed_zone": round(mixed_zone, 4),
+            "confidence": round(confidence, 4),
+            "scores": scores,
         }
     )
 
-    explanation = _generate_explanation(final_type, feature_flags, top2_gap, max_score)
-    final_key = final_type.lower()
-    # Fix 4: confidence must reflect overall prediction strength after all rules.
-    confidence = max_score
-
     return {
-        "skin_type": final_type,
+        "skin_type": skin_type,
         "confidence": round(confidence, 4),
-        "scores": {k: round(v, 4) for k, v in scores.items()},
-        "detected_conditions": {k: round(v, 4) for k, v in normalized_conditions.items()},
+        "scores": scores,
+        "oil": round(oil, 4),
+        "dryness": round(dryness, 4),
+        "mixed_zone": round(mixed_zone, 4),
         "explanation": explanation,
+        "detected_conditions": {
+            "acne":       round(acne, 4),
+            "blackheads": round(blackheads, 4),
+            "dark_spots": round(dark_spots, 4),
+            "pores":      round(pores, 4),
+            "wrinkles":   round(wrinkles, 4),
+        },
     }
