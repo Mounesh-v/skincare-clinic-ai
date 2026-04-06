@@ -11,9 +11,9 @@ import productRoutes from "./router/productRoutes.js";
 import orderRoutes from "./router/orderRoutes.js";
 import doctorRoutes from "./router/doctorRoutes.js";
 import featureRoutes from "./router/featureRoutes.js";
-import specialOfferRoutes from "./router/specialOfferRoutes.js";
+import specialOfferRoutes from "./router/Specialofferroutes.js";
 import adminRoutes from "./router/adminRoutes.js";
-import offerRoute from "./router/MedicalPackagesRoutes.js"
+import offerRoute from "./router/MedicalPackagesRoutes.js";
 
 dotenv.config();
 

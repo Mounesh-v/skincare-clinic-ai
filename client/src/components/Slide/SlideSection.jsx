@@ -86,7 +86,7 @@ const SlideSection = () => {
         Featured Skincare Collections
       </h2>
 
-      <div className="relative w-[90%] mx-auto overflow-hidden rounded-3xl shadow-xl">
+      <div className="relative max-w-6xl max-h-150 mx-auto overflow-hidden rounded-3xl shadow-xl">
         {/* Slides */}
         <div
           className="flex transition-transform duration-700 ease-in-out"
@@ -99,7 +99,7 @@ const SlideSection = () => {
               <img
                 src={slide.image}
                 alt=""
-                className="w-full h-[420px] object-cover"
+                className=" w-full max-h-150  object-cover object-center"
               />
 
               <div className="absolute inset-0 bg-black/30" />

@@ -34,8 +34,6 @@ function HomePage() {
   );
 }
 
-
-
 import { ClipboardList, Brain, UserCheck } from "lucide-react";
 
 /**
@@ -328,7 +326,7 @@ const TrayaStyleHome = () => {
                   <img
                     src="/images/beforeImage.jpeg"
                     alt="Before treatment"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="h-full w-full scale-140 my-8 object-cover  group-hover:scale-150 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback to emoji if image fails
                       e.target.style.display = "none";
@@ -367,13 +365,23 @@ const TrayaStyleHome = () => {
                     className="absolute inset-0 items-center justify-center text-center p-6"
                     style={{ display: "none" }}
                   >
-                    <p className="text-4xl mb-2">😊</p>
+                    {/* <p className="text-4xl mb-2">😊</p> */}
+                    <img
+                    src="/images/afterImage2.jpeg"
+                    alt="After 60 days treatment"
+                    className="w-full h-full  scale-140  object-cover group-hover:scale-150 transition-transform duration-300"
+                    onError={(e) => {
+                      // Fallback to emoji if image fails
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
+                    }}/>
                   </div>
                   {/* Label overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-600/80 to-transparent p-4">
                     <p className="text-sm font-semibold text-white text-center">
                       AFTER 60 DAYS
                     </p>
+                    
                   </div>
                 </div>
               </div>
@@ -407,7 +415,7 @@ const TrayaStyleHome = () => {
                   <img
                     src="/images/beforeImage2.jpeg"
                     alt="Before treatment"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="h-full w-full scale-140 my-8 object-cover  group-hover:scale-150 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback to emoji if image fails
                       e.target.style.display = "none";
