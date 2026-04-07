@@ -60,11 +60,11 @@ const DoctorList = () => {
     if (!confirmDelete) return; // only stop when user clicks Cancel
 
     try {
-      await api.delete(`/api/doctors/${id}`,{
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
-        }
+      await api.delete(`/api/doctors/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
       });
 
       setDoctors((prev) => prev.filter((doc) => doc.id !== id));
@@ -93,7 +93,50 @@ const DoctorList = () => {
   };
 
   const handleExport = () => {
-    toast.success("Export feature coming soon...");
+    try {
+      toast.success("Exporting doctors data...");
+      if (!doctors.length) {
+        toast.error("No doctors to export");
+        return;
+      }
+
+      const Headers = [
+        "Name",
+        "Qualification",
+        "Consultations",
+        "Experience",
+        "Languages",
+        "Rating",
+        "Specialization","Status"
+      ];
+
+
+      const rows = doctors.map((doc) => [
+        doc.id,
+        doc.name,
+        doc.qualification,
+        doc.experience,
+        doc.languages.join(", "),
+        doc.rating,
+        doc.specialization,
+        doc.status
+      ]);
+
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        [Headers, ...rows]
+          .map((e) => e.map((v) => `"${v}"`).join(","))
+          .join("\n");
+
+      const link = document.createElement("a");
+      link.href = encodeURI(csvContent);
+      link.download = "doctors.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      toast.error("Failed to export data");
+    }
   };
 
   const columns = [
