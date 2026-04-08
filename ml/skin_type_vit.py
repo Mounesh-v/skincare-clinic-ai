@@ -401,7 +401,10 @@ def infer_skin_type_ensemble(
             blend_active   = True
 
     # ── Step 5: Build response ────────────────────────────────────────────
-    if final_conf < 0.30:
+    # Lowered from 0.30 → 0.25 so moderate-oily faces (conf ~0.28) are not
+    # swallowed by the Uncertain bucket.  0.25 still filters genuinely
+    # ambiguous predictions while letting real skin types through.
+    if final_conf < 0.25:
         skin_type   = "Uncertain - Retake image"
         explanation = (
             f"Low ensemble confidence ({final_conf*100:.0f}%) "
