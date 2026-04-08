@@ -428,7 +428,10 @@ def infer_skin_type_ensemble(
     _oil_score = float(final_scores.get("oily", 0.0))
     _dry_score = float(final_scores.get("dry",  0.0))
 
-    if _oil_score > _COMBO_OIL_MIN and _dry_score > _COMBO_DRY_MIN:
+    # Oily priority: if the oily score dominates the dry score, do NOT force
+    # Combination — let Oily stand.  Override only fires when dryness is at
+    # least as strong as oiliness, meaning a true mixed-zone pattern.
+    if _oil_score > _COMBO_OIL_MIN and _dry_score > _COMBO_DRY_MIN and _dry_score >= _oil_score:
         combination_override = True
         final_type_key = "combination"
         skin_type      = _DISPLAY.get("combination", "Combination")
