@@ -186,19 +186,20 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
             if canonical in logits_dict:
                 logits_dict[canonical] += raw_logits[idx]
 
-        # Step 2: Apply bias correction (CRITICAL)
-        # We manually tune the raw logits before softmax to natively suppress
-        # the model's heavy bias towards Oily skin.
-        logits_dict["oily"] -= 0.25
-        logits_dict["normal"] += 0.15
+        # Step 2: Apply mild bias correction.
+        # Reduced from -0.25/-0.15 — the original values overcorrected and
+        # prevented Oily from ever winning the ensemble blend.
+        logits_dict["oily"]   -= 0.10
+        logits_dict["normal"] += 0.05
 
         # Step 3: Convert back to list preserving a fixed ordering
         order = ["oily", "dry", "normal"]
         adjusted_logits = [logits_dict[k] for k in order]
 
-        # Step 4: Apply temperature scaling and softmax
-        # Temperature (T=1.2) softens distribution slightly for stable prediction spreads
-        _TEMPERATURE = 1.2
+        # Step 4: Apply temperature scaling and softmax.
+        # T=0.8 sharpens the distribution → confident predictions reach 65%+.
+        # Previous T=1.2 was softening every output, capping confidence at ~55%.
+        _TEMPERATURE = 0.8
         scaled_logits = torch.tensor(adjusted_logits) / _TEMPERATURE
         probs = F.softmax(scaled_logits, dim=-1).tolist()
 
@@ -309,10 +310,12 @@ def infer_skin_type_ensemble(
         if _t_high and not _c_high:
             _cal["combination"] = _cal.get("combination", 0.0) + 0.05
 
-        # No shine signal anywhere → image is not showing oil, correct oily bias
+        # No shine signal anywhere → modest oily correction only.
+        # Reduced from -0.10 to -0.05: the aggressive penalty was combining with
+        # the logit bias correction to make Oily unreachable for most real images.
         if not _t_high and not _c_high and not _spec:
-            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.10)
-            _cal["normal"] = _cal.get("normal", 0.0) + 0.10
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
         elif _b_high and not _spec:
             # Bright image but no specular hotspots → good lighting, not shine
             _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)

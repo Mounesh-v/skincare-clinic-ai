@@ -455,14 +455,40 @@ class SkinAnalyzerService:
             "dark spots": "dry",
         }
 
+        # Build ranked list of all mapped conditions; dominance filter applied below.
+        _all_conditions = [
+            (cond_key, cond_score)
+            for cond_key, cond_score in sorted(
+                condition_probs.items(), key=lambda x: x[1], reverse=True
+            )
+            if _XAI_MAP.get(cond_key)
+        ]
+
+        # Wrinkles dominance suppression: EfficientNet over-predicts wrinkles for
+        # many faces.  If wrinkles tops the list but the classified skin type is
+        # Oily or Normal (not clinically driven by wrinkles), move it to the end
+        # so a more relevant condition appears first in the XAI output.
+        _non_dry_types = {"oily", "normal"}
+        if (
+            _all_conditions
+            and _all_conditions[0][0] in ("wrinkles",)
+            and skin_type.lower() in _non_dry_types
+        ):
+            _head = _all_conditions[0]
+            _all_conditions = _all_conditions[1:] + [_head]
+
         condition_contributions = []
-        for cond_key, cond_score in sorted(condition_probs.items(), key=lambda x: x[1], reverse=True):
+        for cond_key, cond_score in _all_conditions:
             points_to = _XAI_MAP.get(cond_key)
             if not points_to:
                 continue
-            
-            explanation_text = f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%}) ΓåÆ {points_to.capitalize()} tendency"
-
+            # Confidence floor: skip conditions with near-zero signal strength
+            if cond_score < 0.15:
+                continue
+            explanation_text = (
+                f"{cond_key.replace('_', ' ').title()} ({cond_score:.0%})"
+                f" → {points_to.capitalize()} tendency"
+            )
             condition_contributions.append({
                 "condition": cond_key.replace("_", " ").title(),
                 "score": round(cond_score, 4),
@@ -558,8 +584,11 @@ class SkinAnalyzerService:
             "edge_density_high": float(zone_signals.get("edge_density", 0.0)) > 0.20,
             "brightness_high": global_brightness > 160.0,
             "specular_highlight": specular_spread >= 15.0,
-            "t_zone_shine_high": float(zone_signals.get("t_zone_shine", 0.0)) > 175.0,
-            "cheek_shine_high": float(zone_signals.get("cheek_shine", 0.0)) > 165.0,
+            # Lowered from 175/165 — previous thresholds caused both flags to stay
+            # False for most real phone-camera images, making the no-shine oily
+            # penalty fire on every prediction and preventing Oily classification.
+            "t_zone_shine_high": float(zone_signals.get("t_zone_shine", 0.0)) > 165.0,
+            "cheek_shine_high": float(zone_signals.get("cheek_shine", 0.0)) > 155.0,
             "dryness_index": float(zone_signals.get("roughness", 0.0)) / 255.0,
             "texture_rough": float(zone_signals.get("roughness", 0.0)) > 110.0,
         }
