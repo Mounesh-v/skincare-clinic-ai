@@ -38,3 +38,7 @@ Thumbs.db
 # Environment files — never commit real secrets
 server/.env
 client/.env
+
+# Auto-generated / local artifacts
+debug_samples/
+class_map.json

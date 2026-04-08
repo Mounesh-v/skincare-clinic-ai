@@ -20,8 +20,8 @@ def infer_skin_type(
     """Infer skin type from EfficientNet condition probabilities.
 
     Weights are clinically grounded:
-      Oil     = acne × 0.40  + pores × 0.40 + blackheads × 0.20
-      Dryness = wrinkles × 0.65 + dark_spots × 0.35
+      Oil     = acne × 0.45  + pores × 0.35 + blackheads × 0.20
+      Dryness = wrinkles × 0.60 + dark_spots × 0.40
 
     Decision (in priority order):
       oil > 0.35 AND dryness > 0.35  →  Combination
@@ -39,8 +39,8 @@ def infer_skin_type(
     )
 
     # ── Primary signals ───────────────────────────────────────────────────────
-    oil     = acne * 0.40 + pores * 0.40 + blackheads * 0.20
-    dryness = wrinkles * 0.65 + dark_spots * 0.35
+    oil     = acne * 0.45 + pores * 0.35 + blackheads * 0.20
+    dryness = wrinkles * 0.60 + dark_spots * 0.40
 
     # Mixed-zone: clinically meaningful (non-zero) for combination skin
     mixed_zone = min(oil, dryness)
