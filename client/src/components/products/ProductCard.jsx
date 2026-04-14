@@ -61,6 +61,7 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
       <div className="relative aspect-square overflow-hidden bg-slate-50">
         {/* Product Image */}
         <img
+<<<<<<< HEAD
           src={product.images?.[0]?.url || ""}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
@@ -73,6 +74,12 @@ const ProductCard = ({ product, onAddToCart, onToggleFavorite }) => {
             </svg>
           </div>
         )}
+=======
+          src={product.images?.[0]?.url || "/placeholder-product.jpg"}
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+        />
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
 
         {/* Badges - Top Left */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">

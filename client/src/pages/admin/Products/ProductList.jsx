@@ -60,6 +60,7 @@ const ProductList = () => {
   };
 
   const handleExport = () => {
+<<<<<<< HEAD
     try {
       if (!products.length) {
         toast.error("No products to export");
@@ -133,6 +134,9 @@ const ProductList = () => {
     } catch (error) {
       toast.error("Failed to export data");
     }
+=======
+    toast.success("Exporting products data...");
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
   };
 
   // TABLE COLUMNS
@@ -217,9 +221,14 @@ const ProductList = () => {
 
         return (
           <span
+<<<<<<< HEAD
             className={`px-3 py-1 rounded-full text-xs font-medium ${
               statusColors[value]
             }`}
+=======
+            className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[value]
+              }`}
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
           >
             {value}
           </span>
@@ -232,11 +241,18 @@ const ProductList = () => {
       accessor: "featured",
       render: (value) => (
         <span
+<<<<<<< HEAD
           className={`px-3 py-1 rounded-full text-xs font-medium ${
             value
               ? "bg-purple-100 text-purple-700"
               : "bg-slate-100 text-slate-600"
           }`}
+=======
+          className={`px-3 py-1 rounded-full text-xs font-medium ${value
+              ? "bg-purple-100 text-purple-700"
+              : "bg-slate-100 text-slate-600"
+            }`}
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
         >
           {value ? "Yes" : "No"}
         </span>

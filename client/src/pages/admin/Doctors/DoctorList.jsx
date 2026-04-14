@@ -60,11 +60,19 @@ const DoctorList = () => {
     if (!confirmDelete) return; // only stop when user clicks Cancel
 
     try {
+<<<<<<< HEAD
       await api.delete(`/api/doctors/${id}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
+=======
+      await api.delete(`/api/doctors/${id}`,{
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization": `Bearer ${localStorage.getItem("authToken")}`,
+        }
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
       });
 
       setDoctors((prev) => prev.filter((doc) => doc.id !== id));
@@ -93,6 +101,7 @@ const DoctorList = () => {
   };
 
   const handleExport = () => {
+<<<<<<< HEAD
     try {
       toast.success("Exporting doctors data...");
       if (!doctors.length) {
@@ -137,6 +146,9 @@ const DoctorList = () => {
     } catch (error) {
       toast.error("Failed to export data");
     }
+=======
+    toast.success("Export feature coming soon...");
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
   };
 
   const columns = [

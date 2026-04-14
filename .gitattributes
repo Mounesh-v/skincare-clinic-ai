@@ -2,4 +2,13 @@
 *.pt filter=lfs diff=lfs merge=lfs -text
 *.pth filter=lfs diff=lfs merge=lfs -text
 *.tflite filter=lfs diff=lfs merge=lfs -text
+<<<<<<< HEAD
 ml/models/*.pt filter=lfs diff=lfs merge=lfs -text
+=======
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+client/public/images/*.jpeg filter=lfs diff=lfs merge=lfs -text
+client/public/images/*.jpg filter=lfs diff=lfs merge=lfs -text
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb

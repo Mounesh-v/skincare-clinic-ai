@@ -56,7 +56,10 @@ fastapi_app = FastAPI(
 # CORS — reads ML_ALLOWED_ORIGINS env var set in HF Space secrets
 # ---------------------------------------------------------------------------
 _DEFAULT_ORIGINS = (
+<<<<<<< HEAD
     "https://skincare-ai-tawny.vercel.app,"
+=======
+>>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
     "https://skincare-clinic-ai-tjjy.vercel.app,"
     "https://skincare-clinic-ai.vercel.app,"
     "http://localhost:5173,"
