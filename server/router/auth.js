@@ -1,7 +1,7 @@
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { createUser, deleteUser, getAllUsers, getUserById, loginUser, updateUser, updateUserStatus } from "../controllers/register.js";
+import { createUser, deleteUser, getAllUsers, getMyProfile, getUserById, loginUser, updateUser, updateUserProfile, updateUserStatus } from "../controllers/register.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const router = express.Router();
@@ -133,5 +133,7 @@ router.get("/user/:id",verifyToken,getUserById);
 router.put("/user/:id",verifyToken,updateUser)
 router.patch("/users/:id/status",verifyToken,updateUserStatus);
 router.delete("/users/:id",verifyToken,deleteUser);
+router.post("/profile", verifyToken, updateUserProfile);
+router.get("/my-profile", verifyToken, getMyProfile);
 
 export default router;

@@ -229,3 +229,100 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// while ordering update details
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { phone, address, pincode, city, district, state, country } =
+      req.body;
+
+    //  Step 1: Validation
+    if (!phone || !address || !pincode) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    // optional: basic validation
+    if (phone.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid phone number",
+      });
+    }
+
+    if (pincode.length !== 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pincode",
+      });
+    }
+
+    //  Step 2: Find user
+    const user = await Register.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    //  Step 3: Update fields
+    user.phone = phone;
+    user.address = address;
+    user.pincode = pincode;
+    user.isProfileComplete = true;
+    user.city = city;
+    user.district = district;
+    user.state = state;
+    user.country;
+
+    await user.save();
+
+    //  Step 4: Return response (don’t send password)
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+        pincode: user.pincode,
+        isProfileComplete: user.isProfileComplete,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// get all new deatils for user
+export const getMyProfile = async (req, res) => {
+  try {
+    const user = await Register.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

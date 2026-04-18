@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import React, { useState, useEffect } from "react";
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
   Edit2,
   Save,
@@ -16,103 +16,169 @@ import {
   Package,
   FileText,
   LogOut,
-  ChevronRight
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+  ChevronRight,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import api from "../utils/api";
 
 const UserProfile = () => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState('personal');
+  const [activeTab, setActiveTab] = useState("personal");
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: '',
+    firstName: "",
+    email: "",
+    phone: "",
+    gender: "",
     address: {
-      street: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: 'India'
+      street: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "India",
     },
-    skinType: '',
-    allergies: '',
+    skinType: "",
+    allergies: "",
     preferences: {
       emailNotifications: true,
       smsNotifications: false,
-      productRecommendations: true
-    }
+      productRecommendations: true,
+    },
   });
+
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  // fetch all orders
+  const fetchOrders = async () => {
+    try {
+      setLoadingOrders(true);
+
+      const token = localStorage.getItem("authToken");
+
+      const res = await api.get("/api/orders/my", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // console.log(res.data.orders);
+      // console.log(res.data.orders[0].items[0].product.images[0].url);
+
+      setOrders(res.data.orders);
+    } catch (err) {
+      toast.error("Failed to load orders");
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "orders") {
+      fetchOrders();
+    }
+  }, [activeTab]);
+
+  // load all deatils
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+
+      const res = await api.get("/api/auth/my-profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const userData = res.data.user;
+
+      setUser(userData);
+
+      setFormData({
+        firstName: userData.name || "",
+        email: userData.email || "",
+        phone: userData.phone || "",
+        address: {
+          street: userData.address || "",
+          city: userData.city || "",
+          state: userData.state || "",
+          zipCode: userData.pincode || "",
+          country: userData.country || "India",
+        },
+      });
+    } catch (err) {
+      toast.error("Failed to load profile");
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, [navigate]);
 
   // Load user data from localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('authUser');
+    const storedUser = localStorage.getItem("authUser");
     if (storedUser) {
       try {
         const userData = JSON.parse(storedUser);
         setUser(userData);
         setFormData({
-          firstName: userData.firstName || '',
-          lastName: userData.lastName || '',
-          email: userData.email || '',
-          phone: userData.phone || '',
-          dateOfBirth: userData.dateOfBirth || '',
-          gender: userData.gender || '',
+          firstName: userData.firstName || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+          gender: userData.gender || "",
           address: userData.address || {
-            street: '',
-            city: '',
-            state: '',
-            zipCode: '',
-            country: 'India'
+            street: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            country: "India",
           },
-          skinType: userData.skinType || '',
-          allergies: userData.allergies || '',
+          skinType: userData.skinType || "",
+          allergies: userData.allergies || "",
           preferences: userData.preferences || {
             emailNotifications: true,
             smsNotifications: false,
-            productRecommendations: true
-          }
+            productRecommendations: true,
+          },
         });
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error("Error loading user data:", error);
       }
     } else {
       // Redirect to login if no user
-      navigate('/login');
+      navigate("/login");
     }
   }, [navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setFormData((prev) => ({
         ...prev,
         [parent]: {
           ...prev[parent],
-          [child]: value
-        }
+          [child]: value,
+        },
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
   const handleToggle = (name) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       preferences: {
         ...prev.preferences,
-        [name]: !prev.preferences[name]
-      }
+        [name]: !prev.preferences[name],
+      },
     }));
   };
 
@@ -120,13 +186,13 @@ const UserProfile = () => {
     try {
       // Update user in localStorage
       const updatedUser = { ...user, ...formData };
-      localStorage.setItem('authUser', JSON.stringify(updatedUser));
+      localStorage.setItem("authUser", JSON.stringify(updatedUser));
       setUser(updatedUser);
       setIsEditing(false);
-      toast.success('Profile updated successfully!');
+      toast.success("Profile updated successfully!");
     } catch (error) {
-      toast.error('Failed to update profile');
-      console.error('Error saving profile:', error);
+      toast.error("Failed to update profile");
+      console.error("Error saving profile:", error);
     }
   };
 
@@ -134,37 +200,35 @@ const UserProfile = () => {
     // Reset form data to original user data
     if (user) {
       setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        dateOfBirth: user.dateOfBirth || '',
-        gender: user.gender || '',
+        firstName: user.firstName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        gender: user.gender || "",
         address: user.address || {
-          street: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          country: 'India'
+          street: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          country: "India",
         },
-        skinType: user.skinType || '',
-        allergies: user.allergies || '',
+        skinType: user.skinType || "",
+        allergies: user.allergies || "",
         preferences: user.preferences || {
           emailNotifications: true,
           smsNotifications: false,
-          productRecommendations: true
-        }
+          productRecommendations: true,
+        },
       });
     }
     setIsEditing(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
-    window.dispatchEvent(new Event('auth:updated'));
-    toast.success('Logged out successfully');
-    navigate('/login');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authUser");
+    window.dispatchEvent(new Event("auth:updated"));
+    toast.success("Logged out successfully");
+    navigate("/login");
   };
 
   if (!user) {
@@ -176,11 +240,11 @@ const UserProfile = () => {
   }
 
   const tabs = [
-    { id: 'personal', label: 'Personal Info', icon: User },
-    { id: 'skin', label: 'Skin Profile', icon: Heart },
-    { id: 'orders', label: 'My Orders', icon: Package },
-    { id: 'assessments', label: 'Assessments', icon: FileText },
-    { id: 'security', label: 'Security', icon: Lock }
+    { id: "personal", label: "Personal Info", icon: User },
+    { id: "skin", label: "Skin Profile", icon: Heart },
+    { id: "orders", label: "My Orders", icon: Package },
+    { id: "assessments", label: "Assessments", icon: FileText },
+    { id: "security", label: "Security", icon: Lock },
   ];
 
   return (
@@ -190,13 +254,13 @@ const UserProfile = () => {
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden mb-8">
           <div className="relative h-48 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600">
             <div className="absolute inset-0 bg-grid-white/10"></div>
-            
+
             {/* Profile Picture */}
             <div className="absolute -bottom-16 left-8">
               <div className="relative">
                 <div className="w-32 h-32 rounded-2xl bg-white p-1 shadow-xl">
                   <div className="w-full h-full rounded-xl bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center text-white text-4xl font-bold">
-                    {formData.firstName.charAt(0)}{formData.lastName.charAt(0)}
+                    {formData.firstName.charAt(0)}
                   </div>
                 </div>
                 <button className="absolute bottom-0 right-0 w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-lg hover:bg-emerald-700 transition-colors">
@@ -206,7 +270,7 @@ const UserProfile = () => {
             </div>
 
             {/* Logout Button */}
-            <button 
+            <button
               onClick={handleLogout}
               className="absolute top-6 right-6 px-6 py-2 bg-white/20 backdrop-blur-sm text-white rounded-lg font-semibold hover:bg-white/30 transition-all flex items-center gap-2 border border-white/30"
             >
@@ -219,7 +283,7 @@ const UserProfile = () => {
             <div className="flex items-start justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                  {formData.firstName} {formData.lastName}
+                  {formData.firstName}
                 </h1>
                 <p className="text-slate-600 flex items-center gap-2 mb-2">
                   <Mail className="w-4 h-4" />
@@ -234,7 +298,7 @@ const UserProfile = () => {
               </div>
 
               {!isEditing ? (
-                <button 
+                <button
                   onClick={() => setIsEditing(true)}
                   className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg flex items-center gap-2"
                 >
@@ -243,14 +307,14 @@ const UserProfile = () => {
                 </button>
               ) : (
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={handleCancel}
                     className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-300 transition-all flex items-center gap-2"
                   >
                     <X className="w-4 h-4" />
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={handleSave}
                     className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg flex items-center gap-2"
                   >
@@ -276,15 +340,17 @@ const UserProfile = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
                       activeTab === tab.id
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
-                        : 'text-slate-600 hover:bg-slate-50'
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg"
+                        : "text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="flex-1 text-left">{tab.label}</span>
-                    <ChevronRight className={`w-4 h-4 transition-transform ${
-                      activeTab === tab.id ? 'translate-x-1' : ''
-                    }`} />
+                    <ChevronRight
+                      className={`w-4 h-4 transition-transform ${
+                        activeTab === tab.id ? "translate-x-1" : ""
+                      }`}
+                    />
                   </button>
                 );
               })}
@@ -295,11 +361,13 @@ const UserProfile = () => {
           <div className="lg:col-span-3">
             <div className="bg-white rounded-2xl shadow-lg p-8">
               {/* Personal Info Tab */}
-              {activeTab === 'personal' && (
+              {activeTab === "personal" && (
                 <div className="space-y-8">
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-6">Personal Information</h2>
-                    
+                    <h2 className="text-2xl font-bold text-slate-900 mb-6">
+                      Personal Information
+                    </h2>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* First Name */}
                       <div>
@@ -317,7 +385,7 @@ const UserProfile = () => {
                       </div>
 
                       {/* Last Name */}
-                      <div>
+                      {/* <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           Last Name
                         </label>
@@ -329,7 +397,7 @@ const UserProfile = () => {
                           disabled={!isEditing}
                           className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:bg-slate-50 disabled:text-slate-500 transition-all"
                         />
-                      </div>
+                      </div> */}
 
                       {/* Email */}
                       <div>
@@ -363,7 +431,7 @@ const UserProfile = () => {
                       </div>
 
                       {/* Date of Birth */}
-                      <div>
+                      {/* <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           Date of Birth
                         </label>
@@ -375,10 +443,10 @@ const UserProfile = () => {
                           disabled={!isEditing}
                           className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:bg-slate-50 disabled:text-slate-500 transition-all"
                         />
-                      </div>
+                      </div> */}
 
                       {/* Gender */}
-                      <div>
+                      {/* <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                           Gender
                         </label>
@@ -393,9 +461,11 @@ const UserProfile = () => {
                           <option value="male">Male</option>
                           <option value="female">Female</option>
                           <option value="other">Other</option>
-                          <option value="prefer-not-to-say">Prefer not to say</option>
+                          <option value="prefer-not-to-say">
+                            Prefer not to say
+                          </option>
                         </select>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
@@ -405,7 +475,7 @@ const UserProfile = () => {
                       <MapPin className="w-5 h-5 text-emerald-600" />
                       Address
                     </h3>
-                    
+
                     <div className="space-y-6">
                       {/* Street Address */}
                       <div>
@@ -493,10 +563,12 @@ const UserProfile = () => {
               )}
 
               {/* Skin Profile Tab */}
-              {activeTab === 'skin' && (
+              {activeTab === "skin" && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-slate-900 mb-6">Skin Profile</h2>
-                  
+                  <h2 className="text-2xl font-bold text-slate-900 mb-6">
+                    Skin Profile
+                  </h2>
+
                   {/* Skin Type */}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -540,62 +612,92 @@ const UserProfile = () => {
                       <Bell className="w-5 h-5 text-emerald-600" />
                       Preferences
                     </h3>
-                    
+
                     <div className="space-y-4">
                       {/* Email Notifications */}
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                         <div>
-                          <p className="font-semibold text-slate-900">Email Notifications</p>
-                          <p className="text-sm text-slate-600">Receive updates via email</p>
+                          <p className="font-semibold text-slate-900">
+                            Email Notifications
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            Receive updates via email
+                          </p>
                         </div>
                         <button
-                          onClick={() => handleToggle('emailNotifications')}
+                          onClick={() => handleToggle("emailNotifications")}
                           disabled={!isEditing}
                           className={`relative w-14 h-7 rounded-full transition-colors ${
-                            formData.preferences.emailNotifications ? 'bg-emerald-600' : 'bg-slate-300'
-                          } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            formData.preferences.emailNotifications
+                              ? "bg-emerald-600"
+                              : "bg-slate-300"
+                          } ${!isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                            formData.preferences.emailNotifications ? 'translate-x-7' : ''
-                          }`}></div>
+                          <div
+                            className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                              formData.preferences.emailNotifications
+                                ? "translate-x-7"
+                                : ""
+                            }`}
+                          ></div>
                         </button>
                       </div>
 
                       {/* SMS Notifications */}
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                         <div>
-                          <p className="font-semibold text-slate-900">SMS Notifications</p>
-                          <p className="text-sm text-slate-600">Receive updates via SMS</p>
+                          <p className="font-semibold text-slate-900">
+                            SMS Notifications
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            Receive updates via SMS
+                          </p>
                         </div>
                         <button
-                          onClick={() => handleToggle('smsNotifications')}
+                          onClick={() => handleToggle("smsNotifications")}
                           disabled={!isEditing}
                           className={`relative w-14 h-7 rounded-full transition-colors ${
-                            formData.preferences.smsNotifications ? 'bg-emerald-600' : 'bg-slate-300'
-                          } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            formData.preferences.smsNotifications
+                              ? "bg-emerald-600"
+                              : "bg-slate-300"
+                          } ${!isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                            formData.preferences.smsNotifications ? 'translate-x-7' : ''
-                          }`}></div>
+                          <div
+                            className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                              formData.preferences.smsNotifications
+                                ? "translate-x-7"
+                                : ""
+                            }`}
+                          ></div>
                         </button>
                       </div>
 
                       {/* Product Recommendations */}
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                         <div>
-                          <p className="font-semibold text-slate-900">Product Recommendations</p>
-                          <p className="text-sm text-slate-600">Personalized suggestions</p>
+                          <p className="font-semibold text-slate-900">
+                            Product Recommendations
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            Personalized suggestions
+                          </p>
                         </div>
                         <button
-                          onClick={() => handleToggle('productRecommendations')}
+                          onClick={() => handleToggle("productRecommendations")}
                           disabled={!isEditing}
                           className={`relative w-14 h-7 rounded-full transition-colors ${
-                            formData.preferences.productRecommendations ? 'bg-emerald-600' : 'bg-slate-300'
-                          } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            formData.preferences.productRecommendations
+                              ? "bg-emerald-600"
+                              : "bg-slate-300"
+                          } ${!isEditing ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                            formData.preferences.productRecommendations ? 'translate-x-7' : ''
-                          }`}></div>
+                          <div
+                            className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                              formData.preferences.productRecommendations
+                                ? "translate-x-7"
+                                : ""
+                            }`}
+                          ></div>
                         </button>
                       </div>
                     </div>
@@ -604,28 +706,93 @@ const UserProfile = () => {
               )}
 
               {/* Orders Tab */}
-              {activeTab === 'orders' && (
-                <div className="text-center py-12">
-                  <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Orders Yet</h3>
-                  <p className="text-slate-600 mb-6">Start shopping to see your orders here</p>
-                  <button 
-                    onClick={() => navigate('/products')}
-                    className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg"
-                  >
-                    Browse Products
-                  </button>
+              {activeTab === "orders" && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-6">My Orders</h2>
+
+                  {loadingOrders ? (
+                    <p>Loading orders...</p>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                      <p>No orders yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div
+                          key={order._id}
+                          className="border rounded-xl p-4 shadow-sm hover:shadow-md transition"
+                        >
+                          {/* HEADER */}
+                          <div className="flex justify-between mb-3">
+                            <p className="font-semibold">
+                              #{order.orderNumber}
+                            </p>
+                            <span className="text-sm text-slate-500">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          {/* ITEMS */}
+                          <div className="space-y-3">
+                            {order.items.map((item, i) => (
+                              <div key={i} className="flex items-center gap-3">
+                                <img
+                                  src={
+                                    item.product?.images?.[0]?.url ||
+                                    "https://placehold.co/60"
+                                  }
+                                  className="w-14 h-14 rounded-lg object-cover border"
+                                />
+
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">
+                                    {item.product?.name}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    ₹{item.price} × {item.quantity}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* FOOTER */}
+                          <div className="flex justify-between mt-4 font-semibold">
+                            <p>Total</p>
+                            <p>₹{order.total}</p>
+                          </div>
+
+                          {/* STATUS */}
+                          <span
+                            className={`inline-block mt-2 text-xs px-3 py-1 rounded-full ${
+                              order.orderStatus === "Delivered"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}
+                          >
+                            {order.orderStatus}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Assessments Tab */}
-              {activeTab === 'assessments' && (
+              {activeTab === "assessments" && (
                 <div className="text-center py-12">
                   <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Assessments Yet</h3>
-                  <p className="text-slate-600 mb-6">Take a skin assessment to get personalized recommendations</p>
-                  <button 
-                    onClick={() => navigate('/assessment')}
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">
+                    No Assessments Yet
+                  </h3>
+                  <p className="text-slate-600 mb-6">
+                    Take a skin assessment to get personalized recommendations
+                  </p>
+                  <button
+                    onClick={() => navigate("/assessment")}
                     className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg"
                   >
                     Start Assessment
@@ -634,19 +801,23 @@ const UserProfile = () => {
               )}
 
               {/* Security Tab */}
-              {activeTab === 'security' && (
+              {activeTab === "security" && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                     <Shield className="w-6 h-6 text-emerald-600" />
                     Security Settings
                   </h2>
-                  
+
                   {/* Change Password */}
                   <div className="p-6 border border-slate-200 rounded-xl hover:border-emerald-300 transition-all">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-slate-900 mb-1">Change Password</h3>
-                        <p className="text-sm text-slate-600">Update your password regularly</p>
+                        <h3 className="font-bold text-slate-900 mb-1">
+                          Change Password
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                          Update your password regularly
+                        </p>
                       </div>
                       <button className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-all">
                         Change
@@ -658,8 +829,12 @@ const UserProfile = () => {
                   <div className="p-6 border border-slate-200 rounded-xl hover:border-emerald-300 transition-all">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-slate-900 mb-1">Two-Factor Authentication</h3>
-                        <p className="text-sm text-slate-600">Add an extra layer of security</p>
+                        <h3 className="font-bold text-slate-900 mb-1">
+                          Two-Factor Authentication
+                        </h3>
+                        <p className="text-sm text-slate-600">
+                          Add an extra layer of security
+                        </p>
                       </div>
                       <button className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg font-semibold hover:bg-emerald-200 transition-all">
                         Enable
@@ -671,8 +846,12 @@ const UserProfile = () => {
                   <div className="p-6 border border-red-200 rounded-xl bg-red-50">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-bold text-red-900 mb-1">Delete Account</h3>
-                        <p className="text-sm text-red-600">Permanently delete your account and data</p>
+                        <h3 className="font-bold text-red-900 mb-1">
+                          Delete Account
+                        </h3>
+                        <p className="text-sm text-red-600">
+                          Permanently delete your account and data
+                        </p>
                       </div>
                       <button className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all">
                         Delete

@@ -1,6 +1,7 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Login from "../models/Login.js";
+import  RegisterUsers from "../models/Register.js"
 
 /* ==============================
    CREATE ORDER
@@ -8,6 +9,16 @@ import Login from "../models/Login.js";
 export const createOrder = async (req, res) => {
   try {
     const { items, shippingAddress } = req.body;
+
+    const user = await RegisterUsers.findById(req.user.id);
+
+    if (!user.isProfileComplete) {
+      return res.status(400).json({
+        success: false,
+        code: "PROFILE_INCOMPLETE",
+        message: "Please complete your profile first",
+      });
+    }
 
     let totalAmount = 0;
     const orderItems = [];
@@ -51,6 +62,7 @@ export const createOrder = async (req, res) => {
       total: totalAmount,
       shippingAddress,
     });
+    
 
     res.status(201).json({
       success: true,

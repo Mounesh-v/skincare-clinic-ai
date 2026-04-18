@@ -453,7 +453,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                       >
                         <LayoutDashboard className="h-4 w-4" />
                         Dashboard
-                      </button>
+                      </button> */}
 
                       <button
                         onClick={() => navigate("/profile")}
@@ -461,7 +461,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                       >
                         <UserCircle className="h-4 w-4" />
                         Profile
-                      </button> */}
+                      </button>
 
                       <button
                         onClick={() => {

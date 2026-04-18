@@ -51,6 +51,26 @@ const RegisterUsers = new mongoose.Schema(
       enum: ["Active", "Banned"],
       default: "Active",
     },
+    phone: {
+      type: String,
+    },
+
+    address: {
+      type: String,
+    },
+
+    pincode: {
+      type: String,
+    },
+
+    isProfileComplete: {
+      type: Boolean,
+      default: false,
+    },
+    city: String,
+    district: String,
+    state: String,
+    country: String,
   },
   { timestamps: true },
 );

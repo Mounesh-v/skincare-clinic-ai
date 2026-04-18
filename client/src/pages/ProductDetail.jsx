@@ -21,6 +21,7 @@ import Button from "../components/common/Button";
 import productService from "../services/productService";
 import toast from "react-hot-toast";
 import api from "../utils/api";
+import ProfilePopup from "./ProfilePopup";
 
 const ProductDetail = () => {
   const { productId } = useParams();
@@ -33,6 +34,14 @@ const ProductDetail = () => {
   const [activeTab, setActiveTab] = useState("description");
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // for Order options
+  const [showPopup, setShowPopup] = useState(false);
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("authUser")),
+  );
+
+  // const user = localStorage.getItem("authUser");
 
   useEffect(() => {
     fetchProduct();
@@ -123,9 +132,15 @@ const ProductDetail = () => {
       //  redirect after order
       navigate("/products"); // or success page
     } catch (error) {
+      if (error.response?.data?.code === "PROFILE_INCOMPLETE") {
+        setShowPopup(true);
+        return;
+      }
+
       toast.error(error.response?.data?.message || "Order failed");
     }
   };
+
   const handleFavorite = () => {
     setIsFavorite(!isFavorite);
     toast.success(isFavorite ? "Removed from favorites" : "Added to favorites");
@@ -188,8 +203,8 @@ const ProductDetail = () => {
           {/* Product Images */}
           <div className="space-y-4">
             {/* Main Image */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-              <div className="relative aspect-square overflow-hidden rounded-lg">
+            <div className="bg-white  rounded-2xl p-4  shadow-sm border border-slate-200">
+              <div className="relative h-64 sm:h-80 md:h-96 lg:h-[450px] overflow-hidden rounded-lg">
                 <img
                   src={
                     images[selectedImage] ||
@@ -367,6 +382,17 @@ const ProductDetail = () => {
               </div>
             </div>
 
+            <ProfilePopup
+              show={showPopup}
+              user={user}
+              onClose={() => setShowPopup(false)}
+              onSuccess={(updatedData) => {
+                setUser(updatedData);
+                setShowPopup(false);
+                handleBuyNow();
+              }}
+            />
+
             {/* Action Buttons */}
             <div className="flex gap-4">
               <Button
@@ -391,7 +417,7 @@ const ProductDetail = () => {
             </div>
 
             {/* Trust Badges */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-200">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1 border-t border-slate-200">
               <div className="flex flex-col items-center text-center p-3">
                 <Truck className="h-8 w-8 text-primary-600 mb-2" />
                 <p className="text-xs font-medium text-slate-900">
@@ -425,7 +451,7 @@ const ProductDetail = () => {
         </div>
 
         {/* Product Details Tabs */}
-        <div className="mt-16 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="mt-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {/* Tab Headers */}
           <div className="border-b border-slate-200">
             <div className="flex overflow-x-auto">
@@ -543,12 +569,12 @@ const ProductDetail = () => {
 
             {activeTab === "reviews" && (
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 mb-2">
                       Customer Reviews
                     </h3>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <div className="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
                           <Star
