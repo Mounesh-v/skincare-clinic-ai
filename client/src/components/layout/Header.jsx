@@ -18,10 +18,7 @@ import {
   MapPin,
 } from "lucide-react";
 
-<<<<<<< HEAD
-=======
 import ctaBg from "../../assets/hero2.jpg";
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
 
 import { getInitial, getUser } from "../../utils/auth";
 
@@ -201,11 +198,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 className={`md:hidden fixed top-0 left-0 z-[999] h-full w-full bg-cover bg-center shadow-xl overflow-y-auto transform transition-transform duration-500 ease-in-out ${
                   fullscreenMenuOpen ? "translate-x-0" : "-translate-x-full"
                 }`}
-<<<<<<< HEAD
-                style={{ backgroundImage: `url('/images/hero2.jpeg')` }}
-=======
                 style={{ backgroundImage: `url(${ctaBg})` }}
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
               >
                 {/* Header */}
                 <div className="sticky top-0  z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 border-b">
@@ -316,11 +309,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                       })}
                     </div>
                     {/* Featured Products Section */}
-<<<<<<< HEAD
-                    <div className="mt-2 sm:mt-6  p-3 sm:p-4 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
-=======
                     <div className="mt-4 sm:mt-6 sm:mt-8 p-3 sm:p-4 bg-gradient-to-br from-teal-50/90 to-emerald-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
                       <h3 className="font-bold text-slate-900 mb-3">
                         🎯 Featured Products
                       </h3>
@@ -535,11 +524,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
           {/* Background Image */}
           <div
             className="absolute inset-0 bg-cover bg-center sm:bg-top md:bg-center bg-repeat"
-<<<<<<< HEAD
-            style={{ backgroundImage: `url('/images/hero2.jpeg')` }}
-=======
             style={{ backgroundImage: `url(${ctaBg})` }}
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
           >
             {/* Overlay for readability */}
             <div className="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>

@@ -120,11 +120,7 @@ const ProductShowcase = () => {
 
       const data = await productService.getAll(filters);
 
-<<<<<<< HEAD
-      // cd     console.log("data", data);
-=======
       // console.log("data", data);
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
 
       // Handle any backend response format safely
       let productsArray = [];

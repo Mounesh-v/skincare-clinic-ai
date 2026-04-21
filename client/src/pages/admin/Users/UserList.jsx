@@ -20,16 +20,6 @@ const UserList = () => {
   const [users, setUsers] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-=======
 
   useEffect(() => {
   const handleResize = () => {
@@ -39,7 +29,6 @@ const UserList = () => {
   window.addEventListener("resize", handleResize);
   return () => window.removeEventListener("resize", handleResize);
 }, []);
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
 
   // const handleDelete = (userId) => {
   //   if (window.confirm("Are you sure you want to delete this user?")) {
@@ -62,54 +51,8 @@ const UserList = () => {
   // };
 
   const handleExport = () => {
-<<<<<<< HEAD
-    try {
-      toast.success("Exporting users data...");
-      if (!users.length) {
-        toast.error("No orders to export");
-        return;
-      }
-
-      const Headers = [
-        "Name",
-        "Email",
-        "Phone",
-        "Status",
-        "Assessments",
-        "Orders",
-        "Joined Date",
-      ];
-
-      const rows = users.map((u) => [
-        u.id,
-        u.name,
-        u.email,
-        u.phone,
-        u.status,
-        u.assessments,
-        u.orders,
-        u.joinedDate,
-      ]);
-
-      const csvContent =
-        "data:text/csv;charset=utf-8," +
-        [Headers, ...rows]
-          .map((e) => e.map((v) => `"${v}"`).join(","))
-          .join("\n");
-
-      const link = document.createElement("a");
-      link.href = encodeURI(csvContent);
-      link.download = "users.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      toast.error("Failed to export data");
-    }
-=======
     toast.success("Exporting users data...");
     // Implement CSV export logic here
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
   };
 
   const columns = [
