@@ -184,66 +184,63 @@ const ProductDetail = () => {
           <span className="text-slate-900">{product.name}</span>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* Product Images */}
-          <div className="space-y-4">
-            {/* Main Image */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-              <div className="relative aspect-square overflow-hidden rounded-lg">
-                <img
-                  src={
-                    images[selectedImage] ||
-                    images[0] ||
-                    "https://placehold.co/400x400/f0fdf4/16a34a?text=Product+Image"
-                  }
-                  alt={product.name}
-                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                />
-                {discount > 0 && (
-                  <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                    {discount}% OFF
-                  </div>
-                )}
-                <button
-                  onClick={handleFavorite}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:scale-110 transition-transform"
-                >
-                  <Heart
-                    className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : "text-slate-600"}`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Thumbnail Images */}
-            {images.length > 1 && (
-              <div className="grid grid-cols-4 gap-3">
-                {images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`
-                      aspect-square rounded-lg overflow-hidden border-2 transition-all
-                      ${
-                        selectedImage === index
-                          ? "border-primary-600 shadow-md"
-                          : "border-slate-200 hover:border-slate-300"
-                      }
-                    `}
-                  >
-                    <img
-                      src={
-                        image ||
-                        "https://placehold.co/100x100/f0fdf4/16a34a?text=Img"
-                      }
-                      alt={`${product.name} view ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+       <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+  {/* Product Images */}
+ <div className="space-y-3 max-w-md mx-auto lg:mx-0"> {/* ← constrain width */}
+    {/* Main Image */}
+    <div className="bg-white rounded-2xl p-3 shadow-sm border border-slate-200">  {/* ← p-4 → p-3 */}
+      <div className="relative aspect-square overflow-hidden rounded-lg">
+        <img
+          src={
+            images[selectedImage] ||
+            images[0] ||
+            "https://placehold.co/400x400/f0fdf4/16a34a?text=Product+Image"
+          }
+          alt={product.name}
+          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+        />
+        {discount > 0 && (
+          <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs font-bold">
+            {discount}% OFF
           </div>
+        )}
+        <button
+          onClick={handleFavorite}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:scale-110 transition-transform"  
+        >
+          <Heart
+            className={`h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : "text-slate-600"}`}
+          />
+        </button>
+      </div>
+    </div>
+
+    {/* Thumbnail Images */}
+    {images.length > 1 && (
+      <div className="grid grid-cols-4 gap-2">  {/* ← gap-3 → gap-2 */}
+        {images.map((image, index) => (
+          <button
+            key={index}
+            onClick={() => setSelectedImage(index)}
+            className={`
+              aspect-square rounded-md overflow-hidden border-2 transition-all
+              ${
+                selectedImage === index
+                  ? "border-primary-600 shadow-md"
+                  : "border-slate-200 hover:border-slate-300"
+              }
+            `}
+          >
+            <img
+              src={image || "https://placehold.co/100x100/f0fdf4/16a34a?text=Img"}
+              alt={`${product.name} view ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
 
           {/* Product Info */}
           <div className="space-y-6">
