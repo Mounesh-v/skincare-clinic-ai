@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import api from "../../utils/api.js";
 
 // Import your background image
+import signupBg from "../../assets/signup-bg.jpg";
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5005').replace(/\/api\/?$/, '');
 
@@ -113,7 +114,7 @@ const Signup = () => {
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('/images/hero2.jpeg')` }}
+          style={{ backgroundImage: `url(${signupBg})` }}
         >
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/50 to-teal-400/40 backdrop-blur-[2px]"></div>
         </div>

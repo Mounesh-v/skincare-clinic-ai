@@ -2,7 +2,7 @@ import React from 'react';
 import { MapPin, Award, Calendar, Star, Users, Video, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const DoctorNetwork = () => {
+const DoctorNetwork = () => {``
   const navigate = useNavigate();
 
   const features = [

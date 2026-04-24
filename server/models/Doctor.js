@@ -64,6 +64,18 @@ const doctorSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // location
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        required: true,
+      },
+      coordinates: {
+        type: [Number], // [lat, lang]
+        required: true,
+      },
+    },
 
     featured: { type: Boolean, default: false },
 
@@ -91,5 +103,7 @@ doctorSchema.virtual("isAvailable").get(function () {
   });
   return this.availability.includes(today);
 });
+
+doctorSchema.index({ location: "2dsphere" });
 
 export default mongoose.model("Doctor", doctorSchema);

@@ -22,37 +22,35 @@ function ScrollToTop() {
 }
 
 
+
 // Layouts
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import AdminLayout from "./components/admin/AdminLayout";
 
 // Public Pages
-import TrayaStyleHome from './pages/home';
-import StartAssessment from './pages/assessment/StartAssessment.jsx';
-import AnalysisResults from './pages/assessment/Results.jsx';
-import ProductsPage from './pages/ProductsPage';
-import ProductDetail from './pages/ProductDetail';
-import CheckoutPage from './pages/CheckoutPage';
-import Contact from './pages/Contact';
-import Signup from './pages/auth/Signup';
-import Login from './pages/auth/Login.jsx';
-import AuthCallback from './pages/auth/AuthCallback.jsx';
-import FindDoctors from './pages/FindDoctors';
-import OurScience from './pages/OurScience';
-import Ingredients from './pages/Ingredients';
-import ClinicalStudies from './pages/ClinicalStudies';
-import About from './pages/about'
-import Story from './pages/story.jsx'
-import UserProfile from './pages/UserProfile.jsx'
-
-
-
+import TrayaStyleHome from "./pages/home";
+import StartAssessment from "./pages/assessment/StartAssessment.jsx";
+import AnalysisResults from "./pages/assessment/Results.jsx";
+import ProductsPage from "./pages/ProductsPage";
+import ProductDetail from "./pages/ProductDetail";
+import CheckoutPage from "./pages/CheckoutPage";
+import Contact from "./pages/Contact";
+import Signup from "./pages/auth/Signup";
+import Login from "./pages/auth/Login.jsx";
+import AuthCallback from "./pages/auth/AuthCallback.jsx";
+import FindDoctors from "./pages/FindDoctors";
+import OurScience from "./pages/OurScience";
+import Ingredients from "./pages/Ingredients";
+import ClinicalStudies from "./pages/ClinicalStudies";
+import About from "./pages/about";
+import Story from "./pages/story.jsx";
+import UserProfile from "./pages/UserProfile.jsx";
 
 // Admin Pages
 import AdminLogin from "./pages/auth/AdminLogin";
 import Dashboard from "./pages/admin/Dashboard";
-import AdminSpecialOffers from './pages/admin/Feature/AdminSpecialOffers'
+import AdminSpecialOffers from "./pages/admin/Feature/AdminSpecialOffers";
 
 // Admin - Users
 import UserList from "./pages/admin/Users/UserList";
@@ -99,6 +97,8 @@ function App() {
   const [assessmentData, setAssessmentData] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -151,6 +151,25 @@ function App() {
       }
     } catch {
       window.localStorage.removeItem(ASSESSMENT_STORAGE_KEY);
+    }
+  }, []);
+
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (err) => {
+          setError(err.message);
+        }
+      );
+    } else {
+      setError("Geolocation not supported");
     }
   }, []);
 
@@ -232,7 +251,6 @@ function App() {
             <Route path="products/create" element={<ProductCreate />} />
             <Route path="products/:id" element={<ProductView />} />
             <Route path="products/:id/edit" element={<ProductEdit />} />
-            
 
             {/* Orders Management */}
             <Route path="orders" element={<OrderList />} />
@@ -249,10 +267,7 @@ function App() {
             <Route path="doctors/:id/edit" element={<DoctorCreate />} />
 
             {/* Placeholder Routes */}
-            <Route
-              path="Features"
-              element={<FeatureList />}
-            />
+            <Route path="Features" element={<FeatureList />} />
             <Route
               path="analytics"
               element={<ComingSoon title="Analytics & Reports" />}
@@ -263,9 +278,6 @@ function App() {
             <Route path="offers/create" element={<CreateOffer />} />
             <Route path="offers/edit/:id" element={<EditOffer />} />
             <Route path="offers/view/:id" element={<ViewOffer />} />
-
-
-
           </Route>
 
           {/* ============================================ */}
@@ -340,10 +352,8 @@ function PublicAppRoutes({
           }
         />
 
-
-          {/* MedicalPackages Route */}
-           <Route path="/offers" element={<MedicalPackages />} />
-
+        {/* MedicalPackages Route */}
+        <Route path="/offers" element={<MedicalPackages />} />
 
         {/* Find Doctors */}
         <Route path="/find-doctors" element={<FindDoctors />} />

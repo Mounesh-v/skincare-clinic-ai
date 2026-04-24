@@ -17,11 +17,12 @@ import {
   Grid,
   Map as MapIcon,
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import api from "../utils/api.js";
 import DoctorAd from "./DoctorAd.jsx";
+import { useNavigate } from "react-router-dom";
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -38,6 +39,8 @@ const FindDoctors = () => {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("Mumbai, India");
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -50,9 +53,10 @@ const FindDoctors = () => {
     consultationType: "all",
   });
 
+
+
   const [doctorsData, setDoctorsData] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // fetch
   useEffect(() => {
@@ -71,10 +75,10 @@ const FindDoctors = () => {
           reviews: doc.reviews || 0,
           consultationFee: doc.consultationFee,
           address: doc.address,
-          location:
-            doc.location?.lat && doc.location?.lng
-              ? { lat: doc.location.lat, lng: doc.location.lng }
-              : { lat: 19.076, lng: 72.8777 },
+          location: {
+            lat: doc.location?.coordinates?.[1] || 19.076,
+            lng: doc.location?.coordinates?.[0] || 72.8777,
+          },
 
           availability: doc.availability || [],
           nextAvailable: doc.nextAvailable || new Date(),
@@ -155,6 +159,92 @@ const FindDoctors = () => {
     setFilteredDoctors(result);
   }, [searchQuery, filters]);
 
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+  //     </div>
+  //   );
+  // }
+
+  const fetchNearbyDoctors = async (lat, lng) => {
+    try {
+      const res = await api.get(
+        `/api/doctors/nearby?lat=${lat}&lng=${lng}&radius=1000000`,
+      );
+
+      console.log("nearby doctors", res);
+
+      const formatted = formatDoctors(res.data.data);
+      setDoctorsData(formatted);
+      setFilteredDoctors(formatted);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllDoctors = async () => {
+    try {
+      const res = await api.get("/api/doctors");
+      const formatted = formatDoctors(res.data.data);
+      setDoctorsData(formatted);
+      setFilteredDoctors(formatted);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      fetchAllDoctors();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetchNearbyDoctors(position.coords.latitude, position.coords.longitude);
+      },
+      () => {
+        fetchAllDoctors();
+      },
+    );
+  }, []);
+  const formatDoctors = (data) => {
+    return data.map((doc) => ({
+      id: doc._id,
+      name: doc.name,
+      specialization: doc.specialization,
+      qualification: doc.qualification,
+      experience: doc.experience,
+      rating: doc.ratings?.average || 0,
+      reviews: doc.reviews || 0,
+      consultationFee: doc.consultationFee,
+      address: doc.address,
+
+      // ✅ FIX GEOJSON
+      location: {
+        lat: doc.location?.coordinates?.[1] || 19.076,
+        lng: doc.location?.coordinates?.[0] || 72.8777,
+      },
+
+      availability: doc.availability || [],
+      nextAvailable: doc.nextAvailable,
+      gender: doc.gender,
+      languages: doc.languages || [],
+      about: doc.about,
+      image: doc.image,
+      consultationType: doc.consultationType || [],
+      featured: doc.featured,
+      timeSlots: doc.timeSlots || [],
+      phone: doc.phone || "",
+      email: doc.email || "",
+    }));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -165,7 +255,7 @@ const FindDoctors = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <DoctorAd/>
+      <DoctorAd />
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -208,19 +298,21 @@ const FindDoctors = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-3 rounded-lg transition-colors ${viewMode === "grid"
+                className={`p-3 rounded-lg transition-colors ${
+                  viewMode === "grid"
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
+                }`}
               >
                 <Grid className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setViewMode("map")}
-                className={`p-3 rounded-lg transition-colors ${viewMode === "map"
+                className={`p-3 rounded-lg transition-colors ${
+                  viewMode === "map"
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
+                }`}
               >
                 <MapIcon className="w-5 h-5" />
               </button>
@@ -335,10 +427,11 @@ const FilterSidebar = ({ filters, setFilters }) => {
               <button
                 key={gender}
                 onClick={() => setFilters({ ...filters, gender })}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filters.gender === gender
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filters.gender === gender
                     ? "bg-emerald-600 text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
+                }`}
               >
                 {gender === "all" ? "Any" : gender}
               </button>
@@ -500,9 +593,9 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
           <span className="text-sm font-semibold text-emerald-600">
             {doctor.nextAvailable
               ? new Date(doctor.nextAvailable).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })
+                  month: "short",
+                  day: "numeric",
+                })
               : "Not specified"}
           </span>
         </div>
@@ -523,12 +616,36 @@ const DoctorCard = ({ doctor, onViewDetails }) => {
   );
 };
 
-// Map View Component
+// Auto-fit all doctor markers into map bounds
+const MapBounds = ({ bounds }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!bounds || bounds.length === 0) return;
+    if (bounds.length === 1) {
+      map.setView(bounds[0], 12);
+    } else {
+      map.fitBounds(bounds, { padding: [40, 40] });
+    }
+  }, [map, bounds]);
+
+  return null;
+};
+
 const MapView = ({ doctors, onMarkerClick }) => {
-  const center =
-    doctors.length > 0
-      ? [doctors[0].location.lat, doctors[0].location.lng]
-      : [19.076, 72.8777]; // Mumbai default
+  const greenIcon = new L.Icon({
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+    iconRetinaUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  });
+
+  const bounds = doctors.map((doctor) => [doctor.location.lat, doctor.location.lng]);
 
   return (
     <div
@@ -536,7 +653,7 @@ const MapView = ({ doctors, onMarkerClick }) => {
       style={{ height: "700px" }}
     >
       <MapContainer
-        center={center}
+        center={doctors.length > 0 ? bounds[0] : [19.076, 72.8777]}
         zoom={12}
         style={{ height: "100%", width: "100%" }}
       >
@@ -544,10 +661,12 @@ const MapView = ({ doctors, onMarkerClick }) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
+        <MapBounds bounds={bounds} />
         {doctors.map((doctor) => (
           <Marker
             key={doctor.id}
             position={[doctor.location.lat, doctor.location.lng]}
+            icon={greenIcon}
             eventHandlers={{
               click: () => onMarkerClick(doctor),
             }}
@@ -714,10 +833,11 @@ const DoctorModal = ({ doctor, onClose }) => {
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                 <span
                   key={day}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${doctor.availability.includes(day)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    doctor.availability.includes(day)
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 text-slate-400"
-                    }`}
+                  }`}
                 >
                   {day}
                 </span>
@@ -735,10 +855,11 @@ const DoctorModal = ({ doctor, onClose }) => {
                 <button
                   key={time}
                   onClick={() => setSelectedTime(time)}
-                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${selectedTime === time
+                  className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    selectedTime === time
                       ? "bg-emerald-600 text-white"
                       : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
+                  }`}
                 >
                   {time}
                 </button>

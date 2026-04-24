@@ -164,7 +164,7 @@ const DoctorCreate = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic client-side validation
+    // ✅ Validation
     if (!formData.name.trim()) return toast.error("Name is required");
     if (!formData.specialization)
       return toast.error("Specialization is required");
@@ -180,11 +180,12 @@ const DoctorCreate = () => {
     setLoading(true);
 
     try {
+      // Only send clean payload
       const payload = {
         ...formData,
         experience: Number(formData.experience),
         consultationFee: Number(formData.consultationFee),
-        // location: formData.location.lat && formData.location.lng ? formData.location : undefined,
+        address: formData.address.trim(), // clean input
       };
 
       let res;
@@ -204,7 +205,8 @@ const DoctorCreate = () => {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
-        console.log("doctor details", res.data);
+
+        console.log("Doctor created:", res.data);
         toast.success("Doctor created successfully!");
       }
 

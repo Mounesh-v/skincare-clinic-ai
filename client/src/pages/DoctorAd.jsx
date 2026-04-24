@@ -20,6 +20,7 @@ const slides = [
 
 const DoctorSlider = () => {
   const [current, setCurrent] = useState(0);
+  
 
   // auto slide
   useEffect(() => {

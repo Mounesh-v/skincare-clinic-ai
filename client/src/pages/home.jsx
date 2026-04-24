@@ -34,6 +34,15 @@ function HomePage() {
   );
 }
 
+import heroImage from "../assets/heroImage.jpg";
+import beforeImage from "../assets/beforeImage.jpg";
+import afterImage from "../assets/afterImage.jpg";
+import bgPattern from "../assets/hero2.jpg";
+import beforeImage2 from "../assets/beforeImage2.jpg";
+import afterImage2 from "../assets/afterImage2.jpg";
+// At the top of your file
+import ctaBg from "../assets/hero3.jpg";
+
 import { ClipboardList, Brain, UserCheck } from "lucide-react";
 
 /**
@@ -58,7 +67,7 @@ const TrayaStyleHome = () => {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-slate-900 leading-tight">
-                Healthier Skin Starts With Understanding
+                 Healthier Skin Starts With Understanding
                 <span className="text-primary-600"> Your Roots</span>
               </h1>
 
@@ -135,7 +144,7 @@ const TrayaStyleHome = () => {
               <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-primary-500/20">
                 <div className="aspect-[4/5] bg-gradient-to-br from-primary-400 to-secondary-100">
                   <img
-                    src="/images/heroImage.jpg"
+                    src={heroImage}
                     alt="Start Your Journey"
                     className="w-full h-full object-cover"
                   />
@@ -282,6 +291,8 @@ const TrayaStyleHome = () => {
         </div>
       </section>
 
+      
+
       <SpecialOffersBanner />
 
       {/* Why Take Test Section */}
@@ -294,7 +305,7 @@ const TrayaStyleHome = () => {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: `url('/images/hero2.jpeg')`,
+              backgroundImage: `url(${bgPattern})`,
             }}
           ></div>
         </div>
@@ -324,9 +335,9 @@ const TrayaStyleHome = () => {
                 {/* BEFORE Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src="/images/beforeImage.jpeg"
+                    src={beforeImage}
                     alt="Before treatment"
-                    className="h-full w-full scale-140 my-8 object-cover  group-hover:scale-150 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback to emoji if image fails
                       e.target.style.display = "none";
@@ -351,7 +362,7 @@ const TrayaStyleHome = () => {
                 {/* AFTER Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src="/images/afterImage2.jpeg"
+                    src={afterImage}
                     alt="After 60 days treatment"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -365,23 +376,13 @@ const TrayaStyleHome = () => {
                     className="absolute inset-0 items-center justify-center text-center p-6"
                     style={{ display: "none" }}
                   >
-                    {/* <p className="text-4xl mb-2">😊</p> */}
-                    <img
-                    src="/images/afterImage2.jpeg"
-                    alt="After 60 days treatment"
-                    className="w-full h-full  scale-140  object-cover group-hover:scale-150 transition-transform duration-300"
-                    onError={(e) => {
-                      // Fallback to emoji if image fails
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "flex";
-                    }}/>
+                    <p className="text-4xl mb-2">😊</p>
                   </div>
                   {/* Label overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-600/80 to-transparent p-4">
                     <p className="text-sm font-semibold text-white text-center">
                       AFTER 60 DAYS
                     </p>
-                    
                   </div>
                 </div>
               </div>
@@ -413,9 +414,9 @@ const TrayaStyleHome = () => {
                 {/* BEFORE Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src="/images/beforeImage2.jpeg"
+                    src={beforeImage2}
                     alt="Before treatment"
-                    className="h-full w-full scale-140 my-8 object-cover  group-hover:scale-150 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback to emoji if image fails
                       e.target.style.display = "none";
@@ -440,9 +441,9 @@ const TrayaStyleHome = () => {
                 {/* AFTER Image */}
                 <div className="aspect-square bg-slate-100 relative overflow-hidden group">
                   <img
-                    src="/images/afterImage2.jpeg"
+                    src={afterImage2}
                     alt="After 60 days treatment"
-                    className="w-full h-full -my-12 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       // Fallback to emoji if image fails
                       e.target.style.display = "none";
@@ -517,7 +518,7 @@ const TrayaStyleHome = () => {
         {/* Single Background Image for both sections */}
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('/images/hero2.jpeg')` }}
+          style={{ backgroundImage: `url(${ctaBg})` }}
         ></div>
 
         {/* Guarantee Section */}

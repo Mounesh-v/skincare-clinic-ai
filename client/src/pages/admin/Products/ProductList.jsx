@@ -60,79 +60,7 @@ const ProductList = () => {
   };
 
   const handleExport = () => {
-    try {
-      if (!products.length) {
-        toast.error("No products to export");
-        return;
-      }
-
-      const headers = [
-        "ID",
-        "Name",
-        "Category",
-        "Description",
-        "Price",
-        "Original Price",
-        "Discount Percentage",
-        "Stock",
-        "Status",
-        "Sold",
-        "Views",
-        "Rating Average",
-        "Rating Count",
-        "Skin Types",
-        "Benefits",
-        "Concerns",
-        "Ingredients",
-        "How To Use",
-        "Featured",
-        "Weight Unit",
-        "Slug",
-        "Created At",
-        "Updated At",
-      ];
-
-      const rows = products.map((p) => [
-        p.id || p._id,
-        p.name,
-        p.category,
-        p.description,
-        p.price,
-        p.originalPrice,
-        p.discountPercentage,
-        p.stock,
-        p.status,
-        p.sold,
-        p.views,
-        p.ratings?.average,
-        p.ratings?.count,
-        (p.skinTypes || []).join(", "),
-        (p.benefits || []).join(", "),
-        (p.concerns || []).join(", "),
-        (p.ingredients || []).join(", "),
-        p.howToUse,
-        p.featured,
-        p.weight?.unit,
-        p.slug,
-        p.createdAt,
-        p.updatedAt,
-      ]);
-
-      const csvContent =
-        "data:text/csv;charset=utf-8," +
-        [headers, ...rows]
-          .map((e) => e.map((v) => `"${v ?? ""}"`).join(","))
-          .join("\n");
-
-      const link = document.createElement("a");
-      link.href = encodeURI(csvContent);
-      link.download = "products.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      toast.error("Failed to export data");
-    }
+    toast.success("Exporting products data...");
   };
 
   // TABLE COLUMNS
@@ -217,9 +145,8 @@ const ProductList = () => {
 
         return (
           <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              statusColors[value]
-            }`}
+            className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[value]
+              }`}
           >
             {value}
           </span>
@@ -232,11 +159,10 @@ const ProductList = () => {
       accessor: "featured",
       render: (value) => (
         <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${
-            value
+          className={`px-3 py-1 rounded-full text-xs font-medium ${value
               ? "bg-purple-100 text-purple-700"
               : "bg-slate-100 text-slate-600"
-          }`}
+            }`}
         >
           {value ? "Yes" : "No"}
         </span>

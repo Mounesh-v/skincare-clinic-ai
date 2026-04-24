@@ -314,4 +314,4 @@ const SpecialOffersBanner = () => {
   );
 };
 
-export default SpecialOffersBanner;
+export default  SpecialOffersBanner;

@@ -120,7 +120,7 @@ const ProductShowcase = () => {
 
       const data = await productService.getAll(filters);
 
-      // cd     console.log("data", data);
+      // console.log("data", data);
 
       // Handle any backend response format safely
       let productsArray = [];

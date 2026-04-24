@@ -1,9 +1,30 @@
 import Doctor from "../models/Doctor.js";
 import asyncHandler from "express-async-handler";
+import { getCoordinates } from "../utils/geocode.js";
 
 /* CREATE */
 export const createDoctor = asyncHandler(async (req, res) => {
-  const doctor = await Doctor.create(req.body);
+  const { address } = req.body;
+
+  if (!address) {
+    res.status(400);
+    throw new Error("Address is required");
+  }
+
+  //  Step 1: Get coordinates from address
+  const { lat, lng } = await getCoordinates(address);
+
+  //  Step 2: Create location object
+  const location = {
+    type: "Point",
+    coordinates: [lng, lat], 
+  };
+
+  //  Step 3: Save doctor
+  const doctor = await Doctor.create({
+    ...req.body,
+    location,
+  });
 
   res.status(201).json({
     success: true,
@@ -156,5 +177,42 @@ export const updateDoctorRating = asyncHandler(async (req, res) => {
     success: true,
     message: "Rating updated",
     ratings: doctor.ratings,
+  });
+});
+
+
+/* =====================================================
+User Can Acces Location Based Doctors
+===================================================== */
+
+export const getNearbyDoctors = asyncHandler(async (req, res) => {
+  let { lat, lng, radius } = req.query;
+
+  // Convert to numbers
+  lat = Number(lat);
+  lng = Number(lng);
+  radius = Number(radius) || 1000000; // default  1000 km 
+
+  if (!lat || !lng) {
+    res.status(400);
+    throw new Error("Latitude and Longitude are required");
+  }
+
+  const doctors = await Doctor.find({
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [lng, lat], //  IMPORTANT
+        },
+        $maxDistance: radius,
+      },
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    count: doctors.length,
+    data: doctors,
   });
 });
