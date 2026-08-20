@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Users, ShoppingCart, Package, TrendingUp, Eye, Edit, Trash2 } from 'lucide-react';
+import { Users, ShoppingCart, Package, TrendingUp, Eye, Edit, Trash2, Store, CheckCircle, XCircle, Bell } from 'lucide-react';
 import StatsCard from '../../components/admin/StatsCard';
 import LineChart from '../../components/admin/Charts/LineChart';
 import BarChart from '../../components/admin/Charts/BarChart';
 import DataTable from '../../components/admin/DataTable';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import api from '../../utils/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [pendingVendors, setPendingVendors] = useState([]);
+  const [updatingId, setUpdatingId] = useState(null);
   const [stats, setStats] = useState({
     totalUsers: 1248,
     totalOrders: 856,
@@ -132,6 +136,45 @@ const Dashboard = () => {
     },
   ];
 
+  useEffect(() => {
+    const fetchPendingVendors = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const res = await api.get('/api/admin/vendors', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPendingVendors(
+          (res.data.vendors || []).filter((v) => v.status === 'Pending'),
+        );
+      } catch (error) {
+        // silent - non-critical dashboard widget
+      }
+    };
+    fetchPendingVendors();
+  }, []);
+
+  const updateVendorStatus = async (id, status) => {
+    setUpdatingId(id);
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await api.patch(
+        `/api/admin/vendors/${id}/status`,
+        { status },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setPendingVendors((prev) => prev.filter((v) => v._id !== id));
+      toast.success(
+        `${res.data.vendor.businessName} ${
+          status === 'Approved' ? 'approved' : 'rejected'
+        } successfully`,
+      );
+    } catch (error) {
+      toast.error('Failed to update vendor status');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -231,6 +274,90 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* Pending Vendor Approvals */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+            <Bell className="w-5 h-5 text-yellow-600" />
+            Pending Vendor Approvals
+            {pendingVendors.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
+                {pendingVendors.length} new
+              </span>
+            )}
+          </h2>
+          <button
+            onClick={() => navigate('/admin/vendors')}
+            className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+          >
+            View All →
+          </button>
+        </div>
+        {pendingVendors.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
+            <p className="text-slate-500">No pending vendor registrations</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <table className="w-full">
+              <tbody className="divide-y divide-slate-200">
+                {pendingVendors.map((vendor) => (
+                  <tr key={vendor._id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-semibold">
+                          <Store className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-900">
+                            {vendor.businessName}
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {vendor.ownerName} · {vendor.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {vendor.city || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {vendor.createdAt
+                        ? new Date(vendor.createdAt).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => updateVendorStatus(vendor._id, 'Approved')}
+                          disabled={updatingId === vendor._id}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => updateVendorStatus(vendor._id, 'Rejected')}
+                          disabled={updatingId === vendor._id}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl p-6 text-white">
@@ -256,13 +383,13 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-2">View Analytics</h3>
-          <p className="text-purple-100 text-sm mb-4">Check detailed reports</p>
+          <h3 className="text-lg font-semibold mb-2">Manage Vendors</h3>
+          <p className="text-purple-100 text-sm mb-4">Review registrations and approvals</p>
           <button
-            onClick={() => navigate('/admin/analytics')}
+            onClick={() => navigate('/admin/vendors')}
             className="bg-white text-purple-600 px-4 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-colors"
           >
-            View Reports
+            View Vendors
           </button>
         </div>
       </div>

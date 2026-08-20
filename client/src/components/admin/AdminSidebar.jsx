@@ -58,9 +58,9 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
       path: "/admin/Features",
     },
     {
-      name: "Analytics",
+      name: "Vendors",
       icon: BarChart3,
-      path: "/admin/analytics",
+      path: "/admin/vendors",
     },
     {
       name: "Settings",

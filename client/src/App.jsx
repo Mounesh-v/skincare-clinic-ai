@@ -80,15 +80,30 @@ import CreateOffer from "./pages/admin/Offer/CreateOffer";
 import OfferList from "./pages/admin/Offer/OffersList";
 import EditOffer from "./pages/admin/Offer/EditOffer";
 import ViewOffer from "./pages/admin/Offer/ViewOffer";
+import VendorList from "./pages/admin/Vendors/VendorList";
 
 const ASSESSMENT_STORAGE_KEY = "assessmentResultV2";
 
 /**
  * GuestRoute — redirects authenticated users away from auth pages (/login, /signup)
  */
-function GuestRoute({ isAuthenticated, children }) {
+function GuestRoute({ isAuthenticated, user, children }) {
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return user?.role === "admin" ? (
+      <Navigate to="/admin/dashboard" replace />
+    ) : (
+      <Navigate to="/" replace />
+    );
+  }
+  return children;
+}
+
+/**
+ * CustomerRoute — blocks admins from accessing the customer UI
+ */
+function CustomerRoute({ user, children }) {
+  if (user?.role === "admin") {
+    return <Navigate to="/admin/dashboard" replace />;
   }
   return children;
 }
@@ -232,6 +247,16 @@ function App() {
           {/* ADMIN ROUTES (No Header/Footer) */}
           {/* ============================================ */}
           <Route
+            path="/admin/login"
+            element={
+              user?.role === "admin" ? (
+                <Navigate to="/admin/dashboard" replace />
+              ) : (
+                <AdminLogin />
+              )
+            }
+          />
+          <Route
             path="/admin"
             element={
               <AdminRoute>
@@ -269,8 +294,8 @@ function App() {
             {/* Placeholder Routes */}
             <Route path="Features" element={<FeatureList />} />
             <Route
-              path="analytics"
-              element={<ComingSoon title="Analytics & Reports" />}
+              path="vendors"
+              element={<VendorList />}
             />
             <Route path="settings" element={<ComingSoon title="Settings" />} />
 
@@ -286,13 +311,15 @@ function App() {
           <Route
             path="/*"
             element={
-              <PublicAppRoutes
-                isAuthenticated={isAuthenticated}
-                user={user}
-                onLogout={handleLogout}
-                assessmentData={assessmentData}
-                onAssessmentComplete={handleAssessmentComplete}
-              />
+              <CustomerRoute user={user}>
+                <PublicAppRoutes
+                  isAuthenticated={isAuthenticated}
+                  user={user}
+                  onLogout={handleLogout}
+                  assessmentData={assessmentData}
+                  onAssessmentComplete={handleAssessmentComplete}
+                />
+              </CustomerRoute>
             }
           />
         </Routes>
@@ -369,7 +396,7 @@ function PublicAppRoutes({
         <Route
           path="/signup"
           element={
-            <GuestRoute isAuthenticated={isAuthenticated}>
+            <GuestRoute isAuthenticated={isAuthenticated} user={user}>
               <Signup />
             </GuestRoute>
           }
@@ -377,7 +404,7 @@ function PublicAppRoutes({
         <Route
           path="/login"
           element={
-            <GuestRoute isAuthenticated={isAuthenticated}>
+            <GuestRoute isAuthenticated={isAuthenticated} user={user}>
               <Login />
             </GuestRoute>
           }

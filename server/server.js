@@ -1,6 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
+import dns from "node:dns";
 import connectDB from "./config/database.js";
+
+// This network's DNS server refuses Node's c-ares lookups (ECONNREFUSED on
+// resolveSrv/resolve4), which breaks mongodb+srv:// connections. Public DNS
+// answers these queries fine, so route all Node DNS through it permanently.
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 import authUser from "./router/auth.js";
 import cors from "cors";
 import session from "express-session";
