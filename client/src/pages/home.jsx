@@ -146,8 +146,9 @@ const TrayaStyleHome = () => {
                   <img
                     src={heroImage}
                     alt="Start Your Journey"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover "
                   />
+                  
                   {/* Optional overlay with text */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent flex items-end pb-13">
                     <div className="text-center text-white p-8 w-full">
