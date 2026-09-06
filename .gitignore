@@ -17,10 +17,7 @@ ml/data/
 # Model weights (too large for git)
 ml/models/*.pt
 ml/models/*.pth
-<<<<<<< HEAD
 ml/assets/*.task
-=======
->>>>>>> 63ab1da28b61f318ccaaa975e1be3874046028bb
 
 # IDE
 .vscode/
@@ -34,6 +31,11 @@ Thumbs.db
 
 # Logs
 *.log
+training_log.txt
+
+# Local backups
+*_backup_*
+check_model.py
 
 # Environment files — never commit real secrets
 server/.env

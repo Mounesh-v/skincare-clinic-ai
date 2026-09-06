@@ -25,5 +25,7 @@
   },
   "image_size": 384,
   "model": "efficientnet_v2_s",
-  "timestamp": 1773367805.3202705
+  "val_accuracy": 0.9826,
+  "epoch": 9,
+  "timestamp": 1788678337.248998
 }

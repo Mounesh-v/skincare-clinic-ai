@@ -177,29 +177,32 @@ def infer_skin_type_vit(image_rgb: np.ndarray) -> Dict[str, Any]:
         id2label: Dict[int, str] = model.config.id2label
 
         # Step 1: Extract logits to dict mapped by canonical class names.
-        # ViT output is limited to oily/dry/normal.
+        # ViT output is limited to oily/dry/normal (no combination class).
         raw_logits = logits.squeeze(0).tolist()
         logits_dict = {"oily": 0.0, "dry": 0.0, "normal": 0.0}
-        
+
         for idx, raw_label in id2label.items():
             canonical = _LABEL_MAP.get(raw_label.lower(), raw_label.lower())
             if canonical in logits_dict:
                 logits_dict[canonical] += raw_logits[idx]
 
-        # Step 2: Apply mild bias correction.
-        # Reduced from -0.25/-0.15 — the original values overcorrected and
-        # prevented Oily from ever winning the ensemble blend.
-        logits_dict["oily"]   -= 0.10
-        logits_dict["normal"] += 0.05
+        # Step 2: NO bias correction applied here.
+        # The previous -0.10 oily correction was causing oily skin to be
+        # systematically under-classified. The rule engine + zone calibration
+        # in the ensemble already handle correction via feature signals.
+        # Removing the hardcoded bias lets the ViT vote based purely on
+        # what it sees in the image.
 
         # Step 3: Convert back to list preserving a fixed ordering
         order = ["oily", "dry", "normal"]
         adjusted_logits = [logits_dict[k] for k in order]
 
         # Step 4: Apply temperature scaling and softmax.
-        # T=0.8 sharpens the distribution → confident predictions reach 65%+.
-        # Previous T=1.2 was softening every output, capping confidence at ~55%.
-        _TEMPERATURE = 0.8
+        # T=0.9 (raised from 0.8) slightly softens the distribution so the
+        # ensemble can blend ViT and rule scores more smoothly.
+        # T=0.8 was over-sharpening — any class with a small logit advantage
+        # would monopolise the probability mass before blending.
+        _TEMPERATURE = 0.9
         scaled_logits = torch.tensor(adjusted_logits) / _TEMPERATURE
         probs = F.softmax(scaled_logits, dim=-1).tolist()
 
@@ -237,8 +240,8 @@ def infer_skin_type_ensemble(
     image_rgb: "np.ndarray",
     condition_probs: "dict[str, float]",
     features: "dict[str, float | bool] | None" = None,
-    vit_weight: float = 0.65,
-    rule_weight: float = 0.35,
+    vit_weight: float = 0.70,   # raised from 0.65 — ViT is more reliable than
+    rule_weight: float = 0.30,  # weak EfficientNet signal until retrain is done
 ) -> "dict":
     """
     Ensemble blend of ViT model + rule-based skin type inference.
@@ -247,8 +250,8 @@ def infer_skin_type_ensemble(
     - EfficientNet confidence >= 0.75 → rule_weight=0.80, vit_weight=0.20
     - EfficientNet confidence >= 0.60 → rule_weight=0.65, vit_weight=0.35
     - EfficientNet confidence >= 0.50 → rule_weight=0.50, vit_weight=0.50
-    - EfficientNet confidence <  0.50 → rule_weight=0.35, vit_weight=0.65
-    
+    - EfficientNet confidence <  0.50 → rule_weight=0.30, vit_weight=0.70
+
     Args:
         image_rgb: np.ndarray of shape (224, 224, 3), dtype uint8 or float32
         condition_probs: Dictionary with EfficientNet condition probabilities
@@ -256,7 +259,7 @@ def infer_skin_type_ensemble(
         features: Optional calibrated feature flags/metrics for rule engine
         vit_weight: Default ViT weight (used when EfficientNet confidence < 0.50)
         rule_weight: Default rule weight (used when EfficientNet confidence < 0.50)
-    
+
     Returns:
         Dictionary containing:
             - skin_type: Predicted skin type
@@ -292,11 +295,7 @@ def infer_skin_type_ensemble(
     vit_result = infer_skin_type_vit(image_rgb)
 
     # Apply zone-aware calibrations to the raw ViT scores using the feature
-    # signals extracted in analyzer.py.  This mirrors the logic that was
-    # previously defined in SkinAnalyzerService._apply_zone_aware_adjustment
-    # but could never fire because ViT runs inside this function.
-    # Calibration only fires when feature signals are provided; it has no
-    # effect on the FINAL_LOCK path because vit_scores are not used there.
+    # signals extracted in analyzer.py.
     if features:
         _cal = dict(vit_result)
         _t_high  = bool(features.get("t_zone_shine_high",  False))
@@ -310,25 +309,25 @@ def infer_skin_type_ensemble(
         if _t_high and not _c_high:
             _cal["combination"] = _cal.get("combination", 0.0) + 0.05
 
-        # No shine signal anywhere → modest oily correction only.
-        # Reduced from -0.10 to -0.05: the aggressive penalty was combining with
-        # the logit bias correction to make Oily unreachable for most real images.
+        # No shine signal anywhere — apply only a very small oily correction.
+        # Reduced from -0.05 to -0.03: the previous value was still combining
+        # with the logit bias to make Oily unreachable on typical indoor photos.
         if not _t_high and not _c_high and not _spec:
-            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)
-            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.03)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.03
         elif _b_high and not _spec:
             # Bright image but no specular hotspots → good lighting, not shine
-            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)
-            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.03)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.03
 
         # High edge density + low shine → beard/texture noise, not sebum
         if _e_high and not _c_high:
-            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.05)
-            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+            _cal["oily"]   = max(0.0, _cal.get("oily",   0.0) - 0.03)
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.03
 
-        # Smooth, low-roughness face → normal skin tendency
+        # Smooth, low-roughness face → normal skin tendency (very gentle nudge)
         if not _rough and not _t_high:
-            _cal["normal"] = _cal.get("normal", 0.0) + 0.05
+            _cal["normal"] = _cal.get("normal", 0.0) + 0.03
 
         _cal_total = sum(max(0.0, v) for v in _cal.values())
         vit_scores = (
@@ -354,10 +353,12 @@ def infer_skin_type_ensemble(
     vit_type = max(vit_scores, key=lambda k: float(vit_scores.get(k, 0.0)))
     vit_conf = float(max(vit_scores.values())) if vit_scores else 0.0
 
-    # ── Step 4a: FINAL_LOCK when rule engine is confident (≥ 0.70) ────────
-    # Below that threshold, blend ViT + rule scores weighted by their
-    # respective confidences so ViT can correct low-confidence Normal bias.
-    _LOCK_THRESHOLD = 0.70
+    # ── Step 4a: FINAL_LOCK when rule engine is confident (≥ 0.60) ────────
+    # Lowered from 0.70 → 0.60: the rule engine now uses amplified signals so
+    # reaching 0.60 confidence is more meaningful than before.  This gives ViT
+    # more say for moderate predictions while still respecting strong rule
+    # outputs (e.g. very oily or very dry skin).
+    _LOCK_THRESHOLD = 0.60
 
     if rule_conf >= _LOCK_THRESHOLD:
         # Rule engine wins outright — high-confidence lock.
@@ -401,10 +402,10 @@ def infer_skin_type_ensemble(
             blend_active   = True
 
     # ── Step 5: Build response ────────────────────────────────────────────
-    # Lowered from 0.30 → 0.25 so moderate-oily faces (conf ~0.28) are not
-    # swallowed by the Uncertain bucket.  0.25 still filters genuinely
-    # ambiguous predictions while letting real skin types through.
-    if final_conf < 0.25:
+    # Lowered from 0.25 → 0.20: with amplified signals, confidence scores
+    # are more meaningful, so we can use a lower threshold before declaring
+    # the result "Uncertain". This prevents valid predictions from being hidden.
+    if final_conf < 0.20:
         skin_type   = "Uncertain - Retake image"
         explanation = (
             f"Low ensemble confidence ({final_conf*100:.0f}%) "
@@ -422,8 +423,6 @@ def infer_skin_type_ensemble(
     # meaningful dryness signal (> 35%) simultaneously, the mixed-zone
     # pattern warrants a Combination classification regardless of what the
     # individual models voted for.
-    # Rule engine thresholds, FINAL_LOCK, ViT weights, rule_conf, vit_conf,
-    # and EfficientNet outputs are NOT modified by this step.
     _COMBO_OIL_MIN   = 0.10   # oil score must exceed this
     _COMBO_DRY_MIN   = 0.35   # dry score must exceed this
     combination_override = False
@@ -432,8 +431,7 @@ def infer_skin_type_ensemble(
     _dry_score = float(final_scores.get("dry",  0.0))
 
     # Oily priority: if the oily score dominates the dry score, do NOT force
-    # Combination — let Oily stand.  Override only fires when dryness is at
-    # least as strong as oiliness, meaning a true mixed-zone pattern.
+    # Combination — let Oily stand.
     if _oil_score > _COMBO_OIL_MIN and _dry_score > _COMBO_DRY_MIN and _dry_score >= _oil_score:
         combination_override = True
         final_type_key = "combination"
@@ -479,6 +477,3 @@ def infer_skin_type_ensemble(
         "explanation": explanation,
         "source":      _source,
     }
-
-
-
