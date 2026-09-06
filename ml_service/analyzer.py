@@ -500,9 +500,9 @@ class SkinAnalyzerService:
         top_conds = condition_contributions[:2]
         if top_conds:
             cond_phrases = " ".join(f"{c['contribution']}." for c in top_conds)
-            enriched_explanation = f"{cond_phrases} Overall classification: {skin_type} ({confidence:.0%} confidence ΓÇö {confidence_level})."
+            enriched_explanation = f"{cond_phrases} Overall classification: {skin_type} ({confidence:.0%} confidence - {confidence_level})."
         else:
-            enriched_explanation = f"Classified as {skin_type} ({confidence:.0%} confidence ΓÇö {confidence_level})."
+            enriched_explanation = f"Classified as {skin_type} ({confidence:.0%} confidence - {confidence_level})."
 
         LOGGER.info(
             "XAI | confidence_level=%s top_predictions=%s contributions=%d",

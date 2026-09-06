@@ -134,7 +134,7 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
 
   return (
     <>
-      <header className="sticky top-0 z-[1000] bg-gradient-to-br  from-white tp-teal-50 to-emerald-200 py-1 border-b border-slate-50 ">
+      <header className="sticky top-0 z-[1000] bg-slate-900/80 backdrop-blur-md py-1 border-b border-slate-800">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -154,35 +154,35 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
             <div className="hidden lg:flex items-center gap-8">
               <button
                 onClick={() => setFullscreenMenuOpen(true)}
-                className="text-slate-700 cursor-pointer hover:text-emerald-600 font-medium transition-colors duration-200"
+                className="text-slate-300 cursor-pointer hover:text-emerald-400 font-medium transition-colors duration-200 text-sm"
               >
                 Explore
               </button>
               <Link
                 to="/products"
                 onClick={() => setFullscreenMenuOpen(false)}
-                className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
+                className="text-slate-300 hover:text-emerald-400 font-medium transition-colors duration-200 text-sm"
               >
                 Products
               </Link>
               <Link
                 to="/find-doctors"
                 onClick={() => setFullscreenMenuOpen(false)}
-                className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
+                className="text-slate-300 hover:text-emerald-400 font-medium transition-colors duration-200 text-sm"
               >
                 Doctors
               </Link>
               <Link
                 to="/Offers"
                 onClick={() => setFullscreenMenuOpen(false)}
-                className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
+                className="text-slate-300 hover:text-emerald-400 font-medium transition-colors duration-200 text-sm"
               >
                 Offers
               </Link>
               <Link
                 to="/contact"
                 onClick={() => setFullscreenMenuOpen(false)}
-                className="text-slate-700 hover:text-emerald-600 font-medium transition-colors duration-200"
+                className="text-slate-300 hover:text-emerald-400 font-medium transition-colors duration-200 text-sm"
               >
                 Contact
               </Link>
@@ -480,21 +480,21 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                 </div>
               ) : (
                 // ===== NOT LOGGED IN VIEW =====
-                <>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => navigate("/login")}
-                    className="bg-emerald-600 px-5  py-2 text-white rounded-xl  hover:text-emerald-600"
+                    className="px-4 py-2 text-sm font-semibold text-slate-200 hover:text-emerald-400 transition-colors"
                   >
                     Login
                   </button>
 
                   <button
                     onClick={() => navigate("/signup")}
-                    className="hidden md:block px-6 py-2 bg-emerald-600 text-white rounded-lg"
+                    className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-slate-950 bg-gradient-to-r from-teal-400 to-emerald-400 rounded-xl hover:from-teal-300 hover:to-emerald-300 shadow-md shadow-emerald-950/30 transition-all active:scale-95"
                   >
                     Get Started
                   </button>
-                </>
+                </div>
               )}
 
               {/* Hamburger — hidden on lg+ (desktop uses top nav links) */}
