@@ -35,6 +35,7 @@ import AnalysisResults from "./pages/assessment/Results.jsx";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetail from "./pages/ProductDetail";
 import CheckoutPage from "./pages/CheckoutPage";
+import OrderSuccess from "./pages/OrderSuccess";
 import Contact from "./pages/Contact";
 import Signup from "./pages/auth/Signup";
 import Login from "./pages/auth/Login.jsx";
@@ -75,6 +76,7 @@ import DoctorDetails from "./pages/admin/Doctors/DoctorDetails";
 import DoctorCreate from "./pages/admin/Doctors/DoctorCreate";
 import AdminRoute from "./pages/auth/AdminRoute";
 import FeatureList from "./pages/admin/Feature/FeatureList.jsx";
+import AdsList from "./pages/admin/Ads/AdsList.jsx";
 import MedicalPackages from "./pages/MedicalPackages/MedicalPackages";
 import CreateOffer from "./pages/admin/Offer/CreateOffer";
 import OfferList from "./pages/admin/Offer/OffersList";
@@ -293,6 +295,7 @@ function App() {
 
             {/* Placeholder Routes */}
             <Route path="Features" element={<FeatureList />} />
+            <Route path="ads" element={<AdsList />} />
             <Route
               path="vendors"
               element={<VendorList />}
@@ -391,6 +394,7 @@ function PublicAppRoutes({
 
         {/* Checkout */}
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
 
         {/* Auth */}
         <Route

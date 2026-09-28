@@ -4,7 +4,7 @@ import AdBanner from "./AdBanner";
 
 export default function ProductHero() {
   return (
-    <section className="w-full min-h-[85vh]">
+    <section className="w-full">
 
   {/* Full Width Right Side */}
   <div className="flex items-center w-full">

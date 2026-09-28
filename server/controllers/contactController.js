@@ -1,0 +1,42 @@
+import Contact from "../models/Contact.js";
+import { notifyAdmin } from "./notificationController.js";
+
+export const submitContact = async (req, res) => {
+  try {
+    const { name, email, phone, topic, message } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email and message are required",
+      });
+    }
+
+    const contact = await Contact.create({ name, email, phone, topic, message });
+
+    notifyAdmin({
+      type: "system",
+      title: "New Contact Message",
+      message: `${name} sent a message via contact form (${topic || "general"}).`,
+      data: { contactId: contact._id, email, actions: [{ action: "open", title: "View" }, { action: "dismiss", title: "Dismiss" }] },
+      link: `/admin/contacts`,
+    }).catch(() => {});
+
+    res.status(201).json({
+      success: true,
+      message: "Message sent successfully",
+      contact,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getContacts = async (req, res) => {
+  try {
+    const contacts = await Contact.find().sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: contacts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

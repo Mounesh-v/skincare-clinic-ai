@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import toast from "react-hot-toast";
 import api from "../../utils/api";
 import { 
@@ -15,7 +14,8 @@ import {
   ArrowRight,
   Star,
   Clock,
-  Shield
+  Shield,
+  Truck
 } from "lucide-react";
 
 const MedicalPackages = () => {
@@ -34,8 +34,16 @@ const MedicalPackages = () => {
     try {
       setLoading(true);
       const res = await api.get("/api/offers");
-      setOffers(res.data);
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setOffers(data);
+      } else if (data.success && data.data) {
+        setOffers(data.data);
+      } else {
+        setOffers([]);
+      }
     } catch (error) {
+      console.error("Failed to load packages:", error);
       toast.error("Failed to load packages");
     } finally {
       setLoading(false);
@@ -112,63 +120,104 @@ const MedicalPackages = () => {
           /* Offer Cards Grid */
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {offers.map((offer) => {
-              const savings = calculateSavings(offer.originalPrice, offer.price);
+              const savings = offer.originalPrice
+                ? calculateSavings(offer.originalPrice, offer.price)
+                : 0;
               
               return (
                 <div
                   key={offer._id}
                   onClick={() => setSelectedOffer(offer)}
-                  className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden cursor-pointer border border-slate-100 hover:border-emerald-200 hover:-translate-y-1"
+                  className="group bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer"
                 >
-                  {/* Savings Badge */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                      Save {savings}%
+                  {/* Card Header */}
+                  <div className="relative h-40 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                    <Sparkles className="h-16 w-16 text-white/30" />
+                    {/* Discount Badge */}
+                    <div className="absolute top-3 right-3">
+                      <div className="px-3 py-1 bg-white text-emerald-600 text-xs font-bold rounded-full shadow-lg">
+                        {savings}% OFF
+                      </div>
                     </div>
+                    {/* Duration Badge */}
+                    {offer.duration && (
+                      <div className="absolute bottom-3 left-3">
+                        <div className="flex items-center gap-1 px-3 py-1 bg-slate-900/80 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+                          <Clock className="w-3 h-3" />
+                          <span>{offer.duration}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Card Content */}
-                  <div className="p-6 sm:p-8">
-                    {/* Icon */}
-                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Sparkles className="w-7 h-7 text-emerald-600" />
+                  {/* Product Info */}
+                  <div className="p-4 space-y-3">
+                    {/* Category */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-emerald-600 uppercase tracking-wide">
+                        Medical Package
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                        <span className="text-sm font-semibold text-slate-900">
+                          4.8
+                        </span>
+                      </div>
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-2xl font-bold text-slate-900 mb-2 leading-tight">
+                    <h3 className="text-base font-semibold text-slate-900 line-clamp-2 group-hover:text-emerald-600 transition-colors min-h-[3rem]">
                       {offer.title}
                     </h3>
-                    
+
                     {/* Subtitle */}
-                    <p className="text-slate-600 mb-6 text-sm leading-relaxed">
+                    <p className="text-sm text-slate-600 line-clamp-2">
                       {offer.subtitle}
                     </p>
 
-                    {/* Price */}
-                    <div className="flex items-baseline gap-3 mb-6">
-                      <span className="text-4xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                        ₹{offer.price.toLocaleString()}
+                    {/* Price Section */}
+                    <div className="flex items-baseline gap-2 pt-2">
+                      <span className="text-2xl font-bold text-emerald-600">
+                        ₹{offer.price.toLocaleString("en-IN")}
                       </span>
-                      <span className="text-lg text-slate-400 line-through">
-                        ₹{offer.originalPrice.toLocaleString()}
-                      </span>
+                      {offer.originalPrice && offer.originalPrice > offer.price && (
+                        <span className="text-sm text-slate-400 line-through">
+                          ₹{offer.originalPrice.toLocaleString("en-IN")}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Discount Tag */}
-                    <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-sm font-semibold mb-6">
-                      <Tag className="w-4 h-4" />
-                      <span>{offer.discount}</span>
-                    </div>
+                    {/* Includes Preview */}
+                    {offer.includes && offer.includes.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {offer.includes.slice(0, 3).map((item, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                        {offer.includes.length > 3 && (
+                          <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
+                            +{offer.includes.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
 
-                    {/* CTA Button */}
-                    <button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 group-hover:shadow-xl group-hover:shadow-emerald-500/40">
-                      <span>View Details</span>
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    {/* Trust Badges */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                      <div className="flex items-center gap-1 text-xs text-slate-600">
+                        <Truck className="h-3.5 w-3.5" />
+                        <span>Free Delivery</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-slate-600">
+                        <Shield className="h-3.5 w-3.5" />
+                        <span>100% Authentic</span>
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Bottom Accent */}
-                  <div className="h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
                 </div>
               );
             })}
@@ -233,6 +282,16 @@ const MedicalPackages = () => {
             {/* Modal Body */}
             <div className="px-6 sm:px-8 py-6 max-h-[calc(100vh-200px)] overflow-y-auto">
               
+              {/* Product Image */}
+              {selectedOffer.image && (
+                <div className="mb-6 rounded-xl overflow-hidden">
+                  <img
+                    src={selectedOffer.image}
+                    alt={selectedOffer.title}
+                    className="w-full h-48 sm:h-64 object-cover"
+                  />
+                </div>
+              )}
               {/* Price Section */}
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 mb-6 border border-emerald-100">
                 <div className="flex flex-wrap items-baseline gap-3">
@@ -249,64 +308,70 @@ const MedicalPackages = () => {
               </div>
 
               {/* What's Included */}
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  What's Included
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {selectedOffer.includes.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors"
-                    >
-                      <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              {selectedOffer.includes && selectedOffer.includes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    What's Included
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {selectedOffer.includes.map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100 hover:border-emerald-200 transition-colors"
+                      >
+                        <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        </div>
+                        <span className="text-slate-700 text-sm leading-relaxed">{item}</span>
                       </div>
-                      <span className="text-slate-700 text-sm leading-relaxed">{item}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Your Journey */}
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <ArrowRight className="w-5 h-5 text-emerald-600" />
-                  Your Journey
-                </h3>
-                <div className="space-y-4">
-                  {selectedOffer.journey.map((step, index) => (
-                    <div key={step.stepNumber} className="flex gap-4 group">
-                      <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
-                          {step.stepNumber}
+              {selectedOffer.journey && selectedOffer.journey.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <ArrowRight className="w-5 h-5 text-emerald-600" />
+                    Your Journey
+                  </h3>
+                  <div className="space-y-4">
+                    {selectedOffer.journey.map((step, index) => (
+                      <div key={step.stepNumber} className="flex gap-4 group">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+                            {step.stepNumber}
+                          </div>
+                          {index < selectedOffer.journey.length - 1 && (
+                            <div className="w-0.5 h-8 bg-slate-200 mx-auto mt-2"></div>
+                          )}
                         </div>
-                        {index < selectedOffer.journey.length - 1 && (
-                          <div className="w-0.5 h-8 bg-slate-200 mx-auto mt-2"></div>
-                        )}
+                        <div className="flex-1 pb-4">
+                          <h4 className="font-semibold text-slate-900 mb-1">{step.title}</h4>
+                          <p className="text-sm text-slate-600 leading-relaxed">{step.description}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 pb-4">
-                        <h4 className="font-semibold text-slate-900 mb-1">{step.title}</h4>
-                        <p className="text-sm text-slate-600 leading-relaxed">{step.description}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {selectedOffer.tags.map((tag, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Tag className="w-3 h-3" />
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              {selectedOffer.tags && selectedOffer.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {selectedOffer.tags.map((tag, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Tag className="w-3 h-3" />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* Booking Form */}
               <div className="border-t border-slate-200 pt-6">

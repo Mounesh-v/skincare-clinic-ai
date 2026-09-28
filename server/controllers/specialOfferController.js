@@ -24,31 +24,33 @@ export const getActiveOffers = async (req, res) => {
       .lean();
 
     // Format offers for frontend
-    const formattedOffers = offers.map((offer) => {
-      const product = offer.productId;
+    const formattedOffers = offers
+      .filter((offer) => offer.productId)
+      .map((offer) => {
+        const product = offer.productId;
 
-      return {
-        id: offer._id,
-        productId: product._id,
-        name: product.name,
-        shortDesc: product.description
-          ? product.description.substring(0, 50)
-          : "",
-        image:
-          product.images && product.images[0]
-            ? product.images[0]
-            : "/api/placeholder/120/120",
-        originalPrice: product.originalPrice || product.price,
-        offerPrice: offer.offerPrice,
-        discount: offer.discount,
-        badge: offer.badge,
-        badgeColor: offer.badgeColor,
-        timeLeft: calculateTimeLeft(offer.expiresAt),
-        expiresAt: offer.expiresAt,
-        views: offer.views,
-        clicks: offer.clicks,
-      };
-    });
+        return {
+          id: offer._id,
+          productId: product._id,
+          name: product.name,
+          shortDesc: product.description
+            ? product.description.substring(0, 50)
+            : "",
+          image:
+            product.images && product.images[0]
+              ? product.images[0]
+              : "/api/placeholder/120/120",
+          originalPrice: product.originalPrice || product.price,
+          offerPrice: offer.offerPrice,
+          discount: offer.discount,
+          badge: offer.badge,
+          badgeColor: offer.badgeColor,
+          timeLeft: calculateTimeLeft(offer.expiresAt),
+          expiresAt: offer.expiresAt,
+          views: offer.views,
+          clicks: offer.clicks,
+        };
+      });
 
     res.status(200).json({
       success: true,

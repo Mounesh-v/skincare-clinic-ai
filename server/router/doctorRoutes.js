@@ -9,12 +9,14 @@ import {
   updateDoctorRating,
   getNearbyDoctors,
 } from "../controllers/doctorController.js";
+import { createDoctorBooking } from "../controllers/doctorBookingController.js";
 import { verifyAdmin } from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
 //user only
 router.get("/nearby", getNearbyDoctors);
+router.post("/book", createDoctorBooking);
 
 // Public reads
 router.get("/", getDoctors);

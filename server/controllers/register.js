@@ -1,4 +1,5 @@
 import Register from "../models/Register.js";
+import Admin from "../models/Admin.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Assessment from "../models/Assessment.js";
@@ -86,7 +87,13 @@ export const loginUser = async (req, res) => {
       email === process.env.ADMIN_EMAIL &&
       password === process.env.ADMIN_PASSWORD
     ) {
-      const token = jwt.sign({ role: "admin" }, process.env.JWT_SECRET, {
+      // Find or create admin user in DB so notifications have a real ObjectId
+      let admin = await Admin.findOne({ email });
+      if (!admin) {
+        admin = await Admin.create({ name: "Admin", email });
+      }
+
+      const token = jwt.sign({ id: admin._id, role: "admin" }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
 
@@ -94,7 +101,7 @@ export const loginUser = async (req, res) => {
         message: "Admin login successful",
         token,
         user: {
-          id: "admin",
+          id: admin._id,
           name: "Admin",
           email: process.env.ADMIN_EMAIL,
           role: "admin",

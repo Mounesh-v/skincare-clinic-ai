@@ -38,17 +38,10 @@ const OrderList = () => {
         customer: order.user?.name ?? "N/A",
         email: order.user?.email || "",
         products: order.items
-          .map((i) => i.product?.name)
+          .map((i) => i.name || i.product?.name)
           .filter(Boolean)
           .join(", "),
-        totalAmount:
-          order.items.reduce(
-            (acc, item) => acc + (item.price || 0) * (item.quantity || 0),
-            0,
-          ) +
-          (order.shipping || 0) +
-          (order.tax || 0) -
-          (order.discount || 0),
+        totalAmount: order.total || 0,
         paymentStatus: order.paymentStatus,
         orderStatus: order.orderStatus,
         date: new Date(order.createdAt).toLocaleDateString(),

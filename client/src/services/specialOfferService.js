@@ -1,5 +1,4 @@
-import axios from 'axios';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import api from '../utils/api';
 
 /**
  * Special Offers Service
@@ -10,7 +9,8 @@ const specialOfferService = {
   // Get active offers for banner (Public)
   getActiveOffers: async () => {
     try {
-      const response = await axios.get(`${API_URL}/special-offers`);
+      const response = await api.get("/api/special-offers");
+      console.log("response of the Specialoffers", response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching active offers:', error);
@@ -21,11 +21,10 @@ const specialOfferService = {
   // Track offer view (Public)
   trackView: async (offerId) => {
     try {
-      const response = await axios.post(`${API_URL}/special-offers/${offerId}/view`);
+      const response = await api.post(`/api/special-offers/${offerId}/view`);
       return response.data;
     } catch (error) {
       console.error('Error tracking view:', error);
-      // Don't throw - analytics tracking failures shouldn't break UI
       return null;
     }
   },
@@ -33,7 +32,7 @@ const specialOfferService = {
   // Track offer click (Public)
   trackClick: async (offerId) => {
     try {
-      const response = await axios.post(`${API_URL}/special-offers/${offerId}/click`);
+      const response = await api.post(`/api/special-offers/${offerId}/click`);
       return response.data;
     } catch (error) {
       console.error('Error tracking click:', error);
@@ -46,8 +45,8 @@ const specialOfferService = {
   // Get all offers (Admin)
   getAllOffers: async (filters = {}) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/special-offers/admin`, {
+      const token = localStorage.getItem('authToken');
+      const response = await api.get("/api/special-offers/admin", {
         headers: { Authorization: `Bearer ${token}` },
         params: filters
       });
@@ -61,8 +60,8 @@ const specialOfferService = {
   // Get single offer (Admin)
   getOffer: async (offerId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/special-offers/${offerId}`, {
+      const token = localStorage.getItem('authToken');
+      const response = await api.get(`/api/special-offers/${offerId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
@@ -75,12 +74,10 @@ const specialOfferService = {
   // Create offer (Admin)
   createOffer: async (offerData) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_URL}/special-offers/create`,
-        offerData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const token = localStorage.getItem('authToken');
+      const response = await api.post("/api/special-offers/create", offerData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       return response.data;
     } catch (error) {
       console.error('Error creating offer:', error);
@@ -91,12 +88,10 @@ const specialOfferService = {
   // Update offer (Admin)
   updateOffer: async (offerId, offerData) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `${API_URL}/special-offers/${offerId}`,
-        offerData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const token = localStorage.getItem('authToken');
+      const response = await api.put(`/api/special-offers/${offerId}`, offerData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       return response.data;
     } catch (error) {
       console.error('Error updating offer:', error);
@@ -107,8 +102,8 @@ const specialOfferService = {
   // Delete offer (Admin)
   deleteOffer: async (offerId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.delete(`${API_URL}/special-offers/${offerId}`, {
+      const token = localStorage.getItem('authToken');
+      const response = await api.delete(`/api/special-offers/${offerId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;
@@ -121,12 +116,10 @@ const specialOfferService = {
   // Toggle offer status (Admin)
   toggleStatus: async (offerId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.patch(
-        `${API_URL}/special-offers/${offerId}/toggle`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const token = localStorage.getItem('authToken');
+      const response = await api.patch(`/api/special-offers/${offerId}/toggle`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       return response.data;
     } catch (error) {
       console.error('Error toggling offer status:', error);
@@ -137,8 +130,8 @@ const specialOfferService = {
   // Get analytics (Admin)
   getAnalytics: async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/special-offers/analytics`, {
+      const token = localStorage.getItem('authToken');
+      const response = await api.get("/api/special-offers/analytics", {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;

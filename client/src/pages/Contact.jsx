@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import api from '../utils/api';
 import {
   Phone,
   Mail,
@@ -50,7 +51,7 @@ const Contact = () => {
     }
     setSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      await api.post('/api/contact', formData);
       toast.success('Thank you! Our care team will reach out within one business day.');
       setFormData(initialFormState);
     } catch (error) {

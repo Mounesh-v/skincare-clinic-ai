@@ -1,14 +1,38 @@
 import axios from "axios";
 
-// Keep baseURL as plain origin (no /api suffix).
-// All call-sites use absolute paths like "/api/auth/login".
-// Axios replaces the entire path when the url starts with "/",
-// so having /api in baseURL would silently be dropped on every request.
 const BASE = (import.meta.env.VITE_API_URL || "http://localhost:5005").replace(/\/api\/?$/, "");
 
 const api = axios.create({
-  baseURL: BASE,           // e.g. http://localhost:5005
+  baseURL: BASE,
   withCredentials: true,
 });
+
+// Automatically attach auth token to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Handle 401 responses globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authUser");
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

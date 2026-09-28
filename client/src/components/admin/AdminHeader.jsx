@@ -10,10 +10,14 @@ import {
   Store,
   CheckCircle,
   XCircle,
+  BellRing,
+  BellOff,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../utils/api";
 import toast from "react-hot-toast";
+import NotificationBell from "../common/NotificationBell";
+import { useNotifications } from "../../context/NotificationContext";
 
 const AdminHeader = ({ isOpen, setOpen }) => {
   const navigate = useNavigate();
@@ -23,6 +27,7 @@ const AdminHeader = ({ isOpen, setOpen }) => {
   const [updatingId, setUpdatingId] = useState(null);
   const menuRef = useRef(null);
   const notifRef = useRef(null);
+  const { isSubscribed, subscribeToPush, pushPermission } = useNotifications();
 
   const adminUser = JSON.parse(localStorage.getItem("authUser")) || {};
 
@@ -91,6 +96,21 @@ const AdminHeader = ({ isOpen, setOpen }) => {
     navigate("/login");
   };
 
+  const handleEnableNotifications = async () => {
+    if (isSubscribed) {
+      toast.success("Notifications are already enabled");
+      return;
+    }
+    toast.loading("Enabling notifications...", { id: "push-subscribe" });
+    const result = await subscribeToPush();
+    toast.dismiss("push-subscribe");
+    if (result) {
+      toast.success("Notifications enabled! You'll receive device notifications.");
+    } else {
+      toast.error("Failed to enable notifications. Check console for details.");
+    }
+  };
+
   return (
     <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30">
       <div className="h-full px-6 flex items-center justify-between">
@@ -117,87 +137,21 @@ const AdminHeader = ({ isOpen, setOpen }) => {
 
         {/* Right Side */}
         <div className="flex items-center gap-4">
-          {/* Notifications */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => setOpenNotif(!openNotif)}
-              className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <Bell className="w-6 h-6 text-slate-600" />
-              {pendingVendors.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-semibold rounded-full flex items-center justify-center">
-                  {pendingVendors.length}
-                </span>
-              )}
-            </button>
+          {/* Enable Push Notifications Button */}
+          <button
+            onClick={handleEnableNotifications}
+            className={`relative p-2 rounded-lg transition-colors ${
+              isSubscribed
+                ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                : "bg-amber-50 text-amber-600 hover:bg-amber-100 animate-pulse"
+            }`}
+            title={isSubscribed ? "Push notifications enabled" : "Click to enable push notifications"}
+          >
+            {isSubscribed ? <BellRing className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
+          </button>
 
-            {openNotif && (
-              <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50">
-                <div className="px-4 py-3 border-b flex items-center justify-between">
-                  <p className="font-semibold text-sm">Notifications</p>
-                  <span className="text-xs text-slate-500">
-                    {pendingVendors.length} pending vendor(s)
-                  </span>
-                </div>
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                  {pendingVendors.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-slate-500 text-sm">
-                      No new vendor registrations
-                    </div>
-                  ) : (
-                    pendingVendors.map((vendor) => (
-                      <div key={vendor._id} className="px-4 py-3 hover:bg-slate-50">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white shrink-0">
-                            <Store className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900">
-                              {vendor.businessName}
-                            </p>
-                            <p className="text-xs text-slate-500 truncate">
-                              {vendor.ownerName} · {vendor.email}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() =>
-                                updateVendorStatus(vendor._id, "Approved")
-                              }
-                              disabled={updatingId === vendor._id}
-                              className="p-1.5 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 disabled:opacity-50 transition-colors"
-                              title="Approve"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() =>
-                                updateVendorStatus(vendor._id, "Rejected")
-                              }
-                              disabled={updatingId === vendor._id}
-                              className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 transition-colors"
-                              title="Reject"
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setOpenNotif(false);
-                    navigate("/admin/vendors");
-                  }}
-                  className="w-full px-4 py-2.5 text-center text-sm font-medium text-emerald-600 hover:bg-emerald-50 border-t"
-                >
-                  View all vendors
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* User Profile */}
           <div className="relative" ref={menuRef}>

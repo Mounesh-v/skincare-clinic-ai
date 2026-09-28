@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import productService from ".././../services/productService";
+import AdsSection from "../Ads/AdsSection";
 
 const ProductShowcase = () => {
   const navigate = useNavigate();
@@ -186,6 +187,9 @@ const ProductShowcase = () => {
         <div className="absolute bottom-1/3 -right-24 w-[500px] h-[500px] bg-purple-200/20 rounded-full blur-3xl animate-blob animation-delay-4000" />
         <div className="absolute top-2/3 left-1/2 w-[400px] h-[400px] bg-teal-200/15 rounded-full blur-3xl animate-blob animation-delay-2000" />
       </div>
+
+      {/* ── Admin Ads ── */}
+      <AdsSection />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-28">
         {/* ══════════════════════════════════

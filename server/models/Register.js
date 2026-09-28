@@ -71,6 +71,19 @@ const RegisterUsers = new mongoose.Schema(
     district: String,
     state: String,
     country: String,
+
+    savedAddresses: [
+      {
+        label: { type: String, default: "Home" },
+        fullName: String,
+        phone: String,
+        address: String,
+        city: String,
+        state: String,
+        pincode: String,
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
   },
   { timestamps: true },
 );

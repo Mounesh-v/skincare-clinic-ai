@@ -21,6 +21,7 @@ import {
 import ctaBg from "../../assets/hero2.jpg";
 
 import { getInitial, getUser } from "../../utils/auth";
+import NotificationBell from "../common/NotificationBell";
 
 const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
   const [fullscreenMenuOpen, setFullscreenMenuOpen] = useState(false);
@@ -326,6 +327,25 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
                         View Products
                       </button>
                     </div>
+
+                    {/* Special Offers Section */}
+                    <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-br from-red-50/90 to-orange-50/90 backdrop-blur-md rounded-lg shadow-lg border border-white/50">
+                      <h3 className="font-bold text-slate-900 mb-3">
+                        🔥 Special Offers
+                      </h3>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Grab limited time deals on premium skincare
+                      </p>
+                      <button
+                        onClick={() => {
+                          navigate("/offers");
+                          setFullscreenMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white font-medium rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        View Offers
+                      </button>
+                    </div>
                   </div>
 
                   {/* WHO WE ARE Section */}
@@ -419,7 +439,10 @@ const Header = ({ isAuthenticated = false, user = null, onLogout }) => {
             </div>
 
             {/* Right Side - Auth or Profile */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Notification Bell */}
+              {name && <NotificationBell />}
+              
               {name ? (
                 // ===== LOGGED IN VIEW =====
                 <div className="relative" ref={profileRef}>

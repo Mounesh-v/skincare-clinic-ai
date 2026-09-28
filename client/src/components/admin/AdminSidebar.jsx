@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Sparkles,
   Stethoscope,
-  X,BadgePercent  
+  X,BadgePercent,
+  Images
 } from "lucide-react";
 
 const AdminSidebar = ({ isOpen, setOpen }) => {
@@ -58,6 +59,11 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
       path: "/admin/Features",
     },
     {
+      name: "Ads",
+      icon: Images,
+      path: "/admin/ads",
+    },
+    {
       name: "Vendors",
       icon: BarChart3,
       path: "/admin/vendors",
@@ -75,8 +81,8 @@ const AdminSidebar = ({ isOpen, setOpen }) => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("authUser");
     navigate("/admin/login");
   };
 

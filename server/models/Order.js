@@ -28,14 +28,28 @@ const orderSchema = new mongoose.Schema(
           min: 1,
         },
         image: String,
+        vendor: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Vendor",
+        },
       },
     ],
 
-    subtotal: Number,
+    shippingAddress: {
+      fullName: String,
+      email: String,
+      phone: String,
+      address: String,
+      city: String,
+      state: String,
+      pincode: String,
+    },
+
+    subtotal: { type: Number, default: 0 },
     shipping: { type: Number, default: 0 },
     tax: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
-    total: Number,
+    total: { type: Number, default: 0 },
 
     paymentMethod: {
       type: String,
@@ -47,6 +61,7 @@ const orderSchema = new mongoose.Schema(
         "Net Banking",
         "Wallet",
       ],
+      default: "COD",
     },
 
     paymentStatus: {
@@ -68,10 +83,6 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Pending",
     },
-    vendor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Vendor",
-    },
 
     timeline: [
       {
@@ -82,34 +93,32 @@ const orderSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 // GENERATE ORDER NUMBER
-orderSchema.pre("save", async function (next) {
+orderSchema.pre("save", function () {
   if (!this.orderNumber) {
     const random = Math.floor(1000 + Math.random() * 9000);
     this.orderNumber = `ORD-${Date.now()}-${random}`;
   }
-  // next();
 });
 
-orderSchema.pre("save", function (next) {
+// ADD TIMELINE ENTRY ON STATUS CHANGE
+orderSchema.pre("save", function () {
   if (this.isNew) {
     this.timeline.push({
-      status: this.orderStatus,
+      status: this.orderStatus || "Pending",
       timestamp: new Date(),
     });
   }
 
-  if (this.isModified("orderStatus")) {
+  if (this.isModified("orderStatus") && !this.isNew) {
     this.timeline.push({
       status: this.orderStatus,
       timestamp: new Date(),
     });
   }
-
-  // next();
 });
 
 const Order = mongoose.model("Order", orderSchema);

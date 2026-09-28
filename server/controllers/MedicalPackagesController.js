@@ -1,5 +1,6 @@
 import Booking from "../models/Booking.js";
 import Offer from "../models/MedicalPackages.js";
+import { notifyAdmin } from "./notificationController.js";
 
 export const createOffer = async (req, res) => {
   try {
@@ -153,6 +154,14 @@ export const createBooking = async (req, res) => {
       packageName: offer.title,
       amount: offer.price,
     });
+
+    notifyAdmin({
+      type: "booking",
+      title: "New Offer Booking",
+      message: `${userDetails.fullName} booked "${offer.title}" for ₹${offer.price.toLocaleString()}.`,
+      data: { bookingId: booking._id, packageId: offer._id, mobile: userDetails.mobile, actions: [{ action: "open", title: "View" }, { action: "dismiss", title: "Dismiss" }] },
+      link: `/admin/bookings`,
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,

@@ -52,6 +52,9 @@ body {
 
 img, video {
   max-width: 100%;
+}
+
+img:not(.slide-img) {
   height: auto;
 }
 

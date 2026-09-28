@@ -1,5 +1,6 @@
 import Vendor from "../models/Vendor.js";
 import jwt from "jsonwebtoken";
+import { notifyAdmin } from "./notificationController.js";
 
 /**
  * Vendor registration – creates vendor with status Pending
@@ -69,6 +70,14 @@ export const vendorRegister = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+
+    notifyAdmin({
+      type: "vendor",
+      title: "New Vendor Registration",
+      message: `${ownerName} (${businessName}) has registered as a vendor and is pending approval.`,
+      data: { vendorId: vendor._id, email, actions: [{ action: "open", title: "Review" }, { action: "dismiss", title: "Dismiss" }] },
+      link: `/admin/vendors`,
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,

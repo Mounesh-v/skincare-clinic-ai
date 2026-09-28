@@ -101,44 +101,22 @@ const ProductDetail = () => {
     toast.success("Added to cart!");
   };
 
-  const handleBuyNow = async () => {
-    try {
-      const token = localStorage.getItem("authToken");
+  const handleBuyNow = () => {
+    const token = localStorage.getItem("authToken");
 
-      if (!token) {
-        toast.error("Please login first");
-        navigate("/login");
-        return;
-      }
-
-      const payload = {
-        items: [
-          {
-            product: product._id,
-            quantity: quantity,
-          },
-        ],
-        shippingAddress: "Default Address", // later from form
-      };
-
-      const res = await api.post("/api/orders", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      toast.success("Order placed successfully!");
-
-      //  redirect after order
-      navigate("/products"); // or success page
-    } catch (error) {
-      if (error.response?.data?.code === "PROFILE_INCOMPLETE") {
-        setShowPopup(true);
-        return;
-      }
-
-      toast.error(error.response?.data?.message || "Order failed");
+    if (!token) {
+      toast.error("Please login first");
+      navigate("/login");
+      return;
     }
+
+    navigate("/checkout", {
+      state: {
+        product,
+        quantity,
+        selectedSize,
+      },
+    });
   };
 
   const handleFavorite = () => {

@@ -34,10 +34,67 @@ export const createFeature = async (req, res) => {
 // get all features
 export const getAllFeatures = async (req, res) => {
   try {
-    const features = await Feature.find();
+    const features = await Feature.find().sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       data: features,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update a feature
+// @route   PUT /api/features/:id
+// @access  Private (Admin only)
+export const updateFeature = async (req, res) => {
+  try {
+    const { Adname, Adddescription, Addimage } = req.body;
+
+    const feature = await Feature.findByIdAndUpdate(
+      req.params.id,
+      { Adname, Adddescription, Addimage },
+      { new: true }
+    );
+
+    if (!feature) {
+      return res.status(404).json({
+        success: false,
+        message: "Feature not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: feature,
+      message: "Feature updated successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Delete a feature
+// @route   DELETE /api/features/:id
+// @access  Private (Admin only)
+export const deleteFeature = async (req, res) => {
+  try {
+    const feature = await Feature.findByIdAndDelete(req.params.id);
+
+    if (!feature) {
+      return res.status(404).json({
+        success: false,
+        message: "Feature not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Feature deleted successfully",
     });
   } catch (error) {
     res.status(500).json({

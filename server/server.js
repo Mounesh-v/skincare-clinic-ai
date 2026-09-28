@@ -18,8 +18,12 @@ import orderRoutes from "./router/orderRoutes.js";
 import doctorRoutes from "./router/doctorRoutes.js";
 import featureRoutes from "./router/featureRoutes.js";
 import specialOfferRoutes from "./router/Specialofferroutes.js";
+import adRoutes from "./router/adRoutes.js";
 import adminRoutes from "./router/adminRoutes.js";
 import offerRoute from "./router/MedicalPackagesRoutes.js";
+import notificationRoutes from "./router/notificationRoutes.js";
+import contactRoutes from "./router/contactRoutes.js";
+import addressRoutes from "./router/addressRoutes.js";
 
 dotenv.config();
 
@@ -93,8 +97,12 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/features", featureRoutes);
 app.use("/api/special-offers", specialOfferRoutes);
+app.use("/api/ads", adRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/offers", offerRoute);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/addresses", addressRoutes);
 
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => {

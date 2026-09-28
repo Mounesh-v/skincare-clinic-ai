@@ -13,6 +13,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from '../../../client/src/components/common/NotificationBell';
 
 const VendorLayout = () => {
   const navigate = useNavigate();
@@ -133,10 +134,7 @@ const VendorLayout = () => {
           <div className="flex items-center gap-4 ml-auto">
             
             {/* Notifications */}
-            <button className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <Bell className="h-5 w-5 text-slate-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <NotificationBell />
 
             {/* Profile Dropdown */}
             <div className="relative">

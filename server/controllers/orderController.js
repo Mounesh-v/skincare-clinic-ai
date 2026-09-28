@@ -1,16 +1,30 @@
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import Login from "../models/Login.js";
-import  RegisterUsers from "../models/Register.js"
+import RegisterUsers from "../models/Register.js";
+import { notifyAdmin, createNotification } from "./notificationController.js";
 
 /* ==============================
    CREATE ORDER
 ============================== */
 export const createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress } = req.body;
+    const { items, shippingAddress, paymentMethod } = req.body;
+
+    if (!items || !items.length) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one item is required",
+      });
+    }
 
     const user = await RegisterUsers.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     if (!user.isProfileComplete) {
       return res.status(400).json({
@@ -29,26 +43,28 @@ export const createOrder = async (req, res) => {
       if (!product) {
         return res.status(404).json({
           success: false,
-          message: "Product not found",
+          message: `Product not found: ${item.product}`,
         });
       }
 
       if (product.stock < item.quantity) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}`,
+          message: `Insufficient stock for ${product.name}. Available: ${product.stock}`,
         });
       }
 
-      // 👇 IMPORTANT (vendor linking)
+      const itemTotal = product.price * item.quantity;
+      totalAmount += itemTotal;
+
       orderItems.push({
         product: product._id,
-        vendor: product.vendor, // must exist in product schema
-        quantity: item.quantity,
+        name: product.name,
         price: product.price,
+        quantity: item.quantity,
+        image: product.images?.[0]?.url || "",
+        vendor: product.vendor || null,
       });
-
-      totalAmount += product.price * item.quantity;
 
       // update stock
       product.stock -= item.quantity;
@@ -56,13 +72,33 @@ export const createOrder = async (req, res) => {
       await product.save();
     }
 
+    // Calculate tax and shipping
+    const subtotal = totalAmount;
+    const shipping = subtotal >= 999 ? 0 : 49;
+    const tax = Math.round(subtotal * 0.18);
+    const total = subtotal + shipping + tax;
+
     const order = await Order.create({
       user: req.user.id,
       items: orderItems,
-      total: totalAmount,
-      shippingAddress,
+      shippingAddress: shippingAddress || {},
+      subtotal,
+      shipping,
+      tax,
+      total,
+      paymentMethod: paymentMethod || "COD",
+      paymentStatus: paymentMethod === "COD" ? "Pending" : "Pending",
+      orderStatus: "Pending",
     });
-    
+
+    // Notify admin (fire-and-forget)
+    notifyAdmin({
+      type: "order",
+      title: "New Order Placed",
+      message: `${user.name} placed an order worth ₹${total.toLocaleString()} (${orderItems.length} item${orderItems.length > 1 ? "s" : ""})`,
+      data: { orderId: order._id, userId: user._id, total, actions: [{ action: "open", title: "View Order" }, { action: "dismiss", title: "Dismiss" }] },
+      link: `/admin/orders`,
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,
@@ -70,20 +106,22 @@ export const createOrder = async (req, res) => {
       order,
     });
   } catch (error) {
+    console.error("Create order error:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to create order",
     });
   }
 };
+
 /* ==============================
-   GET ALL ORDERS
+   GET ALL ORDERS (Admin)
 ============================== */
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("user") // ← remove field limitation
-      .populate("items.product");
+      .populate("user", "name email phone")
+      .populate("items.product", "name price images");
 
     res.status(200).json({
       success: true,
@@ -104,8 +142,8 @@ export const getAllOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate("user") // ← full user object
-      .populate("items.product");
+      .populate("user", "name email phone")
+      .populate("items.product", "name price images");
 
     if (!order) {
       return res.status(404).json({
@@ -133,7 +171,7 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const { orderStatus, paymentStatus } = req.body;
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate("user", "name email");
 
     if (!order) {
       return res.status(404).json({
@@ -141,6 +179,8 @@ export const updateOrderStatus = async (req, res) => {
         message: "Order not found",
       });
     }
+
+    const previousStatus = order.orderStatus;
 
     if (orderStatus) order.orderStatus = orderStatus;
     if (paymentStatus) order.paymentStatus = paymentStatus;
@@ -150,6 +190,37 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+
+    // Send notification to customer when order status changes
+    if (orderStatus && orderStatus !== previousStatus && order.user) {
+      console.log(`[ORDER] Status changed: ${previousStatus} → ${orderStatus} for order ${order.orderNumber}`);
+
+      const statusMessages = {
+        Processing: "Your order is being processed.",
+        Shipped: "Your order has been shipped!",
+        "Out for Delivery": "Your order is out for delivery.",
+        Delivered: "Your order has been delivered. Thank you!",
+        Cancelled: "Your order has been cancelled.",
+        Returned: "Your order has been returned.",
+      };
+
+      const message = statusMessages[orderStatus] || `Your order status has been updated to ${orderStatus}.`;
+
+      console.log(`[ORDER] Sending notification to user=${order.user._id}`);
+
+      createNotification({
+        recipient: order.user._id,
+        recipientModel: "Register",
+        type: "order",
+        title: `Order ${orderStatus}`,
+        message: `Order ${order.orderNumber}: ${message}`,
+        data: { orderId: order._id, orderStatus, paymentStatus: order.paymentStatus },
+        link: "/products",
+        sendPush: true,
+      }).catch(() => {});
+    } else {
+      console.log(`[ORDER] No status change or no user — skipping notification`);
+    }
 
     res.status(200).json({
       success: true,
@@ -191,14 +262,13 @@ export const deleteOrder = async (req, res) => {
 };
 
 /* ==============================
-   GET OWN ORDER
+   GET OWN ORDERS (User)
 ============================== */
-
 export const getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user.id }).populate(
-      "items.product",
-    );
+    const orders = await Order.find({ user: req.user.id })
+      .populate("items.product", "name price images")
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -210,29 +280,33 @@ export const getMyOrders = async (req, res) => {
 };
 
 /* ==============================
-   ONLY VENDOR ORDER
+   GET VENDOR ORDERS
 ============================== */
-
 export const getVendorOrders = async (req, res) => {
-  const vendorId = req.user._id;
+  try {
+    const vendorId = req.user.id;
 
-  const orders = await Order.find()
-    .populate({
-      path: "items.product",
-      match: { vendor: vendorId }, //  key logic
-    })
-    .populate("user", "name email");
+    const orders = await Order.find({ "items.vendor": vendorId })
+      .populate("user", "name email phone")
+      .populate("items.product", "name price images")
+      .sort({ createdAt: -1 });
 
-  // filter orders that actually contain vendor products
-  const filteredOrders = orders
-    .map((order) => ({
+    // Filter items to only show this vendor's products
+    const filteredOrders = orders.map((order) => ({
       ...order._doc,
-      items: order.items.filter((i) => i.product !== null),
-    }))
-    .filter((order) => order.items.length > 0);
+      items: order.items.filter(
+        (item) => item.vendor && item.vendor.toString() === vendorId
+      ),
+    }));
 
-  res.json({
-    success: true,
-    orders: filteredOrders,
-  });
+    res.json({
+      success: true,
+      orders: filteredOrders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
