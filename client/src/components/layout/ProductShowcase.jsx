@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import productService from ".././../services/productService";
-import AdsSection from "../Ads/AdsSection";
+
 
 const ProductShowcase = () => {
   const navigate = useNavigate();
@@ -189,7 +189,6 @@ const ProductShowcase = () => {
       </div>
 
       {/* ── Admin Ads ── */}
-      <AdsSection />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-28">
         {/* ══════════════════════════════════

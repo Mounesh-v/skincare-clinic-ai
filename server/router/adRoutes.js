@@ -1,24 +1,15 @@
 import express from 'express';
 import { createAd, getAds, getAd, updateAd,
          deleteAd, toggleAdStatus, getPublicAds } from '../controllers/adController.js';
-import { protect, authorize } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
 /**
- * Ads Routes
+ * Ads Routes (public - no auth required)
  */
-
-// Public route - active ads for the website
 router.get('/public', getPublicAds);
 
-/**
- * Admin only routes
- */
-router.use(protect);                                 // Protect all routes
-router.use(authorize('admin'));                      // Only admin can access
-
-router.get('/', getAds);                             // Get all ads (admin)
+router.get('/', getAds);                             // Get all ads
 router.get('/:id', getAd);                           // Get single ad
 router.post('/', createAd);                          // Create ad
 router.put('/:id', updateAd);                        // Update ad

@@ -44,6 +44,7 @@ import afterImage2 from "../assets/afterImage2.jpg";
 import ctaBg from "../assets/hero3.jpg";
 
 import { ClipboardList, Brain, UserCheck } from "lucide-react";
+import AdsSection from "../components/Ads/AdsSection.jsx";
 
 /**
 
@@ -292,6 +293,7 @@ const TrayaStyleHome = () => {
         </div>
       </section>
 
+      <AdsSection />
       
 
       <SpecialOffersBanner />

@@ -84,7 +84,7 @@ export const createAd = async (req, res) => {
       position: position || 0,
       isActive: isActive !== undefined ? isActive : true,
       expiresAt: expiresAt || null,
-      createdBy: req.user._id,
+      createdBy: req.user?._id,
     });
 
     res.status(201).json({
@@ -190,7 +190,7 @@ export const updateAd = async (req, res) => {
       });
     }
 
-    const updateData = { ...req.body, updatedBy: req.user._id };
+    const updateData = { ...req.body, updatedBy: req.user?._id };
 
     // Re-normalize images when provided
     if (req.body.images !== undefined || req.body.image !== undefined) {
@@ -277,7 +277,7 @@ export const toggleAdStatus = async (req, res) => {
     }
 
     ad.isActive = !ad.isActive;
-    ad.updatedBy = req.user._id;
+    ad.updatedBy = req.user?._id;
     await ad.save();
 
     res.status(200).json({

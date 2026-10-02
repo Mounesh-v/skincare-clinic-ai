@@ -266,6 +266,7 @@ const AdsSection = () => {
     const fetchAds = async () => {
       try {
         const res = await api.get("/api/ads/public");
+        console.log("Res",res);
         setAds(res.data.data || []);
       } catch (error) {
         console.error("Error fetching ads:", error);

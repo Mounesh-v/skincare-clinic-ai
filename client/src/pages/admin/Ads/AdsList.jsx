@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import api from "../../../utils/api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +38,8 @@ const AdsList = () => {
   const [isActive, setIsActive] = useState(true);
   const [expiresAt, setExpiresAt] = useState("");
   const [urlInput, setUrlInput] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
@@ -65,6 +67,20 @@ const AdsList = () => {
     fetchAds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  // Prevent the browser from opening files dropped outside the drop zone
+  useEffect(() => {
+    if (!showForm) return;
+    const stopOpen = (e) => {
+      e.preventDefault();
+    };
+    window.addEventListener("dragover", stopOpen);
+    window.addEventListener("drop", stopOpen);
+    return () => {
+      window.removeEventListener("dragover", stopOpen);
+      window.removeEventListener("drop", stopOpen);
+    };
+  }, [showForm]);
 
   const resetForm = () => {
     setTitle("");
@@ -98,26 +114,60 @@ const AdsList = () => {
     resetForm();
   };
 
-  const handleFilesChange = async (e) => {
-    const files = Array.from(e.target.files || []);
+  const addFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
     if (files.length === 0) return;
+
+    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) {
+      toast.error("Only image files are allowed");
+      return;
+    }
+    if (imageFiles.length < files.length) {
+      toast.error("Some files were skipped (not images)");
+    }
 
     try {
       const encoded = [];
-      for (const file of files) {
+      for (const file of imageFiles) {
         if (file.size > MAX_FILE_SIZE) {
           toast.error(`${file.name} is larger than 4MB`);
           continue;
         }
         encoded.push(await toBase64(file));
       }
-      setImages((prev) => [...prev, ...encoded]);
+      if (encoded.length > 0) {
+        setImages((prev) => [...prev, ...encoded]);
+        toast.success(`${encoded.length} image(s) added`);
+      }
     } catch (error) {
       console.log(error);
       toast.error("Failed to read image file");
-    } finally {
-      e.target.value = "";
     }
+  };
+
+  const handleFilesChange = (e) => {
+    addFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    // ignore leave events caused by moving over child elements
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    addFiles(e.dataTransfer.files);
   };
 
   const addImageUrl = () => {
@@ -335,10 +385,18 @@ const AdsList = () => {
                   <h3 className="font-semibold text-slate-900 truncate mb-1">
                     {ad.title}
                   </h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    {ad.expiresAt
-                      ? `Expires ${new Date(ad.expiresAt).toLocaleDateString()}`
-                      : "No expiry"}
+                  <p className="text-xs mb-4">
+                    {!ad.expiresAt ? (
+                      <span className="text-slate-500">No expiry</span>
+                    ) : new Date(ad.expiresAt) < new Date() ? (
+                      <span className="font-bold text-red-500">
+                        Expired on {new Date(ad.expiresAt).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">
+                        Expires {new Date(ad.expiresAt).toLocaleString()}
+                      </span>
+                    )}
                   </p>
 
                   {/* Actions */}
@@ -436,17 +494,41 @@ const AdsList = () => {
                   Images
                 </label>
 
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-emerald-500 transition-colors">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm text-slate-500 mb-3">
-                    Upload images (max 4MB each)
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
+                    dragOver
+                      ? "border-emerald-500 bg-emerald-50 scale-[1.02] shadow-lg"
+                      : "border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/40"
+                  }`}
+                >
+                  <Upload
+                    className={`h-9 w-9 mx-auto mb-2 transition-colors ${
+                      dragOver ? "text-emerald-600" : "text-slate-400"
+                    }`}
+                  />
+                  <p
+                    className={`text-sm font-semibold mb-1 ${
+                      dragOver ? "text-emerald-700" : "text-slate-600"
+                    }`}
+                  >
+                    {dragOver
+                      ? "Drop images here"
+                      : "Drag & drop images here"}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    or click to browse · multiple files · max 4MB each
                   </p>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     multiple
                     onChange={handleFilesChange}
-                    className="w-full text-sm text-slate-600"
+                    className="hidden"
                   />
                 </div>
 
