@@ -15,8 +15,8 @@ const AuthCallback = () => {
         const provider = searchParams.get('provider');
 
         if (token) {
-            // VITE_API_URL = "http://localhost:5005" (no /api suffix)
-            const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:5005').replace(/\/api$/, '');
+            // VITE_API_URL = "https://skincare-clinic-ai-7sf4.onrender.com" (no /api suffix)
+            const apiBase = (import.meta.env.VITE_API_URL || 'https://skincare-clinic-ai-7sf4.onrender.com').replace(/\/api$/, '');
             // Fetch user profile with the OAuth token
             fetch(`${apiBase}/api/auth/me`, {
                 headers: { 'Authorization': `Bearer ${token}` }

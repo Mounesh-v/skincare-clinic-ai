@@ -18,7 +18,7 @@ import api from "../../utils/api.js";
 // Import your background image
 import signupBg from "../../assets/signup-bg.jpg";
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5005').replace(/\/api\/?$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'https://skincare-clinic-ai-7sf4.onrender.com').replace(/\/api\/?$/, '');
 
 const Signup = () => {
   const navigate = useNavigate();

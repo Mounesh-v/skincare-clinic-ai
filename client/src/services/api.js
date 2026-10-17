@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const VITE_API_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:5005/api";
+  import.meta.env.VITE_API_URL ?? "https://skincare-clinic-ai-7sf4.onrender.com/api";
 const ML_BASE = import.meta.env.VITE_ML_URL ?? "https://niamaraa-skincare-ai-api.hf.space";
 
 const apiClient = axios.create({
