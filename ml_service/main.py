@@ -38,7 +38,7 @@ _MAX_BODY_BYTES = 10 * 1024 * 1024
 # CORS allowlist  —  reads ML_ALLOWED_ORIGINS from env, e.g.
 #   ML_ALLOWED_ORIGINS=https://skincare-clinic-ai-7sf4.onrender.com,http://localhost:5174
 # ---------------------------------------------------------------------------
-_DEFAULT_ORIGINS = "https://skincare-clinic-ai-7sf4.onrender.com,http://localhost:5174,http://127.0.0.1:5005,https://skincare-clinic-ai.vercel.app,http://localhost:5173,http://127.0.0.1:5173"
+_DEFAULT_ORIGINS = "https://skincare-clinic-ai-7sf4.onrender.com,http://localhost:5174,http://127.0.0.1:5005,https://skincare-clinic-ai.vercel.app,https://skincare-vendor-portal.vercel.app,https://skincare-vendor-portal.vercel.app"
 _ALLOWED_ORIGINS: frozenset[str] = frozenset(
     o.strip() for o in os.getenv("ML_ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",") if o.strip()
 )

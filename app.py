@@ -59,9 +59,9 @@ _DEFAULT_ORIGINS = (
     "https://skincare-ai-tawny.vercel.app,"
     "https://skincare-clinic-ai-tjjy.vercel.app,"
     "https://skincare-clinic-ai.vercel.app,"
-    "http://localhost:5173,"
+    "https://skincare-vendor-portal.vercel.app,"
     "http://localhost:5174,"
-    "http://127.0.0.1:5173,"
+    "https://skincare-vendor-portal.vercel.app,"
     "https://skincare-clinic-ai.vercel.app"
 )
 ALLOWED_ORIGINS: list[str] = [
