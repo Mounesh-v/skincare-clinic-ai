@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import './index.css';
 
 // Layout & Guard
 import VendorLayout from "./layout/VendorLayout";
