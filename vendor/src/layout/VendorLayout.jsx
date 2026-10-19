@@ -13,7 +13,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import NotificationBell from '../../../client/src/components/common/NotificationBell';
+import NotificationBell from '../components/NotificationBell';
 
 const VendorLayout = () => {
   const navigate = useNavigate();
